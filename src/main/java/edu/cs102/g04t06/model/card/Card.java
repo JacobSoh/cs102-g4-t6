@@ -1,10 +1,12 @@
-package edu.cs102.g04t06.model;
+package edu.cs102.g04t06.model.card;
 
 import java.util.HashMap;
 
+import edu.cs102.g04t06.model.token.TokenType;
+
 public class Card {
-    private Type.TokenType tokenType;
+    private TokenType tokenType;
     private int prestigePoint;
-    private HashMap<Type.TokenType, Integer> cost;
+    private HashMap<TokenType, Integer> cost;
     
 }
