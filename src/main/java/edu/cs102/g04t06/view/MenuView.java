@@ -4,9 +4,18 @@ import edu.cs102.g04t06.App;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
 
+/**
+ * Main menu view for the application.
+ * Part of the {@code edu.cs102.g04t06} module.
+ */
 public class MenuView extends DefaultView {
     private final String bgImgURL = "/images/menuImg.png";
 
+    /**
+     * Creates the menu UI and wires the start action.
+     *
+     * @param application the main application for navigation callbacks
+     */
     public MenuView(App application) {
         // Calling image
         ImageView bg = new ImageView(
