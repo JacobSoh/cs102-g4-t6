@@ -75,6 +75,8 @@
                 <configuration>
                     <release>11</release>
                     <legacyMode>true</legacyMode>
+                    <disableSourcepathUsage>true</disableSourcepathUsage>
+                    <outputDirectory>${project.build.directory}/site/apidocs</outputDirectory>
                     <sourceFileExcludes>
                         <sourceFileExclude>**/module-info.java</sourceFileExclude>
                     </sourceFileExcludes>
