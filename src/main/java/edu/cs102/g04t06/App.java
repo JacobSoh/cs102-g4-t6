@@ -10,12 +10,25 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
- * JavaFX App
+ * JavaFX application entry point for the Splendor game.
+ * Part of the {@code edu.cs102.g04t06} module.
  */
 public class App extends Application {
 
     private Scene scene;
 
+    /**
+     * Creates the application instance.
+     */
+    public App() {
+        // Default constructor required by JavaFX Application lifecycle.
+    }
+
+    /**
+     * Initializes the primary stage and shows the main menu.
+     *
+     * @param stage the primary JavaFX stage
+     */
     @Override
     public void start(Stage stage) {
         // var javaVersion = SystemInfo.javaVersion();
@@ -42,16 +55,27 @@ public class App extends Application {
         showMenu();
     }
 
+    /**
+     * Replaces the scene root with the menu view.
+     */
     public void showMenu() {
         StackPane newRoot = new MenuView(this).getRoot();
         this.scene.setRoot(newRoot);
     }
 
+    /**
+     * Replaces the scene root with the game view.
+     */
     public void showGame() {
         StackPane newRoot = new GameView(this).getRoot();
         this.scene.setRoot(newRoot);
     }
 
+    /**
+     * Application entry point for Java launchers.
+     *
+     * @param args command-line arguments
+     */
     public static void main(String[] args) {
         launch();
     }
