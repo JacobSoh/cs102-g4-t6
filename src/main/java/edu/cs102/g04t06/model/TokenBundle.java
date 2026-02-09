@@ -30,10 +30,20 @@ public class TokenBundle {
      * Adds {@code n} tokens of the given color.
      *
      * @param c the token color to increment
-     * @param n the number of tokens to add (may be negative to subtract)
+     * @param n the number of tokens to add
      */
     public void add(TokenColor c, int n) {
         this.counts[c.ordinal()] += n;
+    }
+
+    /**
+     * Removes {@code n} tokens of the given color.
+     *
+     * @param c the token color to decrement
+     * @param n the number of tokens to remove
+     */
+    public void remove(TokenColor c, int n) {
+        this.counts[c.ordinal()] -= n;
     }
 
     /**
