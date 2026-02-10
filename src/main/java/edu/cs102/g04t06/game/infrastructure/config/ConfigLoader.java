@@ -30,7 +30,7 @@ public class ConfigLoader {
     public int getGemCount(int playerCount, GemColor color) {
         StringBuilder sb = new StringBuilder();
         Formatter sf = new Formatter(sb);
-        sf.format("game.%dplayers.%s", playerCount, color.toString().toLowerCase());
+        sf.format("game.%dplayers.%s", playerCount >= 4 ? 4 : playerCount, color.toString().toLowerCase());
         return Integer.parseInt(this.properties.getProperty(sf.toString()));
     }
 
