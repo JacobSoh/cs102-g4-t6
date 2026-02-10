@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.view;
+package edu.cs102.g04t06.game.presentation.console.old;
 
 import edu.cs102.g04t06.App;
 import javafx.scene.control.Label;
@@ -7,13 +7,13 @@ import javafx.scene.control.Label;
  * View shown after the game starts.
  * Part of the {@code edu.cs102.g04t06} module.
  */
-public class GameView extends DefaultView {
+public class Game extends BaseStack {
     /**
      * Creates the game view UI.
      *
      * @param application the main application for callbacks
      */
-    public GameView(App application) {
+    public Game(App application) {
         Label label = new Label("Game Started");
         this.root.getChildren().add(label);
     }

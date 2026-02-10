@@ -1,7 +1,7 @@
 package edu.cs102.g04t06;
 
-import edu.cs102.g04t06.view.GameView;
-import edu.cs102.g04t06.view.MenuView;
+import edu.cs102.g04t06.game.presentation.console.old.Game;
+import edu.cs102.g04t06.game.presentation.console.old.Menu;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -59,7 +59,7 @@ public class App extends Application {
      * Replaces the scene root with the menu view.
      */
     public void showMenu() {
-        StackPane newRoot = new MenuView(this).getRoot();
+        StackPane newRoot = new Menu(this).getRoot();
         this.scene.setRoot(newRoot);
     }
 
@@ -67,7 +67,7 @@ public class App extends Application {
      * Replaces the scene root with the game view.
      */
     public void showGame() {
-        StackPane newRoot = new GameView(this).getRoot();
+        StackPane newRoot = new Game(this).getRoot();
         this.scene.setRoot(newRoot);
     }
 
