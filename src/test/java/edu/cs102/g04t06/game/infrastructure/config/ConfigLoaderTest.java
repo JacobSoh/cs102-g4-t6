@@ -1,0 +1,97 @@
+package edu.cs102.g04t06.game.infrastructure.config;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.HashMap;
+
+import org.junit.jupiter.api.Test;
+
+import edu.cs102.g04t06.game.rules.entities.GemColor;
+
+/**
+ * Unit tests for {@link ConfigLoader}.
+ *
+ * <p>These tests verify that configuration values are loaded from the test
+ * classpath resource and that the player count clamping behavior works as
+ * expected.</p>
+ *
+ * <p>Note: Test sources are not included in the main API Javadoc output by
+ * default, because Maven's Javadoc plugin only processes {@code src/main/java}
+ * unless explicitly configured to include test sources.</p>
+ */
+public class ConfigLoaderTest {
+    @Test
+    /**
+     * Verifies base configuration values and data file paths.
+     */
+    void loadsBaseConfig() {
+        ConfigLoader loader = new ConfigLoader("config-test.properties");
+
+        // Testing the base rules
+        assertEquals(15, loader.getWinningPoints());
+        assertEquals(3, loader.getMaxReservedCards(2, GemColor.WHITE));
+        assertEquals(10, loader.getMaxGemsPerPlayer(2, GemColor.WHITE));
+        assertEquals(3, loader.getMaxReservedCards(4, GemColor.BLACK));
+        assertEquals(10, loader.getMaxGemsPerPlayer(4, GemColor.BLACK));
+
+        HashMap<String, String> dataPaths = loader.getDataFilePath();
+        assertEquals("data/splendor_card.xlsx", dataPaths.get("card"));
+        assertEquals("data/splendor_noble.xlsx", dataPaths.get("noblePath"));
+    }
+
+    @Test
+    /**
+     * Verifies gem counts for supported player counts (2, 3, and 4 players).
+     */
+    void loadsGemCountsForValidPlayerCounts() {
+        ConfigLoader loader = new ConfigLoader("config-test.properties");
+
+        // Testing 2 player count
+        assertEquals(4, loader.getGemCount(2, GemColor.WHITE));
+        assertEquals(4, loader.getGemCount(2, GemColor.BLUE));
+        assertEquals(4, loader.getGemCount(2, GemColor.GREEN));
+        assertEquals(4, loader.getGemCount(2, GemColor.RED));
+        assertEquals(4, loader.getGemCount(2, GemColor.BLACK));
+        assertEquals(5, loader.getGemCount(2, GemColor.GOLD));
+
+        // Testing 3 player count
+        assertEquals(5, loader.getGemCount(3, GemColor.WHITE));
+        assertEquals(5, loader.getGemCount(3, GemColor.BLUE));
+        assertEquals(5, loader.getGemCount(3, GemColor.GREEN));
+        assertEquals(5, loader.getGemCount(3, GemColor.RED));
+        assertEquals(5, loader.getGemCount(3, GemColor.BLACK));
+        assertEquals(5, loader.getGemCount(3, GemColor.GOLD));
+
+        // Testing 4 player count
+        assertEquals(7, loader.getGemCount(4, GemColor.WHITE));
+        assertEquals(7, loader.getGemCount(4, GemColor.BLUE));
+        assertEquals(7, loader.getGemCount(4, GemColor.GREEN));
+        assertEquals(7, loader.getGemCount(4, GemColor.RED));
+        assertEquals(7, loader.getGemCount(4, GemColor.BLACK));
+        assertEquals(5, loader.getGemCount(4, GemColor.GOLD));
+    }
+
+    @Test
+    /**
+     * Verifies that any player count greater than 4 is clamped to 4.
+     */
+    void clampsPlayerCountGreaterThanFour() {
+        ConfigLoader loader = new ConfigLoader("config-test.properties");
+
+        assertEquals(loader.getGemCount(4, GemColor.WHITE), loader.getGemCount(5, GemColor.WHITE));
+        assertEquals(loader.getGemCount(4, GemColor.BLUE), loader.getGemCount(5, GemColor.BLUE));
+        assertEquals(loader.getGemCount(4, GemColor.GREEN), loader.getGemCount(5, GemColor.GREEN));
+        assertEquals(loader.getGemCount(4, GemColor.RED), loader.getGemCount(5, GemColor.RED));
+        assertEquals(loader.getGemCount(4, GemColor.BLACK), loader.getGemCount(5, GemColor.BLACK));
+        assertEquals(loader.getGemCount(4, GemColor.GOLD), loader.getGemCount(5, GemColor.GOLD));
+    }
+
+    @Test
+    /**
+     * Verifies that a missing config resource triggers a runtime error.
+     */
+    void throwsWhenConfigMissing() {
+        assertThrows(RuntimeException.class, () -> new ConfigLoader("missing.properties"));
+    }
+}
