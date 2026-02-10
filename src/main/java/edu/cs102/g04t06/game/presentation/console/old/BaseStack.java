@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.view;
+package edu.cs102.g04t06.game.presentation.console.old;
 
 import javafx.scene.layout.StackPane;
 
@@ -6,7 +6,7 @@ import javafx.scene.layout.StackPane;
  * Base JavaFX view that provides a root {@link StackPane}.
  * Part of the {@code edu.cs102.g04t06} module.
  */
-public class DefaultView {
+public class BaseStack {
     /**
      * Root container for this view.
      */
@@ -15,7 +15,7 @@ public class DefaultView {
     /**
      * Constructs a view with an empty {@link StackPane} root.
      */
-    public DefaultView() {
+    public BaseStack() {
         this.root = new StackPane();
     }
     
