@@ -98,7 +98,7 @@ public class GemCollection {
     public GemCollection subtract(GemColor color, int amount) {
         int result = gems.getOrDefault(color, 0) - amount;
         if (result < 0) {
-            throw new IllegalArgumentException("Cannot have negative gems");
+            throw new IllegalArgumentException("Cannot have negative gems!");
         }
 
         Map<GemColor, Integer> temp = this.asMap();
