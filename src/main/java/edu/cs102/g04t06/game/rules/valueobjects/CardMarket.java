@@ -123,7 +123,8 @@ public class CardMarket {
     }
 
     /**
-     * Returns the top card in the deck with index 0, removes it from the main deck
+     * Removes the card from visible deck
+     * Checks if remaining deck is empty, and fills visible cards up to 4
      * 
      * @param level     the level of the deck which we are interested in
      * @param index     the index of the card in the deck which we are interested in
@@ -136,42 +137,10 @@ public class CardMarket {
             throw new IllegalArgumentException("Index not present in Visible Deck");
         }
         visible.remove(index);
-    }
 
-    /**
-     * Checks if Visible Market has 4 cards or if Deck is empty,
-     * Fills it up to 4 cards if it does not
-     * 
-     * @param level     the level of the deck which we are interested in
-     * @return void
-     */
-    public void refillMarket(int level) {
-        List<Card> visible = getVisibleCards(level);
-        while (this.getDeckSize(level) > 0 && visible.size() < 4) {
+        if (this.getDeckSize(level) > 0 && visible.size() < 4) {
             visible.add(this.drawCard(level));
         }
     }
 
-
-    public static void main(String[] args) {
-    // Create sample cards
-    List<Card> level1 = createSampleCards(10);  // helper method
-    List<Card> level2 = createSampleCards(10);
-    List<Card> level3 = createSampleCards(10);
-    
-    CardMarket market = new CardMarket(level1, level2, level3);
-    
-    System.out.println("Level 1 visible: " + market.getVisibleCards(1).size());  // 4
-    System.out.println("Level 1 deck: " + market.getDeckSize(1));  // 6
-    
-    // Draw card
-    Card drawn = market.drawCard(1);
-    System.out.println("After draw, deck size: " + market.getDeckSize(1));  // 5
-    
-    // Remove and refill
-    market.removeCard(1, 0);
-    System.out.println("After remove, visible: " + market.getVisibleCards(1).size());  // 3
-    market.refillMarket(1);
-    System.out.println("After refill, visible: " + market.getVisibleCards(1).size());  // 4
-}
 }
