@@ -4,12 +4,12 @@ import edu.cs102.g04t06.game.rules.entities.Card;
 import java.util.*;
 
 public class CardMarket {
-    private List<Card> level1Visible;
-    private List<Card> level1Deck;
-    private List<Card> level2Visible;
-    private List<Card> level2Deck;
-    private List<Card> level3Visible;
-    private List<Card> level3Deck;
+    private final List<Card> level1Visible;
+    private final List<Card> level1Deck;
+    private final List<Card> level2Visible;
+    private final List<Card> level2Deck;
+    private final List<Card> level3Visible;
+    private final List<Card> level3Deck;
 
     private List<Card> splitVisible(List<Card> cards) {
         return new ArrayList<>(cards.subList(0, 4));
