@@ -1,7 +1,8 @@
 package edu.cs102.g04t06.game.rules.entities;
 
 /**
- * Supported gem colors used throughout the game rules and configuration.
+ * Represents the different gem colors in the Splendor game.
+ * GOLD is a wild card gem obtained by reserving cards.
  */
 public enum GemColor {
     WHITE,
