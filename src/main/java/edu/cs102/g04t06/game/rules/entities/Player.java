@@ -140,6 +140,7 @@ public class Player {
      * 
      * @param gems gems to be added
      */
+
     public void deductGems(GemCollection gems){
         if(!this.gems.contains(gems)){
             throw new IllegalStateException(
