@@ -140,7 +140,7 @@ public class Player {
      * 
      * @param gems gems to be added
      */
-    public void dedeuctGems(GemCollection gems){
+    public void deductGems(GemCollection gems){
         if(!this.gems.contains(gems)){
             throw new IllegalStateException(
                 "There is not enough gems"
@@ -154,7 +154,7 @@ public class Player {
      * 
      * @param noble the noble to be claimed
      */
-    public void claimeNoble(Noble noble){
+    public void claimNoble(Noble noble){
         claimedNobles.add(noble);
     }
 }
