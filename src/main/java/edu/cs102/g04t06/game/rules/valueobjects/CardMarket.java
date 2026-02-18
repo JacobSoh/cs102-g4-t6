@@ -1,7 +1,10 @@
 package edu.cs102.g04t06.game.rules.valueobjects;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import edu.cs102.g04t06.game.rules.entities.Card;
-import java.util.*;
 
 public class CardMarket {
     private final List<Card> level1Visible;
@@ -12,6 +15,9 @@ public class CardMarket {
     private final List<Card> level3Deck;
 
     private List<Card> splitVisible(List<Card> cards) {
+        if (cards.size() < 20) {
+            throw new IllegalArgumentException("Deck size should be 20, 30 or 40!");
+        }
         return new ArrayList<>(cards.subList(0, 4));
     }
 
@@ -51,16 +57,12 @@ public class CardMarket {
         if (!(level <= 3 && level >= 1)) {
             throw new IllegalArgumentException("Deck Level can only be 1, 2 or 3!");
         }
-        switch(level) {
-            case 1:
-                return level1Visible;
-            case 2:
-                return level2Visible;
-            case 3:
-                return level3Visible;
-            default:
-                return null; // wont reach here, just adding for compiler
-        }
+        return switch (level) {
+            case 1 -> level1Visible;
+            case 2 -> level2Visible;
+            case 3 -> level3Visible;
+            default -> null;
+        }; // wont reach here, just adding for compiler
     }
 
     /**
@@ -68,11 +70,12 @@ public class CardMarket {
      * 
      * @param level     the level of the card we are interested in
      * @param index     the index of the card we are interested in
-     * @return the visible card, or null if no such card exists
+     * @return the visible card
+     * @throws IllegalArgumentException if index or level not within proper range
      */
     public Card getVisibleCard (int level, int index) {
-        if (this.getVisibleCards(level).size() <= index) {
-            return null;
+        if (this.getVisibleCards(level).size() <= index || index < 0) {
+            throw new IllegalArgumentException("Index of cards should be between 0 and 3!");
         }
         return this.getVisibleCards(level).get(index);
     }
@@ -87,16 +90,12 @@ public class CardMarket {
         if (!(level <= 3 && level >= 1)) {
             throw new IllegalArgumentException("Deck Level can only be 1, 2 or 3!");
         }
-        switch(level) {
-            case 1:
-                return level1Deck.size();
-            case 2:
-                return level2Deck.size();
-            case 3:
-                return level3Deck.size();
-            default:
-                return 0; // wont reach here, just adding for compiler
-        }
+        return switch (level) {
+            case 1 -> level1Deck.size();
+            case 2 -> level2Deck.size();
+            case 3 -> level3Deck.size();
+            default -> 0;
+        }; // wont reach here, just adding for compiler
     }
 
     /**
@@ -110,16 +109,12 @@ public class CardMarket {
         if (this.getDeckSize(level) <= 0) {
             throw new IllegalArgumentException("Deck size must be greater than zero for a draw!");
         }
-        switch(level) {
-            case 1:
-                return level1Deck.remove(0);
-            case 2:
-                return level2Deck.remove(0);
-            case 3:
-                return level3Deck.remove(0);
-            default:
-                return null; // wont reach here, just adding for compiler
-        }
+        return switch (level) {
+            case 1 -> level1Deck.remove(0);
+            case 2 -> level2Deck.remove(0);
+            case 3 -> level3Deck.remove(0);
+            default -> null;
+        }; // wont reach here, just adding for compiler
     }
 
     /**
@@ -141,6 +136,6 @@ public class CardMarket {
         if (this.getDeckSize(level) > 0 && visible.size() < 4) {
             visible.add(this.drawCard(level));
         }
+    
     }
-
 }
