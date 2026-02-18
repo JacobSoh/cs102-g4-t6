@@ -117,16 +117,23 @@ public class GemCollection {
      * @throws IllegalArgumentException if any resulting count is negative
      */
     public GemCollection subtract(GemCollection other) {
-        if (!(this.contains(other))) {
+        if (!this.contains(other)) {
             throw new IllegalArgumentException("Cannot have negative gems");
         }
-
-        GemCollection temp = new GemCollection();
+        
+        Map<GemColor, Integer> result = new EnumMap<>(GemColor.class);
+        
         for (GemColor color : GemColor.values()) {
-            temp = temp.subtract(color, other.getCount(color));
+            int current = this.getCount(color);
+            int toSubtract = other.getCount(color);
+            int newAmount = current - toSubtract;
+            
+            if (newAmount > 0) {
+                result.put(color, newAmount);
+            }
         }
-
-        return temp;
+        
+        return new GemCollection(result);
     }
 
     /**
