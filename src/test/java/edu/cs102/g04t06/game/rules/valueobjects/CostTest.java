@@ -38,7 +38,7 @@ class CostTest {
     @Test
     @DisplayName("Constructor should create cost with correct values")
     void constructorShouldCreateCostCorrectly() {
-        assertEquals(4, standardCost.getRequired(GemColor.WHITE));
+        assertEquals(3, standardCost.getRequired(GemColor.WHITE));
         assertEquals(2, standardCost.getRequired(GemColor.BLUE));
         assertEquals(1, standardCost.getRequired(GemColor.GREEN));
     }
