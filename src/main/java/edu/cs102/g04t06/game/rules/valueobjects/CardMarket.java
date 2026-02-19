@@ -6,6 +6,9 @@ import java.util.List;
 
 import edu.cs102.g04t06.game.rules.entities.Card;
 
+/**
+ * Represents the visible cards and hidden decks for each development-card level.
+ */
 public class CardMarket {
     private final List<Card> level1Visible;
     private final List<Card> level1Deck;
@@ -123,7 +126,6 @@ public class CardMarket {
      * 
      * @param level     the level of the deck which we are interested in
      * @param index     the index of the card in the deck which we are interested in
-     * @return void
      * @throws IllegalArgumentException if deck size is less than or equals to zero
      */
     public void removeCard (int level, int index) {
