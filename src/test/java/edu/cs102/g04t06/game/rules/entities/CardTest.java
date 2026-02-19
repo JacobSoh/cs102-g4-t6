@@ -14,7 +14,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for Card entity.
  * 
+ * @author CS102 Team G6
+ * @version 1.0
  */
+
 @DisplayName("Card Tests")
 class CardTest {
     

@@ -12,7 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for Noble entity.
  * 
+ * @author CS102 Team G6
+ * @version 1.0
  */
+
 @DisplayName("Noble Tests")
 class NobleTest {
     
