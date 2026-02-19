@@ -101,7 +101,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.12.0</version>
                 <configuration>
-                    <release>11</release>
+                    <release>${maven.compiler.source}</release>
                     <legacyMode>true</legacyMode>
                     <disableSourcepathUsage>true</disableSourcepathUsage>
                     <outputDirectory>${project.build.directory}/site/apidocs</outputDirectory>

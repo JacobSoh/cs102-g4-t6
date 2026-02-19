@@ -5,6 +5,9 @@ import java.util.*;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 
+/**
+ * Represents a player and the state they own during a game.
+ */
 public class Player {
 
     // attributes
@@ -15,7 +18,12 @@ public class Player {
     private GemCollection gems;
     private final List<Noble> claimedNobles;
 
-    //constructor
+    /**
+     * Creates a player with empty cards, gems, and nobles.
+     *
+     * @param name player display name
+     * @param turnOrder zero-based play order
+     */
     public Player(String name, int turnOrder){      
         this.name = name;
         this.turnOrder = turnOrder;
@@ -25,31 +33,65 @@ public class Player {
         this.claimedNobles = new ArrayList<>();
     }
 
-    //getters
+    /**
+     * Returns the player's display name.
+     *
+     * @return player name
+     */
     public String getName(){
         return name;
     }
 
+    /**
+     * Returns the player's turn order.
+     *
+     * @return zero-based turn order
+     */
     public int getTurnOrder(){
         return turnOrder;
     }
 
+    /**
+     * Returns purchased development cards.
+     *
+     * @return list of purchased cards
+     */
     public List<Card>getPurchasedCards(){
         return purchasedCards;
     }
 
+    /**
+     * Returns currently reserved cards.
+     *
+     * @return list of reserved cards
+     */
     public List<Card>getReservedCards(){
         return reservedCards;
     }
 
+    /**
+     * Returns the player's current gem collection.
+     *
+     * @return gem collection
+     */
     public GemCollection getGems(){
         return gems;
     }
 
+    /**
+     * Returns nobles already claimed by this player.
+     *
+     * @return list of claimed nobles
+     */
     public List<Noble> getClaimedNobles(){
         return claimedNobles;
     }
 
+    /**
+     * Returns total gems currently held.
+     *
+     * @return total gem count
+     */
     public int getGemCount(){
         return gems.getTotalCount();
     }
@@ -57,6 +99,7 @@ public class Player {
     /**
      * retutn the total points for this player
      * summing all points from the cards and noble
+     * @return total prestige points from cards and nobles
      */
     public int getPoints(){
         int total = 0;
@@ -74,7 +117,7 @@ public class Player {
     * One card give one bonus gem of its bonus color.
     * (the gem discount when owning one card)
     *
-    * @return a map of <GemColor,bonus count>
+    * @return a map of {@code GemColor -> bonus count}
     */
     public Map<GemColor, Integer> calculateBonuses(){
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
@@ -104,7 +147,7 @@ public class Player {
      * player can hold maxmimum of 3 cards
      * 
      * @param card the card to be reserved 
-     * @throws IllgalStateException when the player already have 3 reserved cards
+     * @throws IllegalStateException when the player already has 3 reserved cards
      */
     public void addReservedCard(Card card){
         if(reservedCards.size() >= 3){
