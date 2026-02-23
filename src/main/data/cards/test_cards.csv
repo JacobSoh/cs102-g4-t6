@@ -1,0 +1,6 @@
+Level,Color,PV,Black,Blue,Green,Red,White
+1,BLACK,0,0,1,1,1,1
+1,BLUE,0,1,0,1,1,1
+2,GREEN,2,2,0,0,3,0
+2,RED,1,0,0,2,0,2
+3,WHITE,5,3,3,3,0,0
