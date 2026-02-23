@@ -30,10 +30,10 @@ public class ConfigLoaderTest {
 
         // Testing the base rules
         assertEquals(15, loader.getWinningPoints());
-        assertEquals(3, loader.getMaxReservedCards(2, GemColor.WHITE));
-        assertEquals(10, loader.getMaxGemsPerPlayer(2, GemColor.WHITE));
-        assertEquals(3, loader.getMaxReservedCards(4, GemColor.BLACK));
-        assertEquals(10, loader.getMaxGemsPerPlayer(4, GemColor.BLACK));
+        assertEquals(3, loader.getMaxReservedCards());
+        assertEquals(10, loader.getMaxGemsPerPlayer());
+        assertEquals(3, loader.getMaxReservedCards());
+        assertEquals(10, loader.getMaxGemsPerPlayer());
 
         HashMap<String, String> dataPaths = loader.getDataFilePath();
         assertEquals("data/splendor_card.xlsx", dataPaths.get("card"));

@@ -72,22 +72,18 @@ public class ConfigLoader {
     /**
      * Returns the maximum number of reserved cards allowed.
      *
-     * @param playerCount unused (kept for API consistency)
-     * @param color unused (kept for API consistency)
      * @return maximum number of cards a player may reserve
      */
-    public int getMaxReservedCards(int playerCount, GemColor color) {
+    public int getMaxReservedCards() {
         return Integer.parseInt(this.properties.getProperty("game.maxReservedCards"));
     }
 
     /**
      * Returns the maximum number of gems a player may hold.
      *
-     * @param playerCount unused (kept for API consistency)
-     * @param color unused (kept for API consistency)
      * @return maximum number of gems a player may hold
      */
-    public int getMaxGemsPerPlayer(int playerCount, GemColor color) {
+    public int getMaxGemsPerPlayer() {
         return Integer.parseInt(this.properties.getProperty("game.maxGemsPerPlayer"));
     }
 
