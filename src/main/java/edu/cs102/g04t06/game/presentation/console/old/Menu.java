@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.view;
+package edu.cs102.g04t06.game.presentation.console.old;
 
 import edu.cs102.g04t06.App;
 import javafx.scene.control.Button;
@@ -8,7 +8,7 @@ import javafx.scene.image.ImageView;
  * Main menu view for the application.
  * Part of the {@code edu.cs102.g04t06} module.
  */
-public class MenuView extends DefaultView {
+public class Menu extends BaseStack {
     private final String bgImgURL = "/images/menuImg.png";
 
     /**
@@ -16,7 +16,7 @@ public class MenuView extends DefaultView {
      *
      * @param application the main application for navigation callbacks
      */
-    public MenuView(App application) {
+    public Menu(App application) {
         // Calling image
         ImageView bg = new ImageView(
             getClass().getResource(this.bgImgURL).toExternalForm()
