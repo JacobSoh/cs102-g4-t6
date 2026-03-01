@@ -87,6 +87,28 @@ public class GemCollection {
     }
 
     /**
+     * Add all gem counts of another GemCollection from this one. Returns
+     * a new GemCollection with the resulting counts.
+     *
+     * @param other the GemCollection to subtract
+     * @return a new GemCollection with the reduced gems
+     */
+    public GemCollection add(GemCollection other) {
+        
+        Map<GemColor, Integer> result = new EnumMap<>(GemColor.class);
+        
+        for (GemColor color : GemColor.values()) {
+            int current = this.getCount(color);
+            int toAdd = other.getCount(color);
+            int newAmount = current + toAdd;
+            
+            result.put(color, newAmount);
+        }
+        
+        return new GemCollection(result);
+    }
+
+    /**
      * Subtract a specified amount of a gem colour to this collection Returns a
      * new GemCollection with the updated count
      *
