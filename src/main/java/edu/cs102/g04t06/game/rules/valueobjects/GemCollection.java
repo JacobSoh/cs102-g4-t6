@@ -90,8 +90,8 @@ public class GemCollection {
      * Add all gem counts of another GemCollection from this one. Returns
      * a new GemCollection with the resulting counts.
      *
-     * @param other the GemCollection to subtract
-     * @return a new GemCollection with the reduced gems
+     * @param other the GemCollection to add
+     * @return a new GemCollection with the added gems
      */
     public GemCollection add(GemCollection other) {
         
