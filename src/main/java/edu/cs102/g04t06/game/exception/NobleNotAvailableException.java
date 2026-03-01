@@ -5,7 +5,7 @@ import edu.cs102.g04t06.game.rules.entities.Noble;
 /**
  * thrown when a requested noble cannot be selected from the current game state.
  */
-public class NobleNotAvailableException extends Exception {
+public class NobleNotAvailableException extends InvalidMoveException {
 
     /**
      * creates an exception with a default message.
