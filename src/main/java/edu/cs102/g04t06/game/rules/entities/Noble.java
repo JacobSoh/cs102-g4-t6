@@ -2,6 +2,7 @@ package edu.cs102.g04t06.game.rules.entities;
 
 import java.util.Map; // Map refers to the concept of a dictionary -> with Key and Value pairs 
 import java.util.HashMap; // the specific dictionary we are using  
+import java.util.Objects;
 
 /**
  * represents an immutable Noble card 
@@ -58,5 +59,29 @@ public class Noble {
             }
         }
         return true;
+    }
+
+    /**
+     * computes a hash code consistent with {@link #equals(Object)}.
+     * two nobles that have the same points and requirements produce the same hash.
+     * @return a hash code based on points and requirements
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.points, this.requirements);
+    }
+
+    /**
+     * compares this noble with another object for logical equality.
+     * two nobles are equal when both their points and requirements are equal.
+     * @param o the object to compare with this noble
+     * @return true if the given object is a noble with equal points and requirements, false otherwise
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Noble)) return false;
+        Noble n = (Noble) o;
+        return this.points == n.points && this.requirements.equals(n.requirements);
     }
 }
