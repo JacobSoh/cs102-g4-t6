@@ -1,7 +1,8 @@
 package edu.cs102.g04t06;
 
+import edu.cs102.g04t06.game.presentation.console.ConsoleUI;
+import edu.cs102.g04t06.game.presentation.console.OnBoardingUI;
 import edu.cs102.g04t06.game.presentation.console.old.Game;
-import edu.cs102.g04t06.game.presentation.console.old.Menu;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -49,26 +50,10 @@ public class App extends Application {
         StackPane root = new StackPane();
         this.scene = new Scene(root);
 
-        stage.setScene(scene);
+        stage.setScene(this.scene);
         stage.show();
 
-        showMenu();
-    }
-
-    /**
-     * Replaces the scene root with the menu view.
-     */
-    public void showMenu() {
-        StackPane newRoot = new Menu(this).getRoot();
-        this.scene.setRoot(newRoot);
-    }
-
-    /**
-     * Replaces the scene root with the game view.
-     */
-    public void showGame() {
-        StackPane newRoot = new Game(this).getRoot();
-        this.scene.setRoot(newRoot);
+        ConsoleUI.showOnBoarding(this.scene, this);
     }
 
     /**
