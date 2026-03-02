@@ -2,6 +2,7 @@ package edu.cs102.g04t06.game.presentation.console;
 
 import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
+import edu.cs102.g04t06.game.presentation.console.layout.StylingSheet;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -23,23 +24,8 @@ import javafx.scene.text.FontWeight;
  *
  * command to run: mvn clean javafx:run
  */
-public class LobbyUI extends BaseStack {
+public class LobbyUI extends BaseStack implements StylingSheet {
 
-    // ── Styling constants ──────────────────────────────────────────────────
-    private static final String CARD_BG       = "#1e1e1e";
-    private static final String CARD_BORDER   = "#2a2a2a";
-    private static final String HIGHLIGHT_CLR = "#8b5cf6";   // purple
-    private static final String TEXT_COLOR    = "#e0e0e0";
-    private static final String BTN_BG        = "#f0f0f0";
-    private static final String BTN_TEXT      = "#1a1a1a";
-
-    private static final String BG_IMAGE_URL  = "/images/menuImg.jpeg";
-    private static final double BG_OPACITY    = 0.30;
-
-    private static final int  SLOT_COUNT      = 4;
-    private static final int  CARD_HEIGHT     = 110;
-    private static final int  CARD_RADIUS     = 12;
-    private static final int  CARD_SPACING    = 18;
 
     /** Which slot is currently highlighted (0-based). -1 = none. */
     private int selectedSlot = -1;
