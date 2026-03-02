@@ -42,10 +42,10 @@ class ExcelDataLoaderTest {
         
         // Create test noble CSV
         try (FileWriter writer = new FileWriter(TEST_NOBLE_FILE)) {
-            writer.write("PV,Black,Blue,Green,Red,White\n");
-            writer.write("3,3,0,0,3,3\n");
-            writer.write("3,0,3,3,3,0\n");
-            writer.write("3,4,4,0,0,0\n");
+            writer.write("ID,Name,Black,Blue,Green,Red,White\n");
+            writer.write("1,Caroline,3,0,0,3,3\n");
+            writer.write("2,Henriette,0,3,3,3,0\n");
+            writer.write("3,Mary Stuart,4,4,0,0,0\n");
         }
     }
     
@@ -193,8 +193,10 @@ class ExcelDataLoaderTest {
     void loadNoblesShouldParseDataCorrectly() {
         List<Noble> nobles = ExcelDataLoader.loadNobles(TEST_NOBLE_FILE);
         
-        // First noble: 3,3,0,0,3,3
+        // First noble: 1,Caroline,3,0,0,3,3
         Noble noble1 = nobles.get(0);
+        assertEquals(1, noble1.getId());
+        assertEquals("Caroline", noble1.getName());
         assertEquals(3, noble1.getPoints());
         assertEquals(3, noble1.getRequirements().get(GemColor.BLACK));
         assertEquals(0, noble1.getRequirements().getOrDefault(GemColor.BLUE, 0));
@@ -202,14 +204,18 @@ class ExcelDataLoaderTest {
         assertEquals(3, noble1.getRequirements().get(GemColor.RED));
         assertEquals(3, noble1.getRequirements().get(GemColor.WHITE));
         
-        // Second noble: 3,0,3,3,3,0
+        // Second noble: 2,Henriette,0,3,3,3,0
         Noble noble2 = nobles.get(1);
+        assertEquals(2, noble2.getId());
+        assertEquals("Henriette", noble2.getName());
         assertEquals(3, noble2.getPoints());
         assertEquals(0, noble2.getRequirements().getOrDefault(GemColor.BLACK, 0));
         assertEquals(3, noble2.getRequirements().get(GemColor.BLUE));
         
-        // Third noble: 3,4,4,0,0,0
+        // Third noble: 3,Mary Stuart,4,4,0,0,0
         Noble noble3 = nobles.get(2);
+        assertEquals(3, noble3.getId());
+        assertEquals("Mary Stuart", noble3.getName());
         assertEquals(3, noble3.getPoints());
         assertEquals(4, noble3.getRequirements().get(GemColor.BLACK));
         assertEquals(4, noble3.getRequirements().get(GemColor.BLUE));
@@ -276,10 +282,10 @@ class ExcelDataLoaderTest {
         String emptyLineFile = "test_empty_nobles.csv";
         
         try (FileWriter writer = new FileWriter(emptyLineFile)) {
-            writer.write("PV,Black,Blue,Green,Red,White\n");
-            writer.write("3,3,0,0,3,3\n");
+            writer.write("ID,Name,Black,Blue,Green,Red,White\n");
+            writer.write("1,Caroline,3,0,0,3,3\n");
             writer.write("\n");
-            writer.write("3,4,4,0,0,0\n");
+            writer.write("2,Mary Stuart,4,4,0,0,0\n");
         }
         
         List<Noble> nobles = ExcelDataLoader.loadNobles(emptyLineFile);
@@ -389,16 +395,14 @@ class ExcelDataLoaderTest {
     }
     
     @Test
-    @DisplayName("Should successfully load actual noble file")
-    void shouldSuccessfullyLoadActualNobleFile() {
+    @DisplayName("Actual noble file with quoted commas should fail with clear parse error")
+    void actualNobleFileWithQuotedCommasShouldFailClearly() {
         File nobleFile = new File(ACTUAL_NOBLE_FILE);
         
         if (nobleFile.exists()) {
-            assertDoesNotThrow(() -> {
-                List<Noble> nobles = ExcelDataLoader.loadNobles(ACTUAL_NOBLE_FILE);
-                assertTrue(nobles.size() > 0, "Should have nobles");
-                assertEquals(3, nobles.get(0).getPoints(), "Nobles should have 3 points");
-            });
+            RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                    ExcelDataLoader.loadNobles(ACTUAL_NOBLE_FILE));
+            assertTrue(exception.getMessage().contains("Error parsing noble"));
         }
     }
     

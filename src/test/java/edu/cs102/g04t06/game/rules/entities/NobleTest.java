@@ -27,7 +27,7 @@ class NobleTest {
         standardRequirements.put(GemColor.BLUE, 3);
         standardRequirements.put(GemColor.GREEN, 3);
         
-        standardNoble = new Noble(3, standardRequirements);
+        standardNoble = new Noble(3, "Test Noble", standardRequirements);
     }
     
     // ==================== Constructor Tests ====================
@@ -55,7 +55,7 @@ class NobleTest {
         original.put(GemColor.WHITE, 4);
         original.put(GemColor.BLUE, 4);
         
-        Noble noble = new Noble(3, original);
+        Noble noble = new Noble(3, "Test Noble", original);
         
         // Modify original map
         original.put(GemColor.WHITE, 999);
@@ -70,7 +70,7 @@ class NobleTest {
     @DisplayName("Constructor should handle empty requirements")
     void constructorShouldHandleEmptyRequirements() {
         Map<GemColor, Integer> emptyReq = new EnumMap<>(GemColor.class);
-        Noble noble = new Noble(3, emptyReq);
+        Noble noble = new Noble(3, "Test Noble", emptyReq);
         
         assertNotNull(noble.getRequirements());
         assertTrue(noble.getRequirements().isEmpty());
@@ -85,20 +85,20 @@ class NobleTest {
     }
     
     @Test
-    @DisplayName("getPoints should handle different point values")
-    void getPointsShouldHandleDifferentValues() {
-        Noble noble1 = new Noble(3, standardRequirements);
-        Noble noble2 = new Noble(5, standardRequirements);
+    @DisplayName("getPoints should always return 3 regardless of constructor id")
+    void getPointsShouldAlwaysReturnThree() {
+        Noble noble1 = new Noble(3, "Test Noble", standardRequirements);
+        Noble noble2 = new Noble(5, "Test Noble", standardRequirements);
         
         assertEquals(3, noble1.getPoints());
-        assertEquals(5, noble2.getPoints());
+        assertEquals(3, noble2.getPoints());
     }
     
     @Test
-    @DisplayName("getPoints should handle zero points (edge case)")
-    void getPointsShouldHandleZeroPoints() {
-        Noble noble = new Noble(0, standardRequirements);
-        assertEquals(0, noble.getPoints());
+    @DisplayName("getPoints should remain 3 even with id zero")
+    void getPointsShouldRemainThreeWithZeroId() {
+        Noble noble = new Noble(0, "Test Noble", standardRequirements);
+        assertEquals(3, noble.getPoints());
     }
     
     // ==================== getRequirements() Tests ====================
@@ -205,7 +205,7 @@ class NobleTest {
     void canBeClaimedShouldHandleSingleColorRequirement() {
         Map<GemColor, Integer> singleReq = new EnumMap<>(GemColor.class);
         singleReq.put(GemColor.WHITE, 4);
-        Noble noble = new Noble(3, singleReq);
+        Noble noble = new Noble(3, "Test Noble", singleReq);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 4);
@@ -222,7 +222,7 @@ class NobleTest {
         allColorsReq.put(GemColor.GREEN, 2);
         allColorsReq.put(GemColor.RED, 2);
         allColorsReq.put(GemColor.BLACK, 2);
-        Noble noble = new Noble(5, allColorsReq);
+        Noble noble = new Noble(5, "Test Noble", allColorsReq);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 2);
@@ -243,7 +243,7 @@ class NobleTest {
         allColorsReq.put(GemColor.GREEN, 2);
         allColorsReq.put(GemColor.RED, 2);
         allColorsReq.put(GemColor.BLACK, 2);
-        Noble noble = new Noble(5, allColorsReq);
+        Noble noble = new Noble(5, "Test Noble", allColorsReq);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 2);
@@ -290,7 +290,7 @@ class NobleTest {
         req.put(GemColor.BLUE, 3);
         req.put(GemColor.GREEN, 3);
         
-        Noble noble = new Noble(3, req);
+        Noble noble = new Noble(3, "Test Noble", req);
         
         assertEquals(3, noble.getPoints());
         assertEquals(3, noble.getRequirements().get(GemColor.WHITE));
@@ -305,7 +305,7 @@ class NobleTest {
         req.put(GemColor.RED, 4);
         req.put(GemColor.BLACK, 4);
         
-        Noble noble = new Noble(3, req);
+        Noble noble = new Noble(3, "Test Noble", req);
         
         assertEquals(3, noble.getPoints());
         assertEquals(4, noble.getRequirements().get(GemColor.RED));
@@ -320,65 +320,65 @@ class NobleTest {
         req1.put(GemColor.WHITE, 3);
         req1.put(GemColor.BLUE, 3);
         req1.put(GemColor.GREEN, 3);
-        Noble noble1 = new Noble(3, req1);
+        Noble noble1 = new Noble(3, "Test Noble", req1);
         
         // Noble 2: 3B, 3G, 3R
         Map<GemColor, Integer> req2 = new EnumMap<>(GemColor.class);
         req2.put(GemColor.BLUE, 3);
         req2.put(GemColor.GREEN, 3);
         req2.put(GemColor.RED, 3);
-        Noble noble2 = new Noble(3, req2);
+        Noble noble2 = new Noble(3, "Test Noble", req2);
         
         // Noble 3: 3W, 3G, 3K
         Map<GemColor, Integer> req3 = new EnumMap<>(GemColor.class);
         req3.put(GemColor.WHITE, 3);
         req3.put(GemColor.GREEN, 3);
         req3.put(GemColor.BLACK, 3);
-        Noble noble3 = new Noble(3, req3);
+        Noble noble3 = new Noble(3, "Test Noble", req3);
         
         // Noble 4: 3W, 3B, 3K
         Map<GemColor, Integer> req4 = new EnumMap<>(GemColor.class);
         req4.put(GemColor.WHITE, 3);
         req4.put(GemColor.BLUE, 3);
         req4.put(GemColor.BLACK, 3);
-        Noble noble4 = new Noble(3, req4);
+        Noble noble4 = new Noble(3, "Test Noble", req4);
         
         // Noble 5: 3B, 3R, 3K
         Map<GemColor, Integer> req5 = new EnumMap<>(GemColor.class);
         req5.put(GemColor.BLUE, 3);
         req5.put(GemColor.RED, 3);
         req5.put(GemColor.BLACK, 3);
-        Noble noble5 = new Noble(3, req5);
+        Noble noble5 = new Noble(3, "Test Noble", req5);
         
         // Noble 6: 4W, 4B
         Map<GemColor, Integer> req6 = new EnumMap<>(GemColor.class);
         req6.put(GemColor.WHITE, 4);
         req6.put(GemColor.BLUE, 4);
-        Noble noble6 = new Noble(3, req6);
+        Noble noble6 = new Noble(3, "Test Noble", req6);
         
         // Noble 7: 4G, 4R
         Map<GemColor, Integer> req7 = new EnumMap<>(GemColor.class);
         req7.put(GemColor.GREEN, 4);
         req7.put(GemColor.RED, 4);
-        Noble noble7 = new Noble(3, req7);
+        Noble noble7 = new Noble(3, "Test Noble", req7);
         
         // Noble 8: 4W, 4K
         Map<GemColor, Integer> req8 = new EnumMap<>(GemColor.class);
         req8.put(GemColor.WHITE, 4);
         req8.put(GemColor.BLACK, 4);
-        Noble noble8 = new Noble(3, req8);
+        Noble noble8 = new Noble(3, "Test Noble", req8);
         
         // Noble 9: 4B, 4K
         Map<GemColor, Integer> req9 = new EnumMap<>(GemColor.class);
         req9.put(GemColor.BLUE, 4);
         req9.put(GemColor.BLACK, 4);
-        Noble noble9 = new Noble(3, req9);
+        Noble noble9 = new Noble(3, "Test Noble", req9);
         
         // Noble 10: 4G, 4W
         Map<GemColor, Integer> req10 = new EnumMap<>(GemColor.class);
         req10.put(GemColor.GREEN, 4);
         req10.put(GemColor.WHITE, 4);
-        Noble noble10 = new Noble(3, req10);
+        Noble noble10 = new Noble(3, "Test Noble", req10);
         
         // All should be valid
         assertNotNull(noble1);
@@ -404,7 +404,7 @@ class NobleTest {
     @DisplayName("Should handle noble with zero requirements (edge case)")
     void shouldHandleNobleWithZeroRequirements() {
         Map<GemColor, Integer> emptyReq = new EnumMap<>(GemColor.class);
-        Noble noble = new Noble(3, emptyReq);
+        Noble noble = new Noble(3, "Test Noble", emptyReq);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 5);
@@ -419,7 +419,7 @@ class NobleTest {
         Map<GemColor, Integer> highReq = new EnumMap<>(GemColor.class);
         highReq.put(GemColor.WHITE, 10);
         highReq.put(GemColor.BLUE, 10);
-        Noble noble = new Noble(5, highReq);
+        Noble noble = new Noble(5, "Test Noble", highReq);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 10);
@@ -433,7 +433,7 @@ class NobleTest {
     void shouldHandleNobleWithSingleBonusOfOne() {
         Map<GemColor, Integer> req = new EnumMap<>(GemColor.class);
         req.put(GemColor.RED, 1);
-        Noble noble = new Noble(3, req);
+        Noble noble = new Noble(3, "Test Noble", req);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.RED, 1);
@@ -448,7 +448,7 @@ class NobleTest {
     void canBeClaimedShouldHandleExactBoundary() {
         Map<GemColor, Integer> req = new EnumMap<>(GemColor.class);
         req.put(GemColor.WHITE, 5);
-        Noble noble = new Noble(3, req);
+        Noble noble = new Noble(3, "Test Noble", req);
         
         // Exactly at boundary
         Map<GemColor, Integer> exactBonuses = new EnumMap<>(GemColor.class);
@@ -471,8 +471,8 @@ class NobleTest {
     @Test
     @DisplayName("Should handle multiple nobles with same requirements")
     void shouldHandleMultipleNoblesWithSameRequirements() {
-        Noble noble1 = new Noble(3, standardRequirements);
-        Noble noble2 = new Noble(3, standardRequirements);
+        Noble noble1 = new Noble(3, "Test Noble", standardRequirements);
+        Noble noble2 = new Noble(3, "Test Noble", standardRequirements);
         
         // Different objects
         assertNotSame(noble1, noble2);
@@ -494,8 +494,8 @@ class NobleTest {
         req2.put(GemColor.WHITE, 4);
         req2.put(GemColor.BLUE, 4);
         
-        Noble noble1 = new Noble(3, req1);
-        Noble noble2 = new Noble(3, req2);
+        Noble noble1 = new Noble(3, "Test Noble", req1);
+        Noble noble2 = new Noble(3, "Test Noble", req2);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 3);
@@ -526,11 +526,11 @@ class NobleTest {
     void canBeClaimedShouldWorkWithDifferentInstances() {
         Map<GemColor, Integer> req1 = new EnumMap<>(GemColor.class);
         req1.put(GemColor.WHITE, 3);
-        Noble noble1 = new Noble(3, req1);
+        Noble noble1 = new Noble(3, "Test Noble", req1);
         
         Map<GemColor, Integer> req2 = new EnumMap<>(GemColor.class);
         req2.put(GemColor.BLUE, 4);
-        Noble noble2 = new Noble(3, req2);
+        Noble noble2 = new Noble(3, "Test Noble", req2);
         
         Map<GemColor, Integer> bonuses = new EnumMap<>(GemColor.class);
         bonuses.put(GemColor.WHITE, 3);
