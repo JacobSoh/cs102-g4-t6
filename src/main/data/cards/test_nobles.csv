@@ -1,4 +1,4 @@
-PV,Black,Blue,Green,Red,White
-3,3,0,0,3,3
-3,0,3,3,3,0
-3,4,4,0,0,0
+ID,Name,Black,Blue,Green,Red,White
+1,Caroline,3,0,0,3,3
+2,Henriette,0,3,3,3,0
+3,Mary Stuart,4,4,0,0,0
