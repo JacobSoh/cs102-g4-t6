@@ -1,170 +1,80 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import edu.cs102.g04t06.App;
+import edu.cs102.g04t06.game.presentation.console.gamesubcomponents.*;
 import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.geometry.VPos;
-import javafx.scene.control.Label;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.TilePane;
+import javafx.scene.layout.VBox;
 
 /**
- * Main menu view for the application. Part of the {@code edu.cs102.g04t06}
- * module.
+ * Main game view container.
  */
 public class GameUI extends BaseStack {
 
     private static final String BG_IMAGE_URL = "/images/gameImg.jpg";
-    private static final double SIDE_COLUMN_PERCENT = 25;
-    private static final double CENTER_COLUMN_PERCENT = 50;
-    private static final double CARD_SECTION_PERCENT = 75;
-    private static final double GEM_SECTION_PERCENT = 15;
-    private static final double ACTION_SECTION_PERCENT = 10;
-    private static final double CARD_WIDTH = 120;
-    private static final double CARD_HEIGHT = 170;
-    private static final double MARKET_GAP = 16;
-    private static final Insets MARKET_PADDING = new Insets(18, 0, 12, 0);
+    private static final boolean DEBUG_LAYOUT = true;
+
+    // Foreground cutoffs
+    private static final double PLAYER_COL_RATIO = 0.20;
+    private static final double MARKET_COL_RATIO = 0.60;
+
+    // Marketground cutoffs
+    private static final double CARD_SECTION_RATIO = 0.75;
+    private static final double GEM_SECTION_RATIO = 0.15;
+    private static final double ACTION_SECTION_RATIO = 0.10;
 
     /**
-     * Creates the menu UI and wires the start action.
+     * Creates the game UI.
      *
      * @param application the main application for navigation callbacks
      */
     public GameUI(App application) {
         super(BG_IMAGE_URL, application);
-        GridPane mainLayout = createMainlayout();
-        GridPane marketLayout = createMarketLayout();
-        GridPane cardLayout = createCardLayout();
-        GridPane gemLayout = createGemLayout();
-        Label marketActionLayout = createMarketActionLayout();
-
-        marketLayout.add(cardLayout, 0, 0);
-        marketLayout.add(gemLayout, 0, 1);
-        marketLayout.add(marketActionLayout, 0, 2);
-        GridPane.setValignment(cardLayout, VPos.TOP);
-        GridPane.setValignment(gemLayout, VPos.CENTER);
-        GridPane.setValignment(marketActionLayout, VPos.CENTER);
-
-        mainLayout.add(marketLayout, 1, 0);
-
-        this.root.getChildren().add(mainLayout);
+        this.root.getChildren().add(createForegroundLayout());
     }
 
-    private GridPane createMainlayout() {
-        GridPane gridPane = new GridPane();
-        gridPane.prefWidthProperty().bind(this.root.widthProperty());
-        gridPane.prefHeightProperty().bind(this.root.heightProperty());
+    private HBox createForegroundLayout() {
+        HBox foreground = new HBox();
 
-        // Left column (25%)
-        ColumnConstraints col25 = new ColumnConstraints();
-        col25.setPercentWidth(SIDE_COLUMN_PERCENT);
+        VBox leftPlayerCol = new PlayerAndMarketColumn(foreground, PLAYER_COL_RATIO, false).getRoot();
+        VBox marketCol = new PlayerAndMarketColumn(foreground, MARKET_COL_RATIO, true).getRoot();
+        VBox rightPlayerCol = new PlayerAndMarketColumn(foreground, PLAYER_COL_RATIO, false).getRoot();
 
-        // Center column (50%)
-        ColumnConstraints col50 = new ColumnConstraints();
-        col50.setPercentWidth(CENTER_COLUMN_PERCENT);
-        col50.setFillWidth(true);
+        applyDebugStyle(leftPlayerCol, "rgba(255,0,0,0.08)", "red");
+        applyDebugStyle(rightPlayerCol, "rgba(0,0,255,0.08)", "dodgerblue");
 
-        // Right column (25%)
-        ColumnConstraints col25Right = new ColumnConstraints();
-        col25Right.setPercentWidth(SIDE_COLUMN_PERCENT);
+        marketCol.getChildren().add(createMarketLayout());
 
-        RowConstraints row = new RowConstraints();
-        row.setPercentHeight(100);
-
-        gridPane.getRowConstraints().add(row);
-        gridPane.getColumnConstraints().addAll(col25, col50, col25Right);
-
-        return gridPane;
+        foreground.getChildren().addAll(leftPlayerCol, marketCol, rightPlayerCol);
+        return foreground;
     }
 
-    private GridPane createMarketLayout() {
-        GridPane gridPane = new GridPane();
-        gridPane.setAlignment(Pos.TOP_CENTER);
-        gridPane.setPadding(MARKET_PADDING);
-        gridPane.setHgap(MARKET_GAP);
-        gridPane.setVgap(MARKET_GAP);
-        gridPane.setMaxWidth(Double.MAX_VALUE);
-        gridPane.setMaxHeight(Double.MAX_VALUE);
+    private VBox createMarketLayout() {
+        VBox marketColumn = new VBox();
 
-        // Card section (75%)
-        RowConstraints row65 = new RowConstraints();
-        row65.setPercentHeight(CARD_SECTION_PERCENT);
+        TilePane cardSection = new CardRow(marketColumn, CARD_SECTION_RATIO, true).getRoot();
+        HBox gemSection = new TokenAndActionsRow(marketColumn, GEM_SECTION_RATIO, false).getRoot();
+        HBox actionSection = new TokenAndActionsRow(marketColumn, ACTION_SECTION_RATIO, false).getRoot();
 
-        // Gem section (15%)
-        RowConstraints row15 = new RowConstraints();
-        row15.setPercentHeight(GEM_SECTION_PERCENT);
+        applyDebugStyle(marketColumn, "rgba(0,255,0,0.04)", "lime");
+        applyDebugStyle(cardSection, "rgba(255,255,0,0.10)", "gold");
+        applyDebugStyle(gemSection, "rgba(255,0,255,0.10)", "magenta");
+        applyDebugStyle(actionSection, "rgba(0,255,255,0.10)", "cyan");
 
-        // Action section (10%)
-        RowConstraints row20 = new RowConstraints();
-        row20.setPercentHeight(ACTION_SECTION_PERCENT);
-
-        gridPane.getRowConstraints().addAll(row65, row15, row20);
-
-        return gridPane;
+        marketColumn.getChildren().addAll(cardSection, gemSection, actionSection);
+        return marketColumn;
     }
 
-    private GridPane createCardLayout() {
-        GridPane gridPane = new GridPane();
-        gridPane.setAlignment(Pos.TOP_CENTER);
-        gridPane.setHgap(MARKET_GAP);
-        gridPane.setVgap(MARKET_GAP);
-        gridPane.setMaxWidth(Double.MAX_VALUE);
-        gridPane.setMaxHeight(Double.MAX_VALUE);
-
-        for (int i = 0; i < 4; i++) {
-            ColumnConstraints col = new ColumnConstraints();
-            col.setPercentWidth(25);
-            col.setHalignment(HPos.CENTER);
-            col.setHgrow(Priority.ALWAYS);
-            col.setFillWidth(true);
-            gridPane.getColumnConstraints().add(col);
+    private void applyDebugStyle(Region node, String fillColor, String borderColor) {
+        if (!DEBUG_LAYOUT) {
+            return;
         }
-
-        // for (int i = 0; i < 2; i++) {
-        //     RowConstraints row = new RowConstraints();
-        //     row.setPercentHeight(50);
-        //     gridPane.getRowConstraints().add(row);
-        // }
-        gridPane.add(createCardImage("/images/noble/noble_01.png"), 1, 0);
-        gridPane.add(createCardImage("/images/noble/noble_01.png"), 2, 0);
-        gridPane.add(createCardImage("/images/noble/noble_01.png"), 3, 0);
-
-        for (int col = 0; col < 4; col++) {
-            for (int row = 1; row < 4; row++) {
-                gridPane.add(createCardImage("/images/card/dev_I_11.png"), col, row);
-            }
-        }
-
-        return gridPane;
-    }
-
-    private Label createMarketActionLayout() {
-        Label label = new Label("In progress");
-
-        return label;
-    }
-
-    private GridPane createGemLayout() {
-        GridPane gridPane = new GridPane();
-        for (int col = 0; col < 6; col++) {
-            gridPane.add(createCardImage("/images/gem/jeton_blanc.png"), col, 0);
-        }
-
-        return gridPane;
-    }
-
-    private ImageView createCardImage(String imagePath) {
-        ImageView imageView = new ImageView(getClass().getResource(imagePath).toExternalForm());
-
-        imageView.setFitWidth(CARD_WIDTH);
-        imageView.setFitHeight(CARD_HEIGHT);
-        imageView.setPreserveRatio(true);
-        imageView.setSmooth(true);
-        return imageView;
+        node.setStyle(
+            "-fx-background-color: " + fillColor + ";" +
+            "-fx-border-color: " + borderColor + ";" +
+            "-fx-border-width: 2;"
+        );
     }
 }

@@ -1,6 +1,7 @@
 package edu.cs102.g04t06.game.presentation.console.layout;
 
 import edu.cs102.g04t06.App;
+import javafx.geometry.Insets;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 
@@ -14,12 +15,14 @@ public class BaseStack {
      */
     protected StackPane root;
     protected App application;
+    protected Insets padding = new Insets(18, 15, 18, 15); 
 
     /**
      * Constructs a view with an empty {@link StackPane} root.
      */
     public BaseStack() {
         this.root = new StackPane();
+        this.root.setPadding(padding);
     }
 
     public BaseStack(String bgImageUrl) {
