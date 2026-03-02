@@ -10,7 +10,8 @@ public class ConsoleUI {
         scene.setRoot(newRoot);
     }
 
-    public static void showOnSettings() {
-
+    public static void showOnSettings(Scene scene, App application) {
+        StackPane newRoot = new SettingsUI(application).getRoot();
+        scene.setRoot(newRoot);
     };
 }

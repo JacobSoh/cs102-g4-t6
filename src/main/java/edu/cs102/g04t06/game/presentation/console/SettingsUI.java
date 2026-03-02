@@ -4,6 +4,7 @@ import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 
@@ -20,27 +21,7 @@ public class SettingsUI extends BaseStack {
      * @param application the main application for navigation callbacks
      */
     public SettingsUI(App application) {
-        // Calling image
-        ImageView bg = new ImageView(
-            getClass().getResource(this.bgImgURL).toExternalForm()
-        );
-
-        // Setting image resolutions and behavior
-        bg.setPreserveRatio(false);
-        bg.setSmooth(true);
-        bg.fitWidthProperty().bind(this.root.widthProperty());
-        bg.fitHeightProperty().bind(this.root.heightProperty());
-
-        this.root.getChildren().add(0,bg);
-
-        Button startBtn = new Button("Start Game");
-        root.getChildren().add(startBtn);
-        StackPane.setAlignment(startBtn, Pos.BOTTOM_CENTER);
-        startBtn.translateYProperty().bind(root.heightProperty().multiply(-0.20));
-
-        startBtn.setOnAction(e -> {
-            System.out.println("starting");
-        });
-
+        Label label = new Label("Inside the child pane");
+        this.root.getChildren().add(label);
     }
 }

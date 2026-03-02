@@ -38,9 +38,7 @@ public class OnBoardingUI extends BaseStack {
         StackPane.setAlignment(startBtn, Pos.BOTTOM_CENTER);
         startBtn.translateYProperty().bind(root.heightProperty().multiply(-0.20));
 
-        startBtn.setOnAction(e -> {
-            System.out.println("starting");
-        });
+        startBtn.setOnAction(e -> application.showSettings());
 
     }
 }

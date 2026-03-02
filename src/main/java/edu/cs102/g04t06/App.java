@@ -1,8 +1,6 @@
 package edu.cs102.g04t06;
 
 import edu.cs102.g04t06.game.presentation.console.ConsoleUI;
-import edu.cs102.g04t06.game.presentation.console.OnBoardingUI;
-import edu.cs102.g04t06.game.presentation.console.old.Game;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -53,7 +51,21 @@ public class App extends Application {
         stage.setScene(this.scene);
         stage.show();
 
+        showOnBoarding();
+    }
+
+    /**
+     * Renders the onboarding screen in the current scene.
+     */
+    public void showOnBoarding() {
         ConsoleUI.showOnBoarding(this.scene, this);
+    }
+
+    /**
+     * Renders the settings screen in the current scene.
+     */
+    public void showSettings() {
+        ConsoleUI.showOnSettings(this.scene, this);
     }
 
     /**
