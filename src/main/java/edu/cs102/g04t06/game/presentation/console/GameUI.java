@@ -3,7 +3,10 @@ package edu.cs102.g04t06.game.presentation.console;
 import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.gamesubcomponents.*;
 import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
+import edu.cs102.g04t06.game.presentation.console.layout.StylingSheet;
+import edu.cs102.g04t06.game.rules.entities.GemColor;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
@@ -11,7 +14,7 @@ import javafx.scene.layout.VBox;
 /**
  * Main game view container.
  */
-public class GameUI extends BaseStack {
+public class GameUI extends BaseStack implements StylingSheet {
 
     private static final String BG_IMAGE_URL = "/images/gameImg.jpg";
     private static final boolean DEBUG_LAYOUT = true;
@@ -38,9 +41,9 @@ public class GameUI extends BaseStack {
     private HBox createForegroundLayout() {
         HBox foreground = new HBox();
 
-        VBox leftPlayerCol = new PlayerAndMarketColumn(foreground, PLAYER_COL_RATIO, false).getRoot();
-        VBox marketCol = new PlayerAndMarketColumn(foreground, MARKET_COL_RATIO, true).getRoot();
-        VBox rightPlayerCol = new PlayerAndMarketColumn(foreground, PLAYER_COL_RATIO, false).getRoot();
+        VBox leftPlayerCol = new VBoxLayer(foreground, PLAYER_COL_RATIO, false).getRoot();
+        VBox marketCol = new VBoxLayer(foreground, MARKET_COL_RATIO, true).getRoot();
+        VBox rightPlayerCol = new VBoxLayer(foreground, PLAYER_COL_RATIO, false).getRoot();
 
         applyDebugStyle(leftPlayerCol, "rgba(255,0,0,0.08)", "red");
         applyDebugStyle(rightPlayerCol, "rgba(0,0,255,0.08)", "dodgerblue");
@@ -54,9 +57,9 @@ public class GameUI extends BaseStack {
     private VBox createMarketLayout() {
         VBox marketColumn = new VBox();
 
-        TilePane cardSection = new CardRow(marketColumn, CARD_SECTION_RATIO, true).getRoot();
-        HBox gemSection = new TokenAndActionsRow(marketColumn, GEM_SECTION_RATIO, false).getRoot();
-        HBox actionSection = new TokenAndActionsRow(marketColumn, ACTION_SECTION_RATIO, false).getRoot();
+        TilePane cardSection = new TilePaneLayer(marketColumn, CARD_SECTION_RATIO, true).getRoot();
+        HBox gemSection = new HBoxLayer(marketColumn, GEM_SECTION_RATIO, false).getRoot();
+        HBox actionSection = new HBoxLayer(marketColumn, ACTION_SECTION_RATIO, false).getRoot();
 
         applyDebugStyle(marketColumn, "rgba(0,255,0,0.04)", "lime");
         applyDebugStyle(cardSection, "rgba(255,255,0,0.10)", "gold");
@@ -72,9 +75,17 @@ public class GameUI extends BaseStack {
             return;
         }
         node.setStyle(
-            "-fx-background-color: " + fillColor + ";" +
-            "-fx-border-color: " + borderColor + ";" +
-            "-fx-border-width: 2;"
+                "-fx-background-color: " + fillColor + ";"
+                + "-fx-border-color: " + borderColor + ";"
+                + "-fx-border-width: 2;"
         );
+    }
+
+    private Pane createTokenDisplayLayer() {
+        HBox tokenLayer = new HBox();
+        for (GemColor color : GemColor.values()) {
+            
+        }
+        return tokenLayer;
     }
 }
