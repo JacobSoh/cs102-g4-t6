@@ -48,7 +48,7 @@ class PlayerTest {
         Map<GemColor, Integer> nobleReq = new EnumMap<>(GemColor.class);
         nobleReq.put(GemColor.WHITE, 3);
         nobleReq.put(GemColor.BLUE, 3);
-        standardNoble = new Noble(3, nobleReq);
+        standardNoble = new Noble(3, "Test Noble", nobleReq);
     }
     
     // ==================== Constructor Tests ====================
@@ -302,7 +302,7 @@ class PlayerTest {
     void getPointsShouldHandleMultipleNobles() {
         Map<GemColor, Integer> req = new EnumMap<>(GemColor.class);
         req.put(GemColor.RED, 4);
-        Noble noble2 = new Noble(3, req);
+        Noble noble2 = new Noble(3, "Test Noble", req);
         
         player.claimNoble(standardNoble);  // 3 points
         player.claimNoble(noble2);         // 3 points
@@ -632,7 +632,7 @@ class PlayerTest {
     void claimNobleShouldAddMultipleNobles() {
         Map<GemColor, Integer> req2 = new EnumMap<>(GemColor.class);
         req2.put(GemColor.RED, 4);
-        Noble noble2 = new Noble(3, req2);
+        Noble noble2 = new Noble(3, "Test Noble", req2);
         
         player.claimNoble(standardNoble);
         player.claimNoble(noble2);
@@ -770,7 +770,7 @@ class PlayerTest {
         
         // Add nobles
         player.claimNoble(standardNoble);
-        player.claimNoble(new Noble(3, new EnumMap<>(GemColor.class)));
+        player.claimNoble(new Noble(3, "Test Noble", new EnumMap<>(GemColor.class)));
         
         // Total: 5 + 5 + 4 + 3 + 3 = 20 points
         assertEquals(20, player.getPoints());

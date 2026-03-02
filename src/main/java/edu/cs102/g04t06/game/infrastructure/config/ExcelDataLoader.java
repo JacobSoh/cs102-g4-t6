@@ -1,9 +1,5 @@
 package edu.cs102.g04t06.game.infrastructure.config;
 
-import edu.cs102.g04t06.game.rules.entities.Card;
-import edu.cs102.g04t06.game.rules.entities.GemColor;
-import edu.cs102.g04t06.game.rules.entities.Noble;
-import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -11,6 +7,11 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+
+import edu.cs102.g04t06.game.rules.entities.Card;
+import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
+import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 
 /**
  * Utility class for loading game data from CSV files.
@@ -238,13 +239,14 @@ public class ExcelDataLoader {
         // 4: Red requirement
         // 5: White requirement
         
-        int points = parseIntValue(parts[0], "PV");
+        int id = parseIntValue(parts[0], "ID");
+        String name = parts[1];
         
-        int reqBlack = parseIntValue(parts[1], "Black requirement");
-        int reqBlue = parseIntValue(parts[2], "Blue requirement");
-        int reqGreen = parseIntValue(parts[3], "Green requirement");
-        int reqRed = parseIntValue(parts[4], "Red requirement");
-        int reqWhite = parseIntValue(parts[5], "White requirement");
+        int reqBlack = parseIntValue(parts[2], "Black requirement");
+        int reqBlue = parseIntValue(parts[3], "Blue requirement");
+        int reqGreen = parseIntValue(parts[4], "Green requirement");
+        int reqRed = parseIntValue(parts[5], "Red requirement");
+        int reqWhite = parseIntValue(parts[6], "White requirement");
         
         Map<GemColor, Integer> requirements = new EnumMap<>(GemColor.class);
         if (reqWhite > 0) requirements.put(GemColor.WHITE, reqWhite);
@@ -253,7 +255,7 @@ public class ExcelDataLoader {
         if (reqRed > 0) requirements.put(GemColor.RED, reqRed);
         if (reqBlack > 0) requirements.put(GemColor.BLACK, reqBlack);
         
-        return new Noble(points, requirements);
+        return new Noble(id, name, requirements);
     }
     
     /**

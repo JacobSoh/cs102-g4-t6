@@ -52,7 +52,7 @@ class GameStateTest {
         Map<GemColor, Integer> requirements = new EnumMap<>(GemColor.class);
         requirements.put(GemColor.WHITE, whiteReq);
         requirements.put(GemColor.BLUE, blueReq);
-        return new Noble(points, requirements);
+        return new Noble(points, "Test Noble", requirements);
     }
 
     private GameState makeGameState(List<Noble> nobles, GemCollection gemBank) {

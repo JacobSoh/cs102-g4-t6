@@ -27,7 +27,7 @@ class NobleNotAvailableExceptionTest {
         Map<GemColor, Integer> requirements = new EnumMap<>(GemColor.class);
         requirements.put(GemColor.WHITE, 3);
         requirements.put(GemColor.BLUE, 3);
-        return new Noble(3, requirements);
+        return new Noble(3, "Test Noble", requirements);
     }
 
     @Test
