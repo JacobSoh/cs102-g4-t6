@@ -4,41 +4,135 @@ import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 /**
- * Main menu view for the application.
- * Part of the {@code edu.cs102.g04t06} module.
+ * Onboarding view shown when the application starts.
+ *
+ * <p>This view renders a full-screen background image and an action row
+ * containing mode selection plus a start button.</p>
  */
 public class OnBoardingUI extends BaseStack {
-    private final String bgImgURL = "/images/menuImg.png";
+
+    private static final String BG_IMAGE_URL = "/images/menuImg.jpeg";
+    private static final double BUTTON_GROUP_BOTTOM_OFFSET_RATIO = -0.20;
+    private final App application;
+    private boolean selectedModeValue;
 
     /**
-     * Creates the menu UI and wires the start action.
+     * Creates the onboarding UI and wires navigation actions.
      *
      * @param application the main application for navigation callbacks
      */
     public OnBoardingUI(App application) {
-        // Calling image
-        ImageView bg = new ImageView(
-            getClass().getResource(this.bgImgURL).toExternalForm()
+        this.application = application;
+        this.selectedModeValue = false;
+        this.root.getChildren().add(0, createBackdrop());
+        this.root.getChildren().add(createButtonGroup());
+    }
+
+    /**
+     * Creates a background image that scales with the root container.
+     *
+     * @return configured full-size background image view
+     */
+    private ImageView createBackdrop() {
+        ImageView imageView = new ImageView(getClass().getResource(BG_IMAGE_URL).toExternalForm());
+
+        imageView.setPreserveRatio(false);
+        imageView.setSmooth(true);
+        imageView.fitWidthProperty().bind(this.root.widthProperty());
+        imageView.fitHeightProperty().bind(this.root.heightProperty());
+
+        return imageView;
+    }
+
+    /**
+     * Creates the bottom action row with mode selection and start button.
+     *
+     * @return configured action container
+     */
+    private GridPane createButtonGroup() {
+        GridPane gridPane = new GridPane();
+
+        gridPane.add(createModeOfPlayDropdown(), 0, 0);
+        gridPane.add(createStartButton(), 1, 0);
+        gridPane.setAlignment(Pos.CENTER);
+        gridPane.setHgap(16);
+        gridPane.setVgap(12);
+        gridPane.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+
+        StackPane.setAlignment(gridPane, Pos.BOTTOM_CENTER);
+        gridPane.translateYProperty().bind(this.root.heightProperty().multiply(BUTTON_GROUP_BOTTOM_OFFSET_RATIO));
+
+        return gridPane;
+    }
+
+    /**
+     * Creates the start button and binds navigation to settings.
+     *
+     * @return configured start button
+     */
+    private Button createStartButton() {
+        Button startBtn = new Button("Start");
+        startBtn.setOnAction(e -> this.application.showSettings(String.valueOf(this.selectedModeValue)));
+        return startBtn;
+    }
+
+    /**
+     * Creates the mode selector dropdown.
+     *
+     * <p>The menu item labels are shown to the user while each item stores an
+     * boolean mode value in {@code userData}. Selecting an item updates both
+     * the button text and {@code selectedModeValue}.</p>
+     *
+     * @return configured mode selection menu with value-backed items
+     */
+    private MenuButton createModeOfPlayDropdown() {
+        MenuButton menuButton = new MenuButton("Mode Of Play");
+        menuButton.setPrefWidth(130);
+        menuButton.getItems().addAll(
+                createModeMenuItem(menuButton, "Online", true),
+                createModeMenuItem(menuButton, "Offline", false)
         );
+        return menuButton;
+    }
 
-        // Setting image resolutions and behavior
-        bg.setPreserveRatio(false);
-        bg.setSmooth(true);
-        bg.fitWidthProperty().bind(this.root.widthProperty());
-        bg.fitHeightProperty().bind(this.root.heightProperty());
+    /**
+     * Creates a single dropdown item with an associated boolean value.
+     *
+     * @param menuButton the parent button whose label is updated on selection
+     * @param optionName the text shown for this selectable option
+     * @param optionValue the internal boolean value to store for this option
+     * @return configured menu item with width binding and selection handler
+     */
+    private CustomMenuItem createModeMenuItem(MenuButton menuButton, String optionName, boolean optionValue) {
+        Label optionLabel = new Label(optionName);
+        optionLabel.setAlignment(Pos.CENTER_LEFT);
+        optionLabel.setMaxWidth(Double.MAX_VALUE);
+        optionLabel.prefWidthProperty().bind(menuButton.widthProperty().subtract(16));
 
-        this.root.getChildren().add(0,bg);
+        CustomMenuItem optionItem = new CustomMenuItem(optionLabel, true);
+        optionItem.setUserData(optionValue);
+        optionItem.setOnAction(e -> {
+            menuButton.setText(optionName);
+            this.selectedModeValue = (boolean) optionItem.getUserData();
+        });
+        return optionItem;
+    }
 
-        Button startBtn = new Button("Start Game");
-        root.getChildren().add(startBtn);
-        StackPane.setAlignment(startBtn, Pos.BOTTOM_CENTER);
-        startBtn.translateYProperty().bind(root.heightProperty().multiply(-0.20));
-
-        startBtn.setOnAction(e -> application.showSettings());
-
+    /**
+     * Returns the currently selected mode value.
+     *
+     * @return selected mode value (true for online, false for offline)
+     */
+    public boolean getSelectedModeValue() {
+        return this.selectedModeValue;
     }
 }

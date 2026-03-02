@@ -64,8 +64,8 @@ public class App extends Application {
     /**
      * Renders the settings screen in the current scene.
      */
-    public void showSettings() {
-        ConsoleUI.showOnSettings(this.scene, this);
+    public void showSettings(String modeOfPlay) {
+        ConsoleUI.showOnSettings(this.scene, this, modeOfPlay);
     }
 
     /**

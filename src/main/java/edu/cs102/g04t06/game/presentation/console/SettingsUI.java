@@ -20,8 +20,8 @@ public class SettingsUI extends BaseStack {
      *
      * @param application the main application for navigation callbacks
      */
-    public SettingsUI(App application) {
-        Label label = new Label("Inside the child pane");
+    public SettingsUI(App application, String modeOfPlay) {
+        Label label = new Label(modeOfPlay);
         this.root.getChildren().add(label);
     }
 }
