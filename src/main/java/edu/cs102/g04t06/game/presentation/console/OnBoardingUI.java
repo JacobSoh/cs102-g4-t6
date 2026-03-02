@@ -7,7 +7,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -22,7 +21,6 @@ public class OnBoardingUI extends BaseStack {
 
     private static final String BG_IMAGE_URL = "/images/menuImg.jpeg";
     private static final double BUTTON_GROUP_BOTTOM_OFFSET_RATIO = -0.20;
-    private final App application;
     private boolean selectedModeValue;
 
     /**
@@ -31,26 +29,9 @@ public class OnBoardingUI extends BaseStack {
      * @param application the main application for navigation callbacks
      */
     public OnBoardingUI(App application) {
-        this.application = application;
+        super(BG_IMAGE_URL, application);
         this.selectedModeValue = false;
-        this.root.getChildren().add(0, createBackdrop());
         this.root.getChildren().add(createButtonGroup());
-    }
-
-    /**
-     * Creates a background image that scales with the root container.
-     *
-     * @return configured full-size background image view
-     */
-    private ImageView createBackdrop() {
-        ImageView imageView = new ImageView(getClass().getResource(BG_IMAGE_URL).toExternalForm());
-
-        imageView.setPreserveRatio(false);
-        imageView.setSmooth(true);
-        imageView.fitWidthProperty().bind(this.root.widthProperty());
-        imageView.fitHeightProperty().bind(this.root.heightProperty());
-
-        return imageView;
     }
 
     /**

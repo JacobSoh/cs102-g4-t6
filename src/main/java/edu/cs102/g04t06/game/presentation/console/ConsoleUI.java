@@ -14,4 +14,9 @@ public class ConsoleUI {
         StackPane newRoot = new LobbyUI(application, modeOfPlay).getRoot();
         scene.setRoot(newRoot);
     }
+
+    public static void showGame(Scene scene, App application) {
+        StackPane newRoot = new GameUI(application).getRoot();
+        scene.setRoot(newRoot);
+    }
 }
