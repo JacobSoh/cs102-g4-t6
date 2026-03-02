@@ -1,7 +1,7 @@
 package edu.cs102.g04t06.game.rules.entities;
 
-import java.util.Map; // Map refers to the concept of a dictionary -> with Key and Value pairs 
-import java.util.HashMap; // the specific dictionary we are using  
+import java.util.HashMap; // Map refers to the concept of a dictionary -> with Key and Value pairs
+import java.util.Map; // the specific dictionary we are using  
 import java.util.Objects;
 
 /**
@@ -9,17 +9,21 @@ import java.util.Objects;
  */
 public class Noble {
 
-    private final int points;
+    private final int points = 3;
     private final Map<GemColor, Integer> requirements; // the variable "requirements" will hold the cost to get the Noble (eg. Key: Red -> Value: 4)
+    private final String name;
+    private final int id;
     
     /**
      * constructs a new immutable Noble card
      * @param points the prestige points the noble provides
      * @param requirements the specific gem bonuses a player needs to purchase this noble
      */
-    public Noble(int points, Map<GemColor, Integer> requirements) {
-        this.points = points;
+    public Noble(int id, String name, Map<GemColor, Integer> requirements) {
+        this.id = id;
+        this.name = name;
         this.requirements = new HashMap<>(requirements); // defensive (separate from original) copy of HashMap
+        
     }
 
     /**
@@ -83,5 +87,26 @@ public class Noble {
         if (!(o instanceof Noble)) return false;
         Noble n = (Noble) o;
         return this.points == n.points && this.requirements.equals(n.requirements);
+    }
+
+    /**
+     * returns a String representation of this Noble card.
+     * the returned String includes the Noble's id and name.
+     */
+    @Override
+    public String toString() {
+        return "Noble{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+        }   
+
+
+    public String getName() {
+        return name;
+    }
+
+    public int getId() {
+        return id;
     }
 }
