@@ -81,7 +81,7 @@ public class OnBoardingUI extends BaseStack {
      */
     private Button createStartButton() {
         Button startBtn = new Button("Start");
-        startBtn.setOnAction(e -> this.application.showSettings(String.valueOf(this.selectedModeValue)));
+        startBtn.setOnAction(e -> this.application.showLobby(this.selectedModeValue));
         return startBtn;
     }
 

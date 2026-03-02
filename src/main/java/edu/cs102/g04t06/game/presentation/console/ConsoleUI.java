@@ -1,8 +1,8 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+import edu.cs102.g04t06.App;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
-import edu.cs102.g04t06.App;
 
 public class ConsoleUI {
     public static void showOnBoarding(Scene scene, App application) {
@@ -10,8 +10,8 @@ public class ConsoleUI {
         scene.setRoot(newRoot);
     }
 
-    public static void showOnSettings(Scene scene, App application, String modeOfPlay) {
-        StackPane newRoot = new SettingsUI(application, modeOfPlay).getRoot();
+    public static void showLobby(Scene scene, App application, boolean modeOfPlay) {
+        StackPane newRoot = new LobbyUI(application, modeOfPlay).getRoot();
         scene.setRoot(newRoot);
-    };
+    }
 }
