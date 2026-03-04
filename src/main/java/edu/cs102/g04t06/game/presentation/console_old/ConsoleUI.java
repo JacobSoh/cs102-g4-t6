@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console;
+package edu.cs102.g04t06.game.presentation.console_old;
 
 import edu.cs102.g04t06.App;
 import javafx.scene.Scene;

@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console.layout.market;
+package edu.cs102.g04t06.game.presentation.console_old.layout.market;
 
 import edu.cs102.g04t06.game.presentation.console.template.BaseStack;
 import edu.cs102.g04t06.game.presentation.console.template.StylingSheet;

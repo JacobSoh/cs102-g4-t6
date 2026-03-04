@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console.template;
+package edu.cs102.g04t06.game.presentation.console_old.template;
 
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;

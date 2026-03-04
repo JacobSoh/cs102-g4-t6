@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console.template;
+package edu.cs102.g04t06.game.presentation.console_old.template;
 
 public interface StylingSheet {
     String CARD_BG       = "#1e1e1e";
@@ -8,7 +8,7 @@ public interface StylingSheet {
     String BTN_BG        = "#f0f0f0";
     String BTN_TEXT      = "#1a1a1a";
 
-    String BG_IMAGE_URL  = "/images/menuImg.jpeg";
+    String ONBOARDING_BG_IMG_URL  = "/images/menuImg.jpeg";
     String GAME_BG_IMG_URL = "/images/gameImg.jpg";
     double BG_OPACITY    = 0.30;
 

@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console.template;
+package edu.cs102.g04t06.game.presentation.console_old.template;
 
 import java.util.Collection;
 
