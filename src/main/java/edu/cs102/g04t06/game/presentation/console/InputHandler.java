@@ -1,16 +1,16 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
 import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
-
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Validates and processes player input for the Splendor game.
@@ -20,7 +20,9 @@ import java.util.Map;
  */
 public class InputHandler {
 
-    /** Creates a new InputHandler. */
+    /**
+     * Creates a new InputHandler 
+    */
     public InputHandler() {}
 
     /**
