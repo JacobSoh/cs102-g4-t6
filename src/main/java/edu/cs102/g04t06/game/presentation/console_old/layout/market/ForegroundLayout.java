@@ -1,9 +1,8 @@
-package edu.cs102.g04t06.game.presentation.console.layout.market;
+package edu.cs102.g04t06.game.presentation.console_old.layout.market;
 
-import edu.cs102.g04t06.game.presentation.console.template.BaseStack;
-import edu.cs102.g04t06.game.presentation.console.template.StylingSheet;
+import edu.cs102.g04t06.game.presentation.console_old.template.BaseStack;
+import edu.cs102.g04t06.game.presentation.console_old.template.StylingSheet;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;

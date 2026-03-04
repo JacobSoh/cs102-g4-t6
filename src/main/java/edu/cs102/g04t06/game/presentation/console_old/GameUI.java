@@ -1,10 +1,10 @@
-package edu.cs102.g04t06.game.presentation.console;
+package edu.cs102.g04t06.game.presentation.console_old;
 
 import edu.cs102.g04t06.App;
-import edu.cs102.g04t06.game.presentation.console.layout.market.ForegroundLayout;
-import edu.cs102.g04t06.game.presentation.console.template.BaseStack;
-import edu.cs102.g04t06.game.presentation.console.template.BoundPaneLayer;
-import edu.cs102.g04t06.game.presentation.console.template.StylingSheet;
+import edu.cs102.g04t06.game.presentation.console_old.layout.market.ForegroundLayout;
+import edu.cs102.g04t06.game.presentation.console_old.template.BaseStack;
+import edu.cs102.g04t06.game.presentation.console_old.template.BoundPaneLayer;
+import edu.cs102.g04t06.game.presentation.console_old.template.StylingSheet;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.NumberBinding;

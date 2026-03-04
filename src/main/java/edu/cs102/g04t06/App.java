@@ -51,7 +51,7 @@ public class App extends Application {
         stage.setScene(this.scene);
         stage.show();
 
-        showGame();
+        showOnBoarding();
     }
 
     /**
