@@ -20,6 +20,9 @@ import java.util.Map;
  */
 public class InputHandler {
 
+    /** Creates a new InputHandler. */
+    public InputHandler() {}
+
     /**
      * Validates a player's chosen action number.
      *
