@@ -1,20 +1,15 @@
-package edu.cs102.g04t06.game.presentation.console;
+package edu.cs102.g04t06.game.presentation.console_old;
 
 import edu.cs102.g04t06.App;
-import edu.cs102.g04t06.game.presentation.console.layout.BaseStack;
-import edu.cs102.g04t06.game.presentation.console.layout.StylingSheet;
+import edu.cs102.g04t06.game.presentation.console_old.template.BaseStack;
+import edu.cs102.g04t06.game.presentation.console_old.template.StylingSheet;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
@@ -24,7 +19,7 @@ import javafx.scene.text.FontWeight;
  *
  * command to run: mvn clean javafx:run
  */
-public class LobbyUI extends BaseStack implements StylingSheet {
+public class LobbyUI extends BaseStack<StackPane> implements StylingSheet {
 
 
     /** Which slot is currently highlighted (0-based). -1 = none. */
@@ -37,17 +32,19 @@ public class LobbyUI extends BaseStack implements StylingSheet {
     private final StackPane[] cards = new StackPane[SLOT_COUNT];
 
     public LobbyUI(App application, boolean modeOfPlay) {
-        buildUI(application, modeOfPlay);
+        super(new StackPane(), application);
+        setBaseBackground(GAME_BG_IMG_URL);
+        buildUI();
     }
 
     // ── UI construction ────────────────────────────────────────────────────
 
-    private void buildUI(App application, boolean modeOfPlay) {
-
-        // ── Background image ───────────────────────────────────────────────
-        // Place your background art at src/main/resources/images/lobby_bg.png
-        // (or adjust the path below). Falls back to a plain dark gradient.
-        StackPane backgroundPane = createBackground();
+    private void buildUI() {
+        try {
+            setBaseBackground(GAME_BG_IMG_URL);
+        } catch (Exception e) {
+            this.root.setStyle("-fx-background-color: linear-gradient(to bottom, #1a2a3a, #0d1520);");
+        }
 
         // ── Central column of slot cards ───────────────────────────────────
         VBox cardColumn = new VBox(CARD_SPACING);
@@ -64,41 +61,7 @@ public class LobbyUI extends BaseStack implements StylingSheet {
         // Wrap in a centred container that fills the scene
         StackPane centreWrapper = new StackPane(cardColumn);
         StackPane.setAlignment(cardColumn, Pos.CENTER);
-
-        backgroundPane.getChildren().add(centreWrapper);
-        this.root.getChildren().add(backgroundPane);
-    }
-
-    // ── Background ─────────────────────────────────────────────────────────
-
-    private StackPane createBackground() {
-        StackPane pane = new StackPane();
-        pane.prefWidthProperty().bind(this.root.widthProperty());
-        pane.prefHeightProperty().bind(this.root.heightProperty());
-
-        try {
-            // Attempt to load the game background art
-            var bgUrl = getClass().getResource(BG_IMAGE_URL);
-            if (bgUrl == null) {
-                throw new IllegalStateException("Missing background resource: " + BG_IMAGE_URL);
-            }
-
-            ImageView iv = new ImageView(new Image(bgUrl.toExternalForm()));
-            iv.setPreserveRatio(false);
-            iv.setSmooth(true);
-            iv.setOpacity(BG_OPACITY);
-            iv.fitWidthProperty().bind(this.root.widthProperty());
-            iv.fitHeightProperty().bind(this.root.heightProperty());
-
-            pane.getChildren().add(iv);
-        } catch (Exception e) {
-            // Fallback: dark gradient background
-            pane.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, #1a2a3a, #0d1520);"
-            );
-        }
-
-        return pane;
+        this.root.getChildren().add(centreWrapper);
     }
 
     // ── Slot card ──────────────────────────────────────────────────────────
