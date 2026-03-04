@@ -39,10 +39,10 @@ public class App extends Application {
 
         // Set stage size
         Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
-        stage.setMinHeight(primaryScreenBounds.getMaxY() / 2.0);
-        stage.setMinWidth(primaryScreenBounds.getMaxX() / 2.0);
-        stage.setHeight(primaryScreenBounds.getMaxY() / 2.0);
-        stage.setWidth(primaryScreenBounds.getMaxX() / 2.0);
+        stage.setMinHeight(primaryScreenBounds.getMaxY() / 1.5);
+        stage.setMinWidth(primaryScreenBounds.getMaxX() / 3.0);
+        stage.setHeight(primaryScreenBounds.getMaxY() / 1.5);
+        stage.setWidth(primaryScreenBounds.getMaxX() / 3.0);
 
         // Set default scene
         StackPane root = new StackPane();
