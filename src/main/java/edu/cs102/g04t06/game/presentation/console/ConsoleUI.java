@@ -1,142 +1,124 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import java.util.Scanner;
-
 import edu.cs102.g04t06.App;
+import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
+import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 
 /**
- * Console-driven UI flow for the game.
+ * Routes console screens through one navigation flow.
  */
 public class ConsoleUI {
-    private static final int SLOT_COUNT = 4;
+    private static final String RESET = "\u001B[0m";
+    private static final String BOLD  = "\u001B[1m";
+    private static final String RED   = "\u001B[31m";
 
+    private enum Route {
+        LOAD_SCREEN,
+        MAIN_MENU,
+        PLAYER_SETUP,
+        GAME_BOARD,
+        EXIT
+    }
+
+    @SuppressWarnings("unused")
     private final App application;
-    private final Scanner scanner = new Scanner(System.in);
-    private final String[] slotNames = { "Player 1 (You)", null, null, null };
-    private boolean modeOfPlay; // false = offline, true = online
+    private final LoadScreenUI loadScreenUI;
+    private final MainMenuUI mainMenuUI;
+    private final PlayerSetupUI playerSetupUI;
+    private final GameBoardUI gameBoardUI;
 
     public ConsoleUI(App application) {
         this.application = application;
+        this.loadScreenUI = new LoadScreenUI();
+        this.mainMenuUI = new MainMenuUI();
+        this.playerSetupUI = new PlayerSetupUI();
+        this.gameBoardUI = new GameBoardUI();
     }
 
+    /**
+     * Primary app entry flow:
+     * load screen -> main menu -> setup/new game -> game board.
+     */
     public void showOnBoarding() {
-        while (true) {
-            System.out.println();
-            System.out.println("=== Splendor ===");
-            System.out.println("1) Start Offline");
-            System.out.println("2) Start Online");
-            System.out.println("3) Exit");
-
-            int choice = readInt("Choose option: ", 1, 3);
-            if (choice == 1) {
-                this.modeOfPlay = false;
-                application.showLobby(false);
-                return;
-            }
-            if (choice == 2) {
-                this.modeOfPlay = true;
-                application.showLobby(true);
-                return;
-            }
-            exitProgram();
-        }
+        route(Route.LOAD_SCREEN);
     }
 
+    /**
+     * Compatibility entry point.
+     * There is no separate lobby screen in the console flow, so this routes to setup.
+     */
     public void showLobby(boolean modeOfPlay) {
-        this.modeOfPlay = modeOfPlay;
-
-        while (true) {
-            System.out.println();
-            System.out.println("=== Lobby (" + (this.modeOfPlay ? "Online" : "Offline") + ") ===");
-            printSlots();
-            System.out.println("1) Add NPC");
-            System.out.println("2) Remove NPC");
-            System.out.println("3) Start Game");
-            System.out.println("4) Back to Main Menu");
-            System.out.println("5) Exit");
-
-            int choice = readInt("Choose option: ", 1, 5);
-            switch (choice) {
-                case 1 -> addNpc();
-                case 2 -> removeNpc();
-                case 3 -> {
-                    application.showGame();
-                    return;
-                }
-                case 4 -> {
-                    application.showOnBoarding();
-                    return;
-                }
-                case 5 -> exitProgram();
-                default -> {
-                    // No-op, guarded by readInt range validation.
-                }
-            }
-        }
+        route(Route.PLAYER_SETUP);
     }
 
+    /**
+     * Compatibility entry point to open game board directly.
+     */
     public void showGame() {
-        while (true) {
-            System.out.println();
-            System.out.println("=== Game ===");
-            System.out.println("Console mode placeholder: game logic can be wired here.");
-            System.out.println("1) Back to Lobby");
-            System.out.println("2) Exit");
+        route(Route.GAME_BOARD);
+    }
 
-            int choice = readInt("Choose option: ", 1, 2);
-            if (choice == 1) {
-                application.showLobby(this.modeOfPlay);
-                return;
+    private void route(Route start) {
+        Route current = start;
+        while (current != Route.EXIT) {
+            current = switch (current) {
+                case LOAD_SCREEN -> handleLoadScreen();
+                case MAIN_MENU -> handleMainMenu();
+                case PLAYER_SETUP -> handlePlayerSetup();
+                case GAME_BOARD -> handleGameBoard();
+                case EXIT -> Route.EXIT;
+            };
+        }
+        exitProgram();
+    }
+
+    private Route handleLoadScreen() {
+        loadScreenUI.show();
+        return Route.MAIN_MENU;
+    }
+
+    private Route handleMainMenu() {
+        MenuChoice choice = mainMenuUI.show();
+        return switch (choice) {
+            case NEW_GAME -> Route.PLAYER_SETUP;
+            case LOAD_GAME -> {
+                printLoadGameStub();
+                yield Route.MAIN_MENU;
             }
-            exitProgram();
-        }
+            case QUIT -> Route.EXIT;
+        };
     }
 
-    private void printSlots() {
-        for (int i = 0; i < SLOT_COUNT; i++) {
-            String label = slotNames[i] == null ? "Waiting..." : slotNames[i];
-            System.out.println((i + 1) + ". " + label);
+    private Route handlePlayerSetup() {
+        PlayerSetupResult setup = playerSetupUI.show();
+        if (setup == null) {
+            return Route.MAIN_MENU;
         }
+        return Route.GAME_BOARD;
     }
 
-    private void addNpc() {
-        int slot = readInt("Add NPC to slot (2-4): ", 2, 4) - 1;
-        if (slotNames[slot] != null) {
-            System.out.println("Slot " + (slot + 1) + " is already occupied.");
-            return;
-        }
-        slotNames[slot] = "NPC " + slot;
-        System.out.println("Added " + slotNames[slot] + ".");
+    private Route handleGameBoard() {
+        gameBoardUI.show();
+        return Route.MAIN_MENU;
     }
 
-    private void removeNpc() {
-        int slot = readInt("Remove NPC from slot (2-4): ", 2, 4) - 1;
-        if (slotNames[slot] == null) {
-            System.out.println("Slot " + (slot + 1) + " is already empty.");
-            return;
-        }
-        slotNames[slot] = null;
-        System.out.println("Removed NPC from slot " + (slot + 1) + ".");
-    }
-
-    private int readInt(String prompt, int min, int max) {
-        while (true) {
-            System.out.print(prompt);
-            String raw = scanner.nextLine().trim();
-            try {
-                int value = Integer.parseInt(raw);
-                if (value >= min && value <= max) {
-                    return value;
-                }
-            } catch (NumberFormatException ignored) {
-                // Handled by retry message below.
-            }
-            System.out.println("Please enter a number from " + min + " to " + max + ".");
-        }
+    private void printLoadGameStub() {
+        System.out.println();
+        System.out.println(RED + BOLD + "Load Game is not implemented yet." + RESET);
+        System.out.println("Returning to main menu...");
+        sleep(1200);
     }
 
     private void exitProgram() {
         System.out.println("Exiting Splendor.");
         System.exit(0);
+    }
+
+    private void sleep(int ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
