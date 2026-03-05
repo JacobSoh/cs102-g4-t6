@@ -2,9 +2,9 @@ package edu.cs102.g04t06.game.execution;
 
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
-import edu.cs102.g04t06.game.rules.entities.GemColor;
-import edu.cs102.g04t06.game.rules.entities.Player;
+import edu.cs102.g04t06.game.rules.entities.*;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
+import java.util.*;
 
 
 public class ActionExecutor {
@@ -71,4 +71,94 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
     return new ActionResult(true, "Successfully returned excess gems.");
 }
+
+    public static ActionResult executePurchaseCard(GameState state, Card card, boolean fromReserved) {
+        Player player = state.getCurrentPlayer();
+
+        // 1. Validation via Rules
+        if (!GameRules.canAffordCard(player, card)) {
+            return new ActionResult(false, "Illegal move: You cannot afford this card.");
+        }
+
+        // 2. Calculate actual cost (using the bridge method we added to Cost.java)
+        // Change this line in executePurchaseCard:
+        GemCollection bonuses = new GemCollection(player.calculateBonuses());
+        GemCollection baseCost = card.getCost().afterBonuses(bonuses);
+        
+        // 3. Handle Gold Wildcards
+        GemCollection finalPayment = new GemCollection();
+        int goldNeeded = 0;
+
+        for (GemColor color : GemColor.values()) {
+            if (color == GemColor.GOLD) continue;
+            
+            int required = baseCost.getCount(color);
+            int playerHas = player.getGems().getCount(color);
+            
+            if (playerHas >= required) {
+                finalPayment = finalPayment.add(color, required);
+            } else {
+                // Player is short; they use Gold
+                finalPayment = finalPayment.add(color, playerHas);
+                goldNeeded += (required - playerHas);
+            }
+        }
+        finalPayment = finalPayment.add(GemColor.GOLD, goldNeeded);
+
+        // 4. Update Game State
+        player.deductGems(finalPayment);
+        state.addGemsToBank(finalPayment);
+        
+        if (fromReserved) {
+            player.removeReservedCard(card);
+        } else {
+            state.getMarket().removeCard(card);
+        }
+        player.addCard(card);
+
+        return new ActionResult(true, "Successfully purchased " + card.getBonus() + " card.");
+    }
+    public static ActionResult executeReserveCard(GameState state, Card card) {
+        Player player = state.getCurrentPlayer();
+
+        // 1. Validation: Max 3 reserved cards
+        if (player.getReservedCards().size() >= 3) {
+            return new ActionResult(false, "You already have 3 reserved cards.");
+        }
+
+        // 2. Movement: Take from market, put in player's reserve
+        state.getMarket().removeCard(card);
+        player.addReservedCard(card);
+
+        // 3. The Gold Reward
+        if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
+            GemCollection oneGold = new GemCollection().add(GemColor.GOLD, 1);
+            state.removeGemsFromBank(oneGold);
+            player.addGems(oneGold);
+            
+            // Check 10-gem limit
+            if (player.getGemCount() > 10) {
+                return new ActionResult(true, "Card reserved. You got a Gold gem but must return some to stay at 10!");
+            }
+        }
+
+        return new ActionResult(true, "Card reserved successfully.");
+    }
+    public static ActionResult executeClaimNoble(GameState state, Noble noble) {
+        Player player = state.getCurrentPlayer();
+
+        // 1. Check if the player is actually eligible for this Noble
+        // We use the GameRules stub we created earlier
+        List<Noble> claimable = GameRules.getClaimableNobles(player, state.getNobles());
+        
+        if (!claimable.contains(noble)) {
+            return new ActionResult(false, "You do not meet the bonus requirements for this Noble.");
+        }
+
+        // 2. Movement
+        state.removeNoble(noble);
+        player.addNoble(noble);
+
+        return new ActionResult(true, "Noble " + noble.getName() + " has visited your court!");
+    }
 }

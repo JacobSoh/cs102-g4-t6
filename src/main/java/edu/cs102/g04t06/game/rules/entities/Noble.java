@@ -1,7 +1,7 @@
 package edu.cs102.g04t06.game.rules.entities;
 
-import java.util.Map; // Map refers to the concept of a dictionary -> with Key and Value pairs 
-import java.util.HashMap; // the specific dictionary we are using  
+import java.util.HashMap; // Map refers to the concept of a dictionary -> with Key and Value pairs
+import java.util.Map; // the specific dictionary we are using  
 
 /**
  * represents an immutable Noble card 
@@ -19,6 +19,13 @@ public class Noble {
     public Noble(int points, Map<GemColor, Integer> requirements) {
         this.points = points;
         this.requirements = new HashMap<>(requirements); // defensive (separate from original) copy of HashMap
+    }
+
+//zyik
+    // This satisfies your ActionExecutor's "noble.getName()" call
+    // without needing it in the CSV or Constructor!
+    public String getName() {
+        return "Noble (Value: " + points + ")";
     }
 
     /**

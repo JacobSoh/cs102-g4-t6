@@ -1,10 +1,11 @@
 package edu.cs102.g04t06.game.rules;
 
+import java.util.List;
+
+import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
-import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
-import java.util.List;
 
 public class GameState {
     private List<Player> players;
@@ -20,6 +21,14 @@ public class GameState {
         this.gemBank = initialGems;
         this.availableNobles = nobles;
         this.currentPlayerIndex = 0;
+    }
+    // zyik
+    public List<Noble> getNobles() {
+        return availableNobles;
+    }
+
+    public void removeNoble(Noble noble) {
+        availableNobles.remove(noble);
     }
 
     public Player getCurrentPlayer() {

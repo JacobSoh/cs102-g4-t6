@@ -1,4 +1,4 @@
-target/
+/target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -17,3 +17,16 @@ buildNumber.properties
 .classpath
 # Macos
 .DS_Store
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
