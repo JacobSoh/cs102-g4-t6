@@ -59,7 +59,7 @@ class InputHandlerTest {
     private Noble makeNoble(int points, GemColor color, int amount) {
         Map<GemColor, Integer> reqs = new EnumMap<>(GemColor.class);
         reqs.put(color, amount);
-        return new Noble(points, reqs);
+        return new Noble(points,"Test noble name", reqs);
     }
 
     // ==================== promptActionChoice() Tests ====================
