@@ -1,9 +1,6 @@
 package edu.cs102.g04t06.game.rules.entities;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
@@ -20,7 +17,7 @@ public class Player {
     private final List<Card> reservedCards;
     private GemCollection gems;
     private final List<Noble> claimedNobles;
-    
+
     /**
      * Creates a player with empty cards, gems, and nobles.
      *
@@ -88,12 +85,6 @@ public class Player {
      */
     public List<Noble> getClaimedNobles(){
         return claimedNobles;
-    }
-
-    // added this by zyik
-    public void addNoble(Noble noble) {
-        // This assumes you have a List<Noble> nobles inside the Player class
-        claimedNobles.add(noble); 
     }
 
     /**

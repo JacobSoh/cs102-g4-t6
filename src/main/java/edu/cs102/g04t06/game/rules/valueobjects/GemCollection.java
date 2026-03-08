@@ -1,9 +1,7 @@
 package edu.cs102.g04t06.game.rules.valueobjects;
 
-import java.util.EnumMap;
-import java.util.Map;
-
 import edu.cs102.g04t06.game.rules.entities.GemColor;
+import java.util.*;
 
 /**
  * Immutable Collection of gems used in Splendor Operations return new
@@ -89,11 +87,11 @@ public class GemCollection {
     }
 
     /**
-     * Add all gem counts of another GemCollection to this one. Returns
+     * Add all gem counts of another GemCollection from this one. Returns
      * a new GemCollection with the resulting counts.
      *
      * @param other the GemCollection to add
-     * @return a new GemCollection with the combined gems
+     * @return a new GemCollection with the added gems
      */
     public GemCollection add(GemCollection other) {
         
