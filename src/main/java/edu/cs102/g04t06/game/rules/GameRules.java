@@ -80,13 +80,17 @@ public class GameRules{
                 return false;
             }       
             for (Map.Entry<GemColor, Integer> entry : requested.asMap().entrySet()){
-                if(entry.getValue() != 1){
-                    return false;
-                }
-                if(bank.getCount(entry.getKey()) < 1){
-                    return false;
-                }
-            }
+    int count = entry.getValue();
+    
+    // Ignore colors the player didn't ask for!
+    if (count == 0) continue; 
+    
+    // If they asked for 2 or more of the SAME color, illegal!
+    if (count > 1) return false; 
+    
+    // If the bank doesn't have at least 1, illegal!
+    if (bank.getCount(entry.getKey()) < 1) return false; 
+}
             return true;
     }
 

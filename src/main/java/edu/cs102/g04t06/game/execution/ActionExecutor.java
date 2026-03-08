@@ -1,17 +1,24 @@
 package edu.cs102.g04t06.game.execution;
 
+import java.util.List;
+import java.util.Map;
+
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
-import edu.cs102.g04t06.game.rules.entities.*;
+import edu.cs102.g04t06.game.rules.entities.Card;
+import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
+import edu.cs102.g04t06.game.rules.entities.Player;
+import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
-import java.util.*;
 
 
 public class ActionExecutor {
 
     public static ActionResult executeTakeTwoSameGems(GameState state, GemColor color) {
         // 1. Validate the rule (Bank must have >= 4)
-        if (!GameRules.canTakeTwoSameGems(color, state.getGemBank())) {
+        GameRules rules = new GameRules();
+        if (!rules.canTakeTwoSameGems(color, state.getGemBank())) {
             return new ActionResult(false, "Illegal move: Not enough gems in bank to take two.");
         }
 
@@ -35,7 +42,8 @@ public class ActionExecutor {
 
     public static ActionResult executeTakeThreeDifferentGems(GameState state, GemCollection selection) {
     // 1. Ask GameRules if the bank has these 3 gems
-    if (!GameRules.canTakeThreeDifferentGems(selection, state.getGemBank())) {
+    GameRules rules = new GameRules();
+    if (!rules.canTakeThreeDifferentGems(selection, state.getGemBank())) {
         return new ActionResult(false, "Illegal move: The bank does not have the requested gems.");
     }
 
@@ -76,14 +84,14 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
         Player player = state.getCurrentPlayer();
 
         // 1. Validation via Rules
-        if (!GameRules.canAffordCard(player, card)) {
+        GameRules rules = new GameRules();
+        if (!rules.canAffordCard(player, card)) {
             return new ActionResult(false, "Illegal move: You cannot afford this card.");
         }
 
-        // 2. Calculate actual cost (using the bridge method we added to Cost.java)
-        // Change this line in executePurchaseCard:
-        GemCollection bonuses = new GemCollection(player.calculateBonuses());
-        GemCollection baseCost = card.getCost().afterBonuses(bonuses);
+        // 2. Calculate actual cost (Now returning a Cost object)
+        Map<GemColor, Integer> bonuses = player.calculateBonuses();
+        Cost baseCost = card.getCost().afterBonuses(bonuses);
         
         // 3. Handle Gold Wildcards
         GemCollection finalPayment = new GemCollection();
@@ -92,7 +100,8 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
         for (GemColor color : GemColor.values()) {
             if (color == GemColor.GOLD) continue;
             
-            int required = baseCost.getCount(color);
+            // USE THEIR NEW METHOD: getRequired() instead of getCount()
+            int required = baseCost.getRequired(color); 
             int playerHas = player.getGems().getCount(color);
             
             if (playerHas >= required) {
@@ -127,6 +136,7 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
         }
 
         // 2. Movement: Take from market, put in player's reserve
+
         state.getMarket().removeCard(card);
         player.addReservedCard(card);
 
@@ -149,7 +159,8 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
         // 1. Check if the player is actually eligible for this Noble
         // We use the GameRules stub we created earlier
-        List<Noble> claimable = GameRules.getClaimableNobles(player, state.getNobles());
+        GameRules rules = new GameRules();
+        List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
         
         if (!claimable.contains(noble)) {
             return new ActionResult(false, "You do not meet the bonus requirements for this Noble.");
@@ -157,7 +168,7 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
         // 2. Movement
         state.removeNoble(noble);
-        player.addNoble(noble);
+        player.claimNoble(noble);
 
         return new ActionResult(true, "Noble " + noble.getName() + " has visited your court!");
     }

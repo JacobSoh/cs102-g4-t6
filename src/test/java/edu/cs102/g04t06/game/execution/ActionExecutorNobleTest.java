@@ -1,6 +1,7 @@
 package edu.cs102.g04t06.game.execution;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +31,20 @@ public class ActionExecutorNobleTest {
 
     @BeforeEach
     public void setUp() {
-        // 1. Create Player
+        // 1. Create Players
         List<Player> players = new ArrayList<>();
         players.add(new Player("Zyik", 0));
+        players.add(new Player("Dong En", 1));
 
-        // 2. Setup Dummy CardMarket (Bypassing the 40/30/20 size rule)
+        // 2. Setup Bank (Give it 5 of every standard gem for a healthy start)
+        GemCollection startingBank = new GemCollection()
+                .add(GemColor.RED, 5).add(GemColor.BLUE, 5)
+                .add(GemColor.GREEN, 5).add(GemColor.BLACK, 5)
+                .add(GemColor.WHITE, 5).add(GemColor.GOLD, 5); // Added gold just in case!
+
+        // 3. Setup Dummy Market (Required to build GameState)
         Map<GemColor, Integer> freeMap = new HashMap<>();
-        freeMap.put(GemColor.WHITE, 0);
+        freeMap.put(GemColor.WHITE, 0); 
         Cost emptyCost = new Cost(freeMap);
         
         List<Card> level1Deck = new ArrayList<>();
@@ -48,27 +56,30 @@ public class ActionExecutorNobleTest {
         List<Card> level3Deck = new ArrayList<>();
         for (int i = 0; i < 20; i++) level3Deck.add(new Card(3, 0, GemColor.WHITE, emptyCost));
 
-        // 3. Setup Nobles 
-        Map<GemColor, Integer> req1 = new HashMap<>();
-        req1.put(GemColor.RED, 3);
-        affordableNoble = new Noble(3, req1); // Needs 3 Red bonuses
+        CardMarket market = new CardMarket(level1Deck, level2Deck, level3Deck);
 
-        Map<GemColor, Integer> req2 = new HashMap<>();
-        req2.put(GemColor.BLUE, 3);
-        secondAffordableNoble = new Noble(3, req2); // Needs 3 Blue bonuses
+        // 4. Setup Nobles (THIS IS THE IMPORTANT PART)
+        // 1. Create the LOCAL list of nobles
+        List<Noble> noblesList = new ArrayList<>();
+        
+        // 2. Assign values to your CLASS variables so the tests can use them!
+        Map<GemColor, Integer> redReq = new EnumMap<>(GemColor.class);
+        redReq.put(GemColor.RED, 3);
+        // Assigning to the class variable 'affordableNoble'
+        this.affordableNoble = new Noble(1, "Red Noble", redReq);
+        
+        Map<GemColor, Integer> blueReq = new EnumMap<>(GemColor.class);
+        blueReq.put(GemColor.BLUE, 3);
+        // Assigning to the class variable 'secondAffordableNoble'
+        this.secondAffordableNoble = new Noble(2, "Blue Noble", blueReq);
 
-        Map<GemColor, Integer> req3 = new HashMap<>();
-        req3.put(GemColor.BLACK, 5);
-        expensiveNoble = new Noble(3, req3); // Needs 5 Black bonuses
-
-        List<Noble> nobles = new ArrayList<>();
-        nobles.add(affordableNoble);
-        nobles.add(secondAffordableNoble);
-        nobles.add(expensiveNoble);
+        // 3. Add them both to the list
+        noblesList.add(affordableNoble);
+        noblesList.add(secondAffordableNoble);
 
         // 4. Initialize GameState
-        state = new GameState(players, new CardMarket(level1Deck, level2Deck, level3Deck), new GemCollection(), nobles);
-        player = state.getCurrentPlayer();
+        this.state = new GameState(players, market, startingBank, noblesList, 15);
+        this.player = state.getCurrentPlayer();
     }
 
     // ==========================================================
@@ -105,7 +116,7 @@ public class ActionExecutorNobleTest {
 
         ActionExecutor.executeClaimNoble(state, affordableNoble);
 
-        assertFalse(state.getNobles().contains(affordableNoble), "Noble removed from available GameState list");
+        assertFalse(state.getAvailableNobles().contains(affordableNoble), "Noble removed from available GameState list");
     }
 
     @Test

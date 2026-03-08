@@ -1,7 +1,9 @@
 package edu.cs102.g04t06.game.execution;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,8 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
+import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
+import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 public class ActionExecutorGemTest {
@@ -28,17 +34,34 @@ public class ActionExecutorGemTest {
         players.add(new Player("Dong En", 1));
 
         // 2. Setup Bank (Give it 5 of every standard gem for a healthy start)
-        startingBank = new GemCollection();
-        startingBank = startingBank.add(GemColor.RED, 5)
-                                   .add(GemColor.BLUE, 5)
-                                   .add(GemColor.GREEN, 5)
-                                   .add(GemColor.BLACK, 5)
-                                   .add(GemColor.WHITE, 5);
+        GemCollection startingBank = new GemCollection()
+                .add(GemColor.RED, 5).add(GemColor.BLUE, 5)
+                .add(GemColor.GREEN, 5).add(GemColor.BLACK, 5)
+                .add(GemColor.WHITE, 5).add(GemColor.GOLD, 5); // Added gold just in case!
 
-        // 3. Initialize GameState (We pass null for Market/Nobles since Gem actions don't use them)
-        state = new GameState(players, null, startingBank, new ArrayList<>());
+        // 3. Setup Dummy Market (Required to build GameState)
+        Map<GemColor, Integer> freeMap = new HashMap<>();
+        freeMap.put(GemColor.WHITE, 0); 
+        Cost emptyCost = new Cost(freeMap);
         
-        // 4. Grab the current player (Zyik) to easily verify their inventory later
+        List<Card> level1Deck = new ArrayList<>();
+        for (int i = 0; i < 40; i++) level1Deck.add(new Card(1, 0, GemColor.WHITE, emptyCost));
+        
+        List<Card> level2Deck = new ArrayList<>();
+        for (int i = 0; i < 30; i++) level2Deck.add(new Card(2, 0, GemColor.WHITE, emptyCost));
+        
+        List<Card> level3Deck = new ArrayList<>();
+        for (int i = 0; i < 20; i++) level3Deck.add(new Card(3, 0, GemColor.WHITE, emptyCost));
+
+        CardMarket market = new CardMarket(level1Deck, level2Deck, level3Deck);
+
+        // 4. Setup Empty Nobles (Required to build GameState)
+        List<Noble> nobles = new ArrayList<>();
+
+        // 5. Initialize GameState
+        state = new GameState(players, market, startingBank, nobles, 15);
+        
+        // 6. Grab the current player (Zyik) to easily verify their inventory later
         player = state.getCurrentPlayer();
     }
 

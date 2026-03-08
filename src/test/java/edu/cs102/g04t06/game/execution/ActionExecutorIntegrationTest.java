@@ -28,17 +28,21 @@ public class ActionExecutorIntegrationTest {
 
     @BeforeEach
     public void setUp() {
+        // 1. Create Players
         List<Player> players = new ArrayList<>();
         players.add(new Player("Zyik", 0));
+        players.add(new Player("Dong En", 1));
 
+        // 2. Setup Bank (Give it 5 of every standard gem for a healthy start)
         GemCollection startingBank = new GemCollection()
                 .add(GemColor.RED, 5).add(GemColor.BLUE, 5)
                 .add(GemColor.GREEN, 5).add(GemColor.BLACK, 5)
-                .add(GemColor.WHITE, 5).add(GemColor.GOLD, 5);
+                .add(GemColor.WHITE, 5).add(GemColor.GOLD, 5); // Added gold just in case!
 
+        // 3. Setup Dummy Market (Required to build GameState)
         Map<GemColor, Integer> freeMap = new HashMap<>();
-        freeMap.put(GemColor.WHITE, 0);
-        emptyCost = new Cost(freeMap);
+        freeMap.put(GemColor.WHITE, 0); 
+        Cost emptyCost = new Cost(freeMap);
         
         List<Card> level1Deck = new ArrayList<>();
         for (int i = 0; i < 40; i++) level1Deck.add(new Card(1, 0, GemColor.WHITE, emptyCost));
@@ -49,7 +53,15 @@ public class ActionExecutorIntegrationTest {
         List<Card> level3Deck = new ArrayList<>();
         for (int i = 0; i < 20; i++) level3Deck.add(new Card(3, 0, GemColor.WHITE, emptyCost));
 
-        state = new GameState(players, new CardMarket(level1Deck, level2Deck, level3Deck), startingBank, new ArrayList<>());
+        CardMarket market = new CardMarket(level1Deck, level2Deck, level3Deck);
+
+        // 4. Setup Empty Nobles (Required to build GameState)
+        List<Noble> nobles = new ArrayList<>();
+
+        // 5. Initialize GameState
+        state = new GameState(players, market, startingBank, nobles, 15);
+        
+        // 6. Grab the current player (Zyik) to easily verify their inventory later
         player = state.getCurrentPlayer();
     }
 
@@ -61,11 +73,12 @@ public class ActionExecutorIntegrationTest {
         costMap.put(GemColor.BLUE, 1);
         costMap.put(GemColor.GREEN, 1);
         Card targetCard = new Card(1, 0, GemColor.BLACK, new Cost(costMap));
+        state.getMarket().getVisibleCards(1).set(0, targetCard);
 
         Map<GemColor, Integer> nobleReq = new HashMap<>();
         nobleReq.put(GemColor.BLACK, 1);
-        Noble targetNoble = new Noble(3, nobleReq);
-        state.getNobles().add(targetNoble); // Put noble on the board
+        Noble targetNoble = new Noble(1, "Test Noble", nobleReq);
+        state.getAvailableNobles().add(targetNoble); // Put noble on the board
 
         // STEP 1: Take Gems
         GemCollection takeSelection = new GemCollection().add(GemColor.RED, 1).add(GemColor.BLUE, 1).add(GemColor.GREEN, 1);
@@ -92,6 +105,7 @@ public class ActionExecutorIntegrationTest {
         Map<GemColor, Integer> costMap = new HashMap<>();
         costMap.put(GemColor.RED, 2);
         Card targetCard = new Card(1, 0, GemColor.WHITE, new Cost(costMap));
+        state.getMarket().getVisibleCards(1).set(0, targetCard);
 
         // STEP 1: Reserve the card
         ActionResult step1 = ActionExecutor.executeReserveCard(state, targetCard);

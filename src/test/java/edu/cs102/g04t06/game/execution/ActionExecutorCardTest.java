@@ -33,15 +33,15 @@ public class ActionExecutorCardTest {
         List<Player> players = new ArrayList<>();
         players.add(new Player("Zyik", 0));
 
-        // 2. Setup Bank (Give it 5 of every gem, plus 5 GOLD)
+        // 2. Setup Bank
         GemCollection startingBank = new GemCollection()
                 .add(GemColor.RED, 5).add(GemColor.BLUE, 5)
                 .add(GemColor.GREEN, 5).add(GemColor.BLACK, 5)
                 .add(GemColor.WHITE, 5).add(GemColor.GOLD, 5);
 
-        // --- NEW: Generate perfectly sized dummy decks to satisfy CardMarket ---
+        // 3. Setup Market
         Map<GemColor, Integer> freeMap = new HashMap<>();
-        freeMap.put(GemColor.WHITE, 0); // Gives EnumMap the type, but costs nothing!
+        freeMap.put(GemColor.WHITE, 0); 
         emptyCost = new Cost(freeMap);
         
         List<Card> level1Deck = new ArrayList<>();
@@ -53,16 +53,18 @@ public class ActionExecutorCardTest {
         List<Card> level3Deck = new ArrayList<>();
         for (int i = 0; i < 20; i++) level3Deck.add(new Card(3, 0, GemColor.WHITE, emptyCost));
 
-        // 3. Initialize GameState with the perfectly sized decks
-        state = new GameState(
-            players, 
-            new CardMarket(level1Deck, level2Deck, level3Deck), 
-            startingBank, 
-            new ArrayList<>()
-        );
+        // Actually create the CardMarket object!
+        CardMarket market = new CardMarket(level1Deck, level2Deck, level3Deck);
+
+        // 4. Setup Nobles (Empty list is fine for card tests)
+        List<edu.cs102.g04t06.game.rules.entities.Noble> nobles = new ArrayList<>();
+
+        // 5. Initialize GameState
+        // Notice we are passing startingBank, not "bank"
+        state = new GameState(players, market, startingBank, nobles, 15);
         player = state.getCurrentPlayer();
 
-        // 4. Create dummy costs and cards for our specific tests
+        // 6. Create dummy costs and cards for our specific tests
         Map<GemColor, Integer> cheapMap = new HashMap<>();
         cheapMap.put(GemColor.RED, 2);
         Cost cheapCost = new Cost(cheapMap);
@@ -73,6 +75,12 @@ public class ActionExecutorCardTest {
 
         affordableCard = new Card(1, 0, GemColor.BLUE, cheapCost); 
         expensiveCard = new Card(2, 2, GemColor.RED, priceyCost); 
+
+        // --- ADD THESE TWO LINES ---
+        // Force our specific test cards onto the visible game board so they can be removed!
+        state.getMarket().getVisibleCards(1).set(0, affordableCard);
+        state.getMarket().getVisibleCards(2).set(0, expensiveCard);
+        
     }
     // ==========================================================
     // TESTS FOR: executePurchaseCard()
