@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import edu.cs102.g04t06.game.exception.NobleNotAvailableException;
 import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
 import edu.cs102.g04t06.game.rules.entities.Noble;
@@ -86,6 +88,8 @@ public class GameBoardUI {
     private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
     private int roundNumber = 1;
+    private final GameRules rules = new GameRules();
+    private final InputHandler inputHandler = new InputHandler();
 
     public GameBoardUI() {
         this(new Scanner(System.in));
@@ -106,6 +110,9 @@ public class GameBoardUI {
         while (true) {
             clearScreen();
             render(state);
+            if (state.isGameOver()) {
+                break;
+            }
             String input = promptAction();
             if (input.equalsIgnoreCase("q")) {
                 break;
@@ -416,16 +423,56 @@ public class GameBoardUI {
     }
 
     private void handleTake(GameState state, String s) {
-        String[] p = s.split("\\s+");
-        if (p.length < 2) {
+        String payloadRaw = s.replaceFirst("^take", "").trim();
+        if (payloadRaw.isEmpty()) {
             err("Usage: take <gem> [gem] [gem]   e.g.  take w r u");
             return;
         }
 
-        String payload = String.join(" ", Arrays.copyOfRange(p, 1, p.length)).toUpperCase();
-        actionLog.add(state.getCurrentPlayer().getName() + " requested take " + payload);
-        ok("Took: " + payload + "  (pending rules integration)");
-        sleep(800);
+        List<GemColor> colors;
+        try {
+            colors = parseGemSequence(payloadRaw);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        Player player = state.getCurrentPlayer();
+        GemCollection bank = state.getGemBank();
+
+        if (colors.size() == 3) {
+            GemCollection requested;
+            try {
+                requested = inputHandler.promptGemSelection(3, colors);
+            } catch (IllegalArgumentException e) {
+                err(e.getMessage());
+                return;
+            }
+            if (!rules.canTakeThreeDifferentGems(requested, bank)) {
+                err("Invalid take: must be 3 different colors available in bank.");
+                return;
+            }
+
+            applyTake(state, player, requested, "Took");
+
+        } else if (colors.size() == 2) {
+            if (colors.get(0) != colors.get(1)) {
+                err("Invalid take: for 2 gems, both must be the same color.");
+                return;
+            }
+
+            GemColor color = colors.get(0);
+            if (!rules.canTakeTwoSameGems(color, bank)) {
+                err("Invalid take: bank must have at least 4 of that color.");
+                return;
+            }
+
+            GemCollection requested = new GemCollection().add(color, 2);
+            applyTake(state, player, requested, "Took");
+
+        } else {
+            err("Invalid take: choose either 3 different gems or 2 of the same color.");
+        }
     }
 
     private void handleBuy(GameState state, String s) {
@@ -435,8 +482,48 @@ public class GameBoardUI {
             return;
         }
 
-        actionLog.add(state.getCurrentPlayer().getName() + " requested buy " + p[1] + " " + p[2]);
-        ok("Bought " + p[1] + " " + p[2] + "  (pending rules integration)");
+        int tier;
+        int slotIndex;
+        try {
+            tier = parseTierToken(p[1]);
+            slotIndex = parseSlotToken(p[2]);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        Card card;
+        try {
+            card = state.getMarket().getVisibleCard(tier, slotIndex);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        Player player = state.getCurrentPlayer();
+        if (!rules.canAffordCard(player, card)) {
+            err("Cannot afford that card.");
+            return;
+        }
+
+        GemCollection payment = buildPayment(player, rules.calculateActualCost(player, card));
+        try {
+            player.deductGems(payment);
+            state.addGemsToBank(payment);
+        } catch (IllegalStateException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        player.addCard(card);
+        state.getMarket().removeCard(card);
+
+        actionLog.add(player.getName() + " bought t" + tier + " slot" + (slotIndex + 1));
+        ok("Bought t" + tier + " slot" + (slotIndex + 1));
+
+        handleNobleClaim(state, player);
+        handleWinCheck(state, player);
+        advanceTurn(state);
         sleep(800);
     }
 
@@ -447,20 +534,247 @@ public class GameBoardUI {
             return;
         }
 
-        actionLog.add(state.getCurrentPlayer().getName() + " requested reserve " + p[1] + " " + p[2]);
-        ok("Reserved " + p[1] + " " + p[2] + "  (pending rules integration)");
+        int tier;
+        int slotIndex;
+        try {
+            tier = parseTierToken(p[1]);
+            slotIndex = parseSlotToken(p[2]);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        Player player = state.getCurrentPlayer();
+        if (!rules.canReserveCard(player)) {
+            err("You already have 3 reserved cards.");
+            return;
+        }
+
+        Card card;
+        try {
+            card = state.getMarket().getVisibleCard(tier, slotIndex);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        player.addReservedCard(card);
+        state.getMarket().removeCard(card);
+
+        // Gain a gold gem if available
+        if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
+            GemCollection gold = new GemCollection().add(GemColor.GOLD, 1);
+            state.removeGemsFromBank(gold);
+            player.addGems(gold);
+        }
+
+        actionLog.add(player.getName() + " reserved t" + tier + " slot" + (slotIndex + 1));
+        ok("Reserved t" + tier + " slot" + (slotIndex + 1));
+
+        if (rules.mustReturnGems(player)) {
+            handleReturnExcessGems(state, player);
+        }
+
+        advanceTurn(state);
         sleep(800);
     }
 
     private void handlePass(GameState state) {
         String current = state.getCurrentPlayer().getName();
+        advanceTurn(state);
+        actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
+        ok("Turn passed.");
+        sleep(600);
+    }
+
+    private void applyTake(GameState state, Player player, GemCollection requested, String verb) {
+        try {
+            state.removeGemsFromBank(requested);
+            player.addGems(requested);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
+        actionLog.add(player.getName() + " took " + formatGemShort(requested));
+        ok(verb + ": " + formatGemShort(requested));
+
+        if (rules.mustReturnGems(player)) {
+            handleReturnExcessGems(state, player);
+        }
+
+        advanceTurn(state);
+        sleep(800);
+    }
+
+    private void handleReturnExcessGems(GameState state, Player player) {
+        int excess = player.getGemCount() - 10;
+        while (excess > 0) {
+            System.out.print(WHITE + "  ║ " + RESET
+                    + RED + "You have " + player.getGemCount()
+                    + " gems. Return " + excess + " gem(s): " + RESET);
+            String input = scanner.nextLine().trim();
+
+            List<GemColor> toReturnColors;
+            try {
+                toReturnColors = parseGemSequence(input);
+            } catch (IllegalArgumentException e) {
+                err(e.getMessage());
+                continue;
+            }
+
+            try {
+                GemCollection toReturn = inputHandler.promptGemsToReturn(player, excess, toReturnColors);
+                player.deductGems(toReturn);
+                state.addGemsToBank(toReturn);
+                actionLog.add(player.getName() + " returned " + formatGemShort(toReturn));
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                err(e.getMessage());
+                continue;
+            }
+
+            excess = player.getGemCount() - 10;
+        }
+    }
+
+    private void handleNobleClaim(GameState state, Player player) {
+        List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
+        if (claimable.isEmpty()) {
+            return;
+        }
+
+        Noble chosen = claimable.get(0);
+        if (claimable.size() > 1) {
+            System.out.println();
+            System.out.println(WHITE + "Choose a noble to claim:" + RESET);
+            for (int i = 0; i < claimable.size(); i++) {
+                Noble n = claimable.get(i);
+                System.out.println("  " + (i + 1) + ". " + n.getName() + " (" + n.getPoints() + " pts)");
+            }
+            System.out.print(GREEN + "  > " + RESET);
+            String input = scanner.nextLine().trim();
+            int idx;
+            try {
+                idx = Integer.parseInt(input) - 1;
+            } catch (NumberFormatException e) {
+                idx = 0;
+            }
+            if (idx >= 0 && idx < claimable.size()) {
+                chosen = claimable.get(idx);
+            }
+        }
+
+        try {
+            Noble claimed = state.removeNoble(chosen);
+            player.claimNoble(claimed);
+            actionLog.add(player.getName() + " claimed noble " + claimed.getName());
+            ok("Claimed noble: " + claimed.getName());
+        } catch (NobleNotAvailableException e) {
+            err(e.getMessage());
+        }
+    }
+
+    private void handleWinCheck(GameState state, Player player) {
+        if (rules.hasPlayerWon(player, state.getWinningThreshold())) {
+            state.setGameOver(true);
+            actionLog.add(player.getName() + " reached " + player.getPoints() + " points. Game over.");
+            ok("Game over! " + player.getName() + " wins.");
+        }
+    }
+
+    private void advanceTurn(GameState state) {
         state.advanceToNextPlayer();
         if (state.getCurrentPlayerIndex() == 0) {
             roundNumber++;
         }
-        actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
-        ok("Turn passed.");
-        sleep(600);
+    }
+
+    private int parseTierToken(String token) {
+        String t = token.toLowerCase().trim();
+        t = t.replace("tier", "");
+        t = t.startsWith("t") ? t.substring(1) : t;
+        try {
+            int tier = Integer.parseInt(t);
+            if (tier < 1 || tier > 3) {
+                throw new IllegalArgumentException("Tier must be 1, 2, or 3.");
+            }
+            return tier;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid tier. Use t1, t2, or t3.");
+        }
+    }
+
+    private int parseSlotToken(String token) {
+        String t = token.toLowerCase().trim();
+        t = t.replace("slot", "");
+        t = t.startsWith("s") ? t.substring(1) : t;
+        try {
+            int slot = Integer.parseInt(t);
+            if (slot < 1 || slot > 4) {
+                throw new IllegalArgumentException("Slot must be 1 to 4.");
+            }
+            return slot - 1;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid slot. Use slot1..slot4.");
+        }
+    }
+
+    private List<GemColor> parseGemSequence(String raw) {
+        String cleaned = raw.toUpperCase().replaceAll("[^A-Z*]", "");
+        if (cleaned.isEmpty()) {
+            throw new IllegalArgumentException("No gem codes provided.");
+        }
+
+        List<GemColor> result = new ArrayList<>();
+        for (char c : cleaned.toCharArray()) {
+            result.add(parseGemCode(c));
+        }
+        return result;
+    }
+
+    private GemColor parseGemCode(char c) {
+        return switch (c) {
+            case 'W' -> GemColor.WHITE;
+            case 'U' -> GemColor.BLUE;
+            case 'G' -> GemColor.GREEN;
+            case 'R' -> GemColor.RED;
+            case 'K' -> GemColor.BLACK;
+            case '*' -> GemColor.GOLD;
+            default -> throw new IllegalArgumentException("Invalid gem code: " + c);
+        };
+    }
+
+    private GemCollection buildPayment(Player player, GemCollection actualCost) {
+        Map<GemColor, Integer> pay = new EnumMap<>(GemColor.class);
+        int goldNeeded = 0;
+
+        for (GemColor color : GemColor.values()) {
+            if (color == GemColor.GOLD) {
+                continue;
+            }
+            int need = actualCost.getCount(color);
+            int have = player.getGems().getCount(color);
+            int payColor = Math.min(have, need);
+            pay.put(color, payColor);
+            goldNeeded += Math.max(0, need - payColor);
+        }
+
+        if (goldNeeded > 0) {
+            pay.put(GemColor.GOLD, goldNeeded);
+        }
+
+        return new GemCollection(pay);
+    }
+
+    private String formatGemShort(GemCollection gems) {
+        StringBuilder sb = new StringBuilder();
+        for (GemColor color : GemColor.values()) {
+            int count = gems.getCount(color);
+            if (count > 0) {
+                sb.append(gemCodeLower(color)).append(count).append(" ");
+            }
+        }
+        return sb.toString().trim();
     }
 
     // -------------------------------------------------------------------------

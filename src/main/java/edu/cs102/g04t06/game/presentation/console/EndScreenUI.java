@@ -85,16 +85,16 @@ public class EndScreenUI {
     /** Displays the end screen using GameState and a caller-provided round count. */
     public void show(GameState state, int roundsPlayed) {
         this.results = buildResults(state);
-        this.roundsPlayed = Math.max(1, roundsPlayed);
+        this.roundsPlayed = roundsPlayed;
         renderAndWait();
     }
 
     /**
      * Displays the end screen using GameState.
-     * Since GameState currently has no round counter, this defaults to round 1.
+     * If the caller doesn't provide rounds, show N/A instead of a fake value.
      */
     public void show(GameState state) {
-        show(state, 1);
+        show(state, 0);
     }
 
     private void renderAndWait() {
@@ -188,7 +188,11 @@ public class EndScreenUI {
     // Rounds played
     // -----------------------------------------------------------------------
     private void printRoundsPlayed() {
-        line(D + WH + "  Rounds played: " + R + B + WH + roundsPlayed + R);
+        if (roundsPlayed <= 0) {
+            line(D + WH + "  Rounds played: " + R + B + WH + "N/A" + R);
+        } else {
+            line(D + WH + "  Rounds played: " + R + B + WH + roundsPlayed + R);
+        }
         blank();
         divider();
     }
