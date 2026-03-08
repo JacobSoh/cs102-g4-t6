@@ -1,74 +1,44 @@
 package edu.cs102.g04t06;
 
-import edu.cs102.g04t06.game.presentation.console.old.Game;
-import edu.cs102.g04t06.game.presentation.console.old.Menu;
-import javafx.application.Application;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Scene;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Screen;
-import javafx.stage.Stage;
+import edu.cs102.g04t06.game.presentation.console.ConsoleUI;
 
 /**
- * JavaFX application entry point for the Splendor game.
+ * Console application entry point for the Splendor game.
  * Part of the {@code edu.cs102.g04t06} module.
  */
-public class App extends Application {
-
-    private Scene scene;
+public class App {
+    private final ConsoleUI consoleUI;
 
     /**
      * Creates the application instance.
      */
     public App() {
-        // Default constructor required by JavaFX Application lifecycle.
+        this.consoleUI = new ConsoleUI(this);
     }
 
     /**
-     * Initializes the primary stage and shows the main menu.
-     *
-     * @param stage the primary JavaFX stage
+     * Starts the console onboarding flow.
      */
-    @Override
-    public void start(Stage stage) {
-        // var javaVersion = SystemInfo.javaVersion();
-        // var javafxVersion = SystemInfo.javafxVersion();
-
-        // Set stage Attributes
-        stage.setTitle("Splendor");
-        // stage.setFullScreen(true);
-
-        // Set stage size
-        Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
-        stage.setMinHeight(primaryScreenBounds.getMaxY() / 2.0);
-        stage.setMinWidth(primaryScreenBounds.getMaxX() / 2.0);
-        stage.setHeight(primaryScreenBounds.getMaxY() / 2.0);
-        stage.setWidth(primaryScreenBounds.getMaxX() / 2.0);
-
-        // Set default scene
-        StackPane root = new StackPane();
-        this.scene = new Scene(root);
-
-        stage.setScene(scene);
-        stage.show();
-
-        showMenu();
+    public void run() {
+        showOnBoarding();
     }
 
     /**
-     * Replaces the scene root with the menu view.
+     * Renders the onboarding screen in the console.
      */
-    public void showMenu() {
-        StackPane newRoot = new Menu(this).getRoot();
-        this.scene.setRoot(newRoot);
+    public void showOnBoarding() {
+        this.consoleUI.showOnBoarding();
     }
 
     /**
-     * Replaces the scene root with the game view.
+     * Renders the game screen in the console.
      */
     public void showGame() {
-        StackPane newRoot = new Game(this).getRoot();
-        this.scene.setRoot(newRoot);
+        this.consoleUI.showGame();
+    }
+
+    public void showLobby(boolean modeOfPlay) {
+        this.consoleUI.showLobby(modeOfPlay);
     }
 
     /**
@@ -77,7 +47,7 @@ public class App extends Application {
      * @param args command-line arguments
      */
     public static void main(String[] args) {
-        launch();
+        new App().run();
     }
 
 }
