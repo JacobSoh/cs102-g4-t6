@@ -140,4 +140,24 @@ public class CardMarket {
         }
     
     }
+
+    /**
+     * Bridge method to remove a specific Card object directly.
+     * Finds the card's level and index, then calls the main removeCard method.
+     * * @param card the card to remove
+     * @throws IllegalArgumentException if the card is not found in the visible market
+     */
+    public void removeCard(Card card) {
+        for (int level = 1; level <= 3; level++) {
+            List<Card> visible = getVisibleCards(level);
+            int index = visible.indexOf(card);
+            
+            if (index != -1) {
+                // We found the card! Call the team's original method to remove and refill
+                removeCard(level, index);
+                return; 
+            }
+        }
+        throw new IllegalArgumentException("Card not found in the visible market!");
+    }
 }
