@@ -1,9 +1,16 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+
+import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
+import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
  * EndScreenUI
@@ -14,9 +21,7 @@ import java.util.Scanner;
  *   - Final scoreboard (points, cards, nobles per player)
  *   - "Return to Main Menu" prompt
  *
- * Currently runs on mock data.
- * Every section that needs to be wired to real GameState
- * is marked with a  // TODO: HOOK  comment.
+ * Data is sourced from GameState passed to show(...).
  */
 public class EndScreenUI {
 
@@ -47,10 +52,6 @@ public class EndScreenUI {
     private static final int COL_CARDS  = 32;
     private static final int COL_NOBLES = 18;
 
-    // -----------------------------------------------------------------------
-    // Mock result data  (replace with real GameState / result object)
-    // -----------------------------------------------------------------------
-
     /** Holds the end-of-game summary for one player. */
     public static class PlayerResult {
         public final String name;
@@ -74,26 +75,29 @@ public class EndScreenUI {
         }
     }
 
-    // TODO: HOOK — replace mock data with real GameState / PlayerResult list
-
-    private int mockRounds = 12;
-
-    private final List<PlayerResult> mockResults = Arrays.asList(
-        new PlayerResult("CAROL", 15, 10, "W:2 R:2 U:2 G:2 K:2", 3, 9,  true),
-        new PlayerResult("ALICE", 12,  8, "W:2 R:1 U:3 G:0 K:2", 2, 6,  false),
-        new PlayerResult("BOB",    9,  6, "W:0 R:3 U:1 G:1 K:1", 1, 3,  false)
-    );
+    private List<PlayerResult> results = List.of();
+    private int roundsPlayed = 1;
 
     // -----------------------------------------------------------------------
     // Public entry point
-    // TODO: HOOK — accept results: public void show(List<PlayerResult> results, int rounds)
     // -----------------------------------------------------------------------
 
+    /** Displays the end screen using GameState and a caller-provided round count. */
+    public void show(GameState state, int roundsPlayed) {
+        this.results = buildResults(state);
+        this.roundsPlayed = Math.max(1, roundsPlayed);
+        renderAndWait();
+    }
+
     /**
-     * Displays the end screen and blocks until the player presses M to return
-     * to the main menu.
+     * Displays the end screen using GameState.
+     * Since GameState currently has no round counter, this defaults to round 1.
      */
-    public void show() {
+    public void show(GameState state) {
+        show(state, 1);
+    }
+
+    private void renderAndWait() {
         clearScreen();
         boardTop();
         printWinnerBanner();
@@ -134,9 +138,17 @@ public class EndScreenUI {
     // Winner banner
     // -----------------------------------------------------------------------
     private void printWinnerBanner() {
-        // TODO: HOOK — replace mockResults.get(0) with actual winner
-        PlayerResult winner = mockResults.stream()
-                .filter(p -> p.isWinner).findFirst().orElse(mockResults.get(0));
+        if (results.isEmpty()) {
+            line(centre(RE + B + "No game results available." + R, INNER));
+            blank();
+            divider();
+            return;
+        }
+
+        PlayerResult winner = results.stream()
+                .filter(p -> p.isWinner)
+                .findFirst()
+                .orElse(results.get(0));
 
         // ASCII trophy art, centred
         String[] trophy = {
@@ -176,8 +188,7 @@ public class EndScreenUI {
     // Rounds played
     // -----------------------------------------------------------------------
     private void printRoundsPlayed() {
-        // TODO: HOOK — replace mockRounds with state.getRoundNumber() or result
-        line(D + WH + "  Rounds played: " + R + B + WH + mockRounds + R);
+        line(D + WH + "  Rounds played: " + R + B + WH + roundsPlayed + R);
         blank();
         divider();
     }
@@ -200,8 +211,7 @@ public class EndScreenUI {
         line(D + WH + "  " + rep('\u2500', INNER - 2) + R);
 
         // One row per player, sorted by points (descending) — winner first
-        // TODO: HOOK — replace mockResults with real sorted result list
-        List<PlayerResult> sorted = new ArrayList<>(mockResults);
+        List<PlayerResult> sorted = new ArrayList<>(results);
         sorted.sort((a, b2) -> b2.points - a.points);
 
         for (int i = 0; i < sorted.size(); i++) {
@@ -344,11 +354,55 @@ public class EndScreenUI {
         System.out.flush();
     }
 
+    private List<PlayerResult> buildResults(GameState state) {
+        if (state == null || state.getPlayers() == null || state.getPlayers().isEmpty()) {
+            return List.of();
+        }
+
+        List<Player> players = new ArrayList<>(state.getPlayers());
+        players.sort(Comparator.comparingInt(Player::getPoints).reversed());
+        int bestPoints = players.get(0).getPoints();
+
+        List<PlayerResult> built = new ArrayList<>();
+        boolean winnerAssigned = false;
+
+        for (Player p : players) {
+            Map<GemColor, Integer> bonuses = new EnumMap<>(p.calculateBonuses());
+            int noblePoints = p.getClaimedNobles().stream()
+                    .mapToInt(Noble::getPoints)
+                    .sum();
+
+            boolean isWinner = !winnerAssigned && p.getPoints() == bestPoints;
+            if (isWinner) {
+                winnerAssigned = true;
+            }
+
+            built.add(new PlayerResult(
+                    p.getName().toUpperCase(),
+                    p.getPoints(),
+                    p.getPurchasedCards().size(),
+                    formatBonuses(bonuses),
+                    p.getClaimedNobles().size(),
+                    noblePoints,
+                    isWinner
+            ));
+        }
+
+        return built;
+    }
+
+    private String formatBonuses(Map<GemColor, Integer> bonuses) {
+        return "W:" + bonuses.getOrDefault(GemColor.WHITE, 0)
+                + " R:" + bonuses.getOrDefault(GemColor.RED, 0)
+                + " U:" + bonuses.getOrDefault(GemColor.BLUE, 0)
+                + " G:" + bonuses.getOrDefault(GemColor.GREEN, 0)
+                + " K:" + bonuses.getOrDefault(GemColor.BLACK, 0);
+    }
+
     // -----------------------------------------------------------------------
     // Temporary main — remove once wired into App.java
     // -----------------------------------------------------------------------
     public static void main(String[] args) {
-        new EndScreenUI().show();
-        System.out.println("Returned to main menu.");
+        System.out.println("EndScreenUI demo main is disabled. Call show(GameState, rounds).");
     }
 }
