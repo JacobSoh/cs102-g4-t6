@@ -1,8 +1,21 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
 import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
+import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Card;
+import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
+import edu.cs102.g04t06.game.rules.entities.Player;
+import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
+import edu.cs102.g04t06.game.rules.valueobjects.Cost;
+import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 /**
  * Routes console screens through one navigation flow.
@@ -26,6 +39,7 @@ public class ConsoleUI {
     private final MainMenuUI mainMenuUI;
     private final PlayerSetupUI playerSetupUI;
     private final GameBoardUI gameBoardUI;
+    private GameState gameState;
 
     public ConsoleUI(App application) {
         this.application = application;
@@ -94,11 +108,16 @@ public class ConsoleUI {
         if (setup == null) {
             return Route.MAIN_MENU;
         }
+        this.gameState = createInitialGameState(setup);
         return Route.GAME_BOARD;
     }
 
     private Route handleGameBoard() {
-        gameBoardUI.show();
+        if (gameState == null) {
+            printLoadGameStub();
+            return Route.MAIN_MENU;
+        }
+        gameBoardUI.show(gameState);
         return Route.MAIN_MENU;
     }
 
@@ -120,5 +139,77 @@ public class ConsoleUI {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Builds a playable in-memory state from setup data.
+     * Rules execution is still pending; this method only seeds initial board data.
+     */
+    private GameState createInitialGameState(PlayerSetupResult setup) {
+        List<Player> players = new ArrayList<>();
+        for (int i = 0; i < setup.allPlayerNames.size(); i++) {
+            players.add(new Player(setup.allPlayerNames.get(i), i));
+        }
+
+        CardMarket market = new CardMarket(
+                buildDeck(1, 40),
+                buildDeck(2, 30),
+                buildDeck(3, 20));
+
+        GemCollection gemBank = new GemCollection();
+        int base = switch (setup.totalPlayers) {
+            case 2 -> 4;
+            case 3 -> 5;
+            default -> 7;
+        };
+        gemBank = gemBank.add(GemColor.WHITE, base)
+                .add(GemColor.RED, base)
+                .add(GemColor.BLUE, base)
+                .add(GemColor.GREEN, base)
+                .add(GemColor.BLACK, base)
+                .add(GemColor.GOLD, 5);
+
+        List<Noble> nobles = List.of(
+                new Noble(1, "Anne of Green", Map.of(GemColor.WHITE, 3, GemColor.GREEN, 3)),
+                new Noble(2, "Red Regent", Map.of(GemColor.RED, 4, GemColor.BLACK, 4)),
+                new Noble(3, "Azure Court", Map.of(GemColor.BLUE, 4, GemColor.WHITE, 4))
+        );
+
+        return new GameState(players, market, gemBank, new ArrayList<>(nobles), 15);
+    }
+
+    private List<Card> buildDeck(int level, int count) {
+        List<Card> deck = new ArrayList<>(count);
+        GemColor[] bonuses = {GemColor.WHITE, GemColor.BLUE, GemColor.GREEN, GemColor.RED, GemColor.BLACK};
+
+        for (int i = 0; i < count; i++) {
+            GemColor bonus = bonuses[(i + level) % bonuses.length];
+            int points = switch (level) {
+                case 1 -> (i % 8 == 0) ? 1 : 0;
+                case 2 -> 1 + (i % 3);
+                default -> 3 + (i % 3);
+            };
+            deck.add(new Card(level, points, bonus, buildCost(level, i)));
+        }
+
+        return deck;
+    }
+
+    private Cost buildCost(int level, int seed) {
+        EnumMap<GemColor, Integer> map = new EnumMap<>(GemColor.class);
+        GemColor[] colors = {GemColor.WHITE, GemColor.RED, GemColor.BLUE, GemColor.GREEN, GemColor.BLACK};
+
+        int base = switch (level) {
+            case 1 -> 1;
+            case 2 -> 2;
+            default -> 3;
+        };
+
+        for (int i = 0; i < 3; i++) {
+            GemColor color = colors[(seed + i) % colors.length];
+            map.put(color, base + ((seed + i) % 2));
+        }
+
+        return new Cost(map);
     }
 }

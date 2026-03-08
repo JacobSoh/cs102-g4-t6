@@ -1,13 +1,18 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
+import edu.cs102.g04t06.game.rules.entities.Player;
+import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 /**
  * GameBoardUI
@@ -16,9 +21,6 @@ import edu.cs102.g04t06.game.rules.entities.GemColor;
  *
  * ANSI codes use \033 (octal 033 = decimal 27 = ESC), the most
  * reliable escape literal in Java string constants.
- *
- * Every section that needs to be wired to real GameState
- * is marked with a  // TODO: HOOK  comment.
  */
 public class GameBoardUI {
 
@@ -59,6 +61,13 @@ public class GameBoardUI {
         GEM_LABEL.put(GemColor.GOLD,  "*");
     }
 
+    private static final List<GemColor> CARD_ORDER = Arrays.asList(
+            GemColor.WHITE, GemColor.RED, GemColor.BLUE, GemColor.GREEN, GemColor.BLACK);
+
+    private static final List<GemColor> BANK_ORDER = Arrays.asList(
+            GemColor.WHITE, GemColor.RED, GemColor.BLUE,
+            GemColor.GREEN, GemColor.BLACK, GemColor.GOLD);
+
     // -------------------------------------------------------------------------
     // Board dimensions
     //   border : "  ╔" + "═"×86 + "╗"  →  total 90 terminal columns
@@ -72,127 +81,60 @@ public class GameBoardUI {
     private static final int CARD_INNER  = 12;   // ┌ + 12×─ + ┐  = 14 wide
 
     // -------------------------------------------------------------------------
-    // Lightweight mock data  (replace with real GameState later)
+    // Scanner + UI-local session state
     // -------------------------------------------------------------------------
+    private final Scanner scanner;
+    private final List<String> actionLog = new ArrayList<>();
+    private int roundNumber = 1;
 
-    private static class MockCard {
-        final String label, ansi, cost;
-        final int    points;
-        MockCard(String label, String ansi, int points, String cost) {
-            this.label = label; this.ansi = ansi;
-            this.points = points; this.cost = cost;
+    public GameBoardUI() {
+        this(new Scanner(System.in));
+    }
+
+    GameBoardUI(Scanner scanner) {
+        this.scanner = scanner;
+    }
+
+    // -------------------------------------------------------------------------
+    // Public entry points
+    // -------------------------------------------------------------------------
+    public void show(GameState state) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
         }
-    }
 
-    private static class MockNoble {
-        final int    points;
-        final String req;
-        MockNoble(int points, String req) { this.points = points; this.req = req; }
-    }
-
-    private static class MockPlayer {
-        final String  name, cardStats, gemStats;
-        final int     points, totalGems, reservedCount;
-        final boolean isCurrent;
-        MockPlayer(String name, int points, boolean isCurrent,
-                   String cardStats, String gemStats,
-                   int totalGems, int reserved) {
-            this.name = name; this.points = points; this.isCurrent = isCurrent;
-            this.cardStats = cardStats; this.gemStats = gemStats;
-            this.totalGems = totalGems; this.reservedCount = reserved;
-        }
-    }
-
-    // TODO: HOOK — replace all mock* fields with a GameState parameter
-
-    private int mockRound = 5;
-
-    private final List<MockNoble> mockNobles = Arrays.asList(
-        new MockNoble(3, "u:3 g:3"),
-        new MockNoble(3, "r:4 k:4"),
-        new MockNoble(3, "w:3 r:3")
-    );
-
-    private final List<MockCard> tier3 = Arrays.asList(
-        new MockCard("K", GREY,  5, "w3r3u3"),
-        new MockCard("R", RED,   4, "w2u4k3"),
-        new MockCard("U", BLUE,  4, "r3g3k3"),
-        new MockCard("G", GREEN, 5, "w4r2k4")
-    );
-    private final int deck3 = 12;
-
-    private final List<MockCard> tier2 = Arrays.asList(
-        new MockCard("G", GREEN, 2, "u2g1k2"),
-        new MockCard("W", WHITE, 3, "r2g2k3"),
-        new MockCard("R", RED,   2, "w1u2g2"),
-        new MockCard("U", BLUE,  3, "r3k2g1")
-    );
-    private final int deck2 = 18;
-
-    private final List<MockCard> tier1 = Arrays.asList(
-        new MockCard("K", GREY,  0, "r1g2k1"),
-        new MockCard("W", WHITE, 1, "u1g1k2"),
-        new MockCard("U", BLUE,  0, "r2u2"),
-        new MockCard("R", RED,   0, "w1k2")
-    );
-    private final int deck1 = 32;
-
-    private final Map<GemColor, Integer> bank = new LinkedHashMap<>();
-    {
-        bank.put(GemColor.WHITE, 3);
-        bank.put(GemColor.RED,   2);
-        bank.put(GemColor.BLUE,  4);
-        bank.put(GemColor.GREEN, 1);
-        bank.put(GemColor.BLACK, 3);
-        bank.put(GemColor.GOLD,  2);
-    }
-
-    private final List<MockPlayer> players = Arrays.asList(
-        new MockPlayer("ALICE", 9,  true,
-            "W:2 R:1 U:3 G:0 K:2", "W:1 R:2 U:0 G:3 K:1 *:1", 8, 0),
-        new MockPlayer("BOB",   4,  false,
-            "W:0 R:3 U:1 G:1 K:0", "7", 7, 1),
-        new MockPlayer("CAROL", 12, false,
-            "W:2 R:2 U:2 G:2 K:1", "5", 5, 0)
-    );
-
-    private final List<String> log = Arrays.asList(
-        "Bob took R U G",
-        "Carol bought T2-slot2",
-        "Alice took W W"
-    );
-
-    // -------------------------------------------------------------------------
-    // Scanner
-    // -------------------------------------------------------------------------
-    private final Scanner scanner = new Scanner(System.in);
-
-    // -------------------------------------------------------------------------
-    // Public entry point
-    // TODO: HOOK — accept GameState: public void show(GameState state)
-    // -------------------------------------------------------------------------
-    public void show() {
         while (true) {
             clearScreen();
-            render();
+            render(state);
             String input = promptAction();
-            if (input.equalsIgnoreCase("q")) break;
-            handleAction(input);
+            if (input.equalsIgnoreCase("q")) {
+                break;
+            }
+            handleAction(state, input);
         }
+    }
+
+    /** Renders the board once without prompting for user input. */
+    public void displayGameState(GameState state) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        clearScreen();
+        render(state);
     }
 
     // -------------------------------------------------------------------------
     // Master render
     // -------------------------------------------------------------------------
-    private void render() {
+    private void render(GameState state) {
         boardTop();
         printHeader();
-        printNobles();
-        printTier("TIER 3", tier3, deck3);
-        printTier("TIER 2", tier2, deck2);
-        printTier("TIER 1", tier1, deck1);
-        printBank();
-        printPlayers();
+        printNobles(state.getAvailableNobles());
+        printTier("TIER 3", state.getMarket().getVisibleCards(3), state.getMarket().getDeckSize(3));
+        printTier("TIER 2", state.getMarket().getVisibleCards(2), state.getMarket().getDeckSize(2));
+        printTier("TIER 1", state.getMarket().getVisibleCards(1), state.getMarket().getDeckSize(1));
+        printBank(state.getGemBank());
+        printPlayers(state.getPlayers(), state.getCurrentPlayer());
         printLog();
         printActionLine();
         boardBottom();
@@ -202,40 +144,48 @@ public class GameBoardUI {
     // Board frame
     // -------------------------------------------------------------------------
     private void boardTop() {
-        System.out.println(WHITE + "  \u2554" + rep('\u2550', FILL) + "\u2557" + RESET);
+        System.out.println(WHITE + "  ╔" + rep('═', FILL) + "╗" + RESET);
     }
 
     private void boardBottom() {
-        System.out.println(WHITE + "  \u255a" + rep('\u2550', FILL) + "\u255d" + RESET);
+        System.out.println(WHITE + "  ╚" + rep('═', FILL) + "╝" + RESET);
     }
 
     /** One content line padded to INNER visible width. */
     private void line(String content) {
         int pad = INNER - vlen(content);
-        if (pad < 0) pad = 0;
-        System.out.println(WHITE + "  \u2551 " + RESET
+        if (pad < 0) {
+            pad = 0;
+        }
+        System.out.println(WHITE + "  ║ " + RESET
                 + content + sp(pad)
-                + WHITE + " \u2551" + RESET);
+                + WHITE + " ║" + RESET);
     }
 
-    private void blank()   { line(""); }
+    private void blank() {
+        line("");
+    }
+
     private void divider() {
-        System.out.println(WHITE + "  \u2560" + rep('\u2550', FILL) + "\u2563" + RESET);
+        System.out.println(WHITE + "  ╠" + rep('═', FILL) + "╣" + RESET);
     }
 
     // -------------------------------------------------------------------------
     // Header
     // -------------------------------------------------------------------------
     private void printHeader() {
-        // TODO: HOOK — replace mockRound with state.getRoundNumber()
         String left  = GOLD + BOLD + "SPLENDOR" + RESET;
-        String mid   = WHITE + "Round " + mockRound + RESET;
+        String mid   = WHITE + "Round " + roundNumber + RESET;
         String right = DIM + WHITE + "[?] Help    [Q] Quit" + RESET;
 
         int g1 = (INNER / 2) - vlen(left) - vlen(mid) / 2;
         int g2 = INNER - vlen(left) - vlen(mid) - vlen(right) - g1;
-        if (g1 < 1) g1 = 1;
-        if (g2 < 1) g2 = 1;
+        if (g1 < 1) {
+            g1 = 1;
+        }
+        if (g2 < 1) {
+            g2 = 1;
+        }
         line(left + sp(g1) + mid + sp(g2) + right);
         divider();
     }
@@ -243,35 +193,39 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     // Nobles
     // -------------------------------------------------------------------------
-    private void printNobles() {
-        // TODO: HOOK — replace mockNobles with state.getAvailableNobles()
+    private void printNobles(List<Noble> nobles) {
         line(PURPLE + BOLD + "NOBLES" + RESET);
 
+        if (nobles == null || nobles.isEmpty()) {
+            line(DIM + WHITE + "  No nobles available." + RESET);
+            blank();
+            divider();
+            return;
+        }
+
         // Build each row across all noble tiles
-        String[] topRow = new String[mockNobles.size()];
-        String[] ptRow  = new String[mockNobles.size()];
-        String[] rqRow  = new String[mockNobles.size()];
-        String[] botRow = new String[mockNobles.size()];
+        String[] topRow = new String[nobles.size()];
+        String[] ptRow  = new String[nobles.size()];
+        String[] rqRow  = new String[nobles.size()];
+        String[] botRow = new String[nobles.size()];
 
-        for (int i = 0; i < mockNobles.size(); i++) {
-            MockNoble n = mockNobles.get(i);
+        for (int i = 0; i < nobles.size(); i++) {
+            Noble noble = nobles.get(i);
             String border = WHITE;
-            String dash   = rep('\u2500', NOBLE_INNER);
+            String dash   = rep('─', NOBLE_INNER);
 
-            topRow[i] = border + "\u250c" + dash + "\u2510" + RESET;
-            botRow[i] = border + "\u2514" + dash + "\u2518" + RESET;
+            topRow[i] = border + "┌" + dash + "┐" + RESET;
+            botRow[i] = border + "└" + dash + "┘" + RESET;
 
-            // points:  │ ★ 3              │
-            String pContent = " " + GOLD + "\u2605 " + n.points + RESET;
-            ptRow[i] = WHITE + "\u2502" + RESET
-                     + padTo(pContent, NOBLE_INNER)
-                     + WHITE + "\u2502" + RESET;
+            String pContent = " " + GOLD + "★ " + noble.getPoints() + RESET;
+            ptRow[i] = WHITE + "│" + RESET
+                    + padTo(pContent, NOBLE_INNER)
+                    + WHITE + "│" + RESET;
 
-            // requirements — colour each token individually
-            String rContent = " " + colorReq(n.req);
-            rqRow[i] = WHITE + "\u2502" + RESET
-                     + padTo(rContent, NOBLE_INNER)
-                     + WHITE + "\u2502" + RESET;
+            String rContent = " " + formatNobleRequirements(noble.getRequirements());
+            rqRow[i] = WHITE + "│" + RESET
+                    + padTo(rContent, NOBLE_INNER)
+                    + WHITE + "│" + RESET;
         }
 
         line(joinTiles(topRow, 2));
@@ -285,14 +239,21 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     // Tier sections
     // -------------------------------------------------------------------------
-    private void printTier(String label, List<MockCard> cards, int deckCount) {
-        // TODO: HOOK — replace cards/deckCount with CardMarket tier data
-
+    private void printTier(String label, List<Card> cards, int deckCount) {
         String hL = BOLD + WHITE + label + RESET;
         String hR = DIM + WHITE + "DECK: " + RESET + BOLD + WHITE + deckCount + RESET;
         int gap = INNER - vlen(hL) - vlen(hR);
-        if (gap < 1) gap = 1;
+        if (gap < 1) {
+            gap = 1;
+        }
         line(hL + sp(gap) + hR);
+
+        if (cards == null || cards.isEmpty()) {
+            line(DIM + WHITE + "  No cards visible." + RESET);
+            blank();
+            divider();
+            return;
+        }
 
         String[] topRow   = new String[cards.size()];
         String[] labelRow = new String[cards.size()];
@@ -300,25 +261,25 @@ public class GameBoardUI {
         String[] botRow   = new String[cards.size()];
 
         for (int i = 0; i < cards.size(); i++) {
-            MockCard c    = cards.get(i);
+            Card c = cards.get(i);
             String border = WHITE;
-            String dash   = rep('\u2500', CARD_INNER);
+            String dash   = rep('─', CARD_INNER);
+            String gemLabel = GEM_LABEL.getOrDefault(c.getBonus(), "?");
+            String gemAnsi = GEM_ANSI.getOrDefault(c.getBonus(), WHITE);
 
-            topRow[i] = border + "\u250c" + dash + "\u2510" + RESET;
-            botRow[i] = border + "\u2514" + dash + "\u2518" + RESET;
+            topRow[i] = border + "┌" + dash + "┐" + RESET;
+            botRow[i] = border + "└" + dash + "┘" + RESET;
 
-            // colour label + points:  "K  5"
-            String lContent = " " + c.ansi + BOLD + c.label + RESET
-                            + "  " + WHITE + c.points + RESET;
-            labelRow[i] = WHITE + "\u2502" + RESET
-                        + padTo(lContent, CARD_INNER)
-                        + WHITE + "\u2502" + RESET;
+            String lContent = " " + gemAnsi + BOLD + gemLabel + RESET
+                    + "  " + WHITE + c.getPoints() + RESET;
+            labelRow[i] = WHITE + "│" + RESET
+                    + padTo(lContent, CARD_INNER)
+                    + WHITE + "│" + RESET;
 
-            // cost string:  "w3r3u3"
-            String cContent = " " + DIM + WHITE + c.cost + RESET;
-            costRow[i] = WHITE + "\u2502" + RESET
-                       + padTo(cContent, CARD_INNER)
-                       + WHITE + "\u2502" + RESET;
+            String cContent = " " + DIM + WHITE + formatCardCost(c) + RESET;
+            costRow[i] = WHITE + "│" + RESET
+                    + padTo(cContent, CARD_INNER)
+                    + WHITE + "│" + RESET;
         }
 
         line("  " + joinTiles(topRow,   1));
@@ -332,16 +293,16 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     // Bank gems
     // -------------------------------------------------------------------------
-    private void printBank() {
-        // TODO: HOOK — replace bank with state.getGemBank()
+    private void printBank(GemCollection bank) {
         line(BOLD + WHITE + "BANK GEMS:" + RESET);
 
         StringBuilder sb = new StringBuilder("  ");
-        for (Map.Entry<GemColor, Integer> e : bank.entrySet()) {
-            String a = GEM_ANSI.getOrDefault(e.getKey(), WHITE);
-            String l = GEM_LABEL.getOrDefault(e.getKey(), "?");
-            sb.append(a).append(BOLD).append(l).append(":").append(e.getValue())
-              .append(RESET).append("   ");
+        for (GemColor color : BANK_ORDER) {
+            String a = GEM_ANSI.getOrDefault(color, WHITE);
+            String l = GEM_LABEL.getOrDefault(color, "?");
+            int count = bank == null ? 0 : bank.getCount(color);
+            sb.append(a).append(BOLD).append(l).append(":").append(count)
+                    .append(RESET).append("   ");
         }
         line(sb.toString());
         divider();
@@ -350,40 +311,54 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     // Player panels
     // -------------------------------------------------------------------------
-    private void printPlayers() {
-        // TODO: HOOK — replace players with state.getPlayers()
-        for (MockPlayer p : players) {
-            if (p.isCurrent) printCurrentPlayer(p);
-            else             printOtherPlayer(p);
+    private void printPlayers(List<Player> players, Player currentPlayer) {
+        if (players == null || players.isEmpty()) {
+            line(DIM + WHITE + "No players in game state." + RESET);
+            divider();
+            return;
+        }
+
+        for (Player p : players) {
+            if (p == currentPlayer) {
+                printCurrentPlayer(p);
+            } else {
+                printOtherPlayer(p);
+            }
         }
         divider();
     }
 
-    private void printCurrentPlayer(MockPlayer p) {
-        String ind   = GREEN + BOLD + "\u25ba " + RESET;
-        String name  = CYAN  + BOLD + p.name + " (you)" + RESET;
-        String pts   = GOLD  + BOLD + p.points + " pts" + RESET;
+    private void printCurrentPlayer(Player p) {
+        String ind   = GREEN + BOLD + "► " + RESET;
+        String name  = CYAN  + BOLD + p.getName() + " (you)" + RESET;
+        String pts   = GOLD  + BOLD + p.getPoints() + " pts" + RESET;
         int gap = INNER - vlen(ind) - vlen(name) - vlen(pts);
-        if (gap < 2) gap = 2;
+        if (gap < 2) {
+            gap = 2;
+        }
         line(ind + name + sp(gap) + pts);
 
+        String cardStats = colorStats(formatStats(p.calculateBonuses(), false));
+        String gemStats  = colorStats(formatStats(p.getGems().asMap(), true));
+
         line(WHITE + "  Cards :  " + RESET
-                + colorStats(p.cardStats)
+                + cardStats
                 + WHITE + "   Reserved: " + RESET
-                + reservedSlots(p.reservedCount));
+                + reservedSlots(p.getReservedCards().size()));
 
         line(WHITE + "  Gems  :  " + RESET
-                + colorStats(p.gemStats)
-                + DIM + WHITE + "   (Total: " + p.totalGems + ")" + RESET);
+                + gemStats
+                + DIM + WHITE + "   (Total: " + p.getGemCount() + ")" + RESET);
     }
 
-    private void printOtherPlayer(MockPlayer p) {
-        line(RED + BOLD + p.name + RESET
-                + "  " + BOLD + WHITE + p.points + " pts" + RESET
+    private void printOtherPlayer(Player p) {
+        String cardStats = formatStats(p.calculateBonuses(), false);
+        line(RED + BOLD + p.getName() + RESET
+                + "  " + BOLD + WHITE + p.getPoints() + " pts" + RESET
                 + DIM + WHITE
-                + "   Cards: " + p.cardStats
-                + "   Gems: "  + p.gemStats + " total"
-                + "   Reserved: " + p.reservedCount
+                + "   Cards: " + cardStats
+                + "   Gems: "  + p.getGemCount() + " total"
+                + "   Reserved: " + p.getReservedCards().size()
                 + RESET);
     }
 
@@ -391,12 +366,21 @@ public class GameBoardUI {
     // Log
     // -------------------------------------------------------------------------
     private void printLog() {
-        // TODO: HOOK — replace log with real game event log
         StringBuilder sb = new StringBuilder(DIM + WHITE + "LOG:  " + RESET);
-        for (int i = 0; i < log.size(); i++) {
-            sb.append(WHITE).append(log.get(i)).append(RESET);
-            if (i < log.size() - 1)
+        if (actionLog.isEmpty()) {
+            sb.append(DIM).append(WHITE).append("No actions yet").append(RESET);
+            line(sb.toString());
+            return;
+        }
+
+        int start = Math.max(0, actionLog.size() - 3);
+        List<String> recent = actionLog.subList(start, actionLog.size());
+
+        for (int i = 0; i < recent.size(); i++) {
+            sb.append(WHITE).append(recent.get(i)).append(RESET);
+            if (i < recent.size() - 1) {
                 sb.append(DIM).append(WHITE).append("   |   ").append(RESET);
+            }
         }
         line(sb.toString());
     }
@@ -409,107 +393,183 @@ public class GameBoardUI {
     }
 
     private String promptAction() {
-        System.out.print(WHITE + "  \u2551 " + RESET + GREEN + BOLD + "  > " + RESET);
+        System.out.print(WHITE + "  ║ " + RESET + GREEN + BOLD + "  > " + RESET);
         return scanner.nextLine().trim();
     }
 
     // -------------------------------------------------------------------------
     // Action dispatch
-    // TODO: HOOK — wire each handler to GameRules / GameState
     // -------------------------------------------------------------------------
-    private void handleAction(String input) {
+    private void handleAction(GameState state, String input) {
         String s = input.toLowerCase().trim();
-        if      (s.startsWith("take"))    handleTake(s);
-        else if (s.startsWith("buy"))     handleBuy(s);
-        else if (s.startsWith("reserve")) handleReserve(s);
-        else if (s.equals("pass"))        handlePass();
-        else                              err("Unknown command. Try: take, buy, reserve, pass, q");
+        if (s.startsWith("take")) {
+            handleTake(state, s);
+        } else if (s.startsWith("buy")) {
+            handleBuy(state, s);
+        } else if (s.startsWith("reserve")) {
+            handleReserve(state, s);
+        } else if (s.equals("pass")) {
+            handlePass(state);
+        } else {
+            err("Unknown command. Try: take, buy, reserve, pass, q");
+        }
     }
 
-    private void handleTake(String s) {
+    private void handleTake(GameState state, String s) {
         String[] p = s.split("\\s+");
-        if (p.length < 2) { err("Usage: take <gem> [gem] [gem]   e.g.  take w r u"); return; }
-        ok("Took: " + String.join(" ", Arrays.copyOfRange(p, 1, p.length)).toUpperCase() + "  (stub)");
-        sleep(1200);
+        if (p.length < 2) {
+            err("Usage: take <gem> [gem] [gem]   e.g.  take w r u");
+            return;
+        }
+
+        String payload = String.join(" ", Arrays.copyOfRange(p, 1, p.length)).toUpperCase();
+        actionLog.add(state.getCurrentPlayer().getName() + " requested take " + payload);
+        ok("Took: " + payload + "  (pending rules integration)");
+        sleep(800);
     }
 
-    private void handleBuy(String s) {
+    private void handleBuy(GameState state, String s) {
         String[] p = s.split("\\s+");
-        if (p.length < 3) { err("Usage: buy <tier> <slot>   e.g.  buy t2 slot1"); return; }
-        ok("Bought " + p[1] + " " + p[2] + "  (stub)");
-        sleep(1200);
+        if (p.length < 3) {
+            err("Usage: buy <tier> <slot>   e.g.  buy t2 slot1");
+            return;
+        }
+
+        actionLog.add(state.getCurrentPlayer().getName() + " requested buy " + p[1] + " " + p[2]);
+        ok("Bought " + p[1] + " " + p[2] + "  (pending rules integration)");
+        sleep(800);
     }
 
-    private void handleReserve(String s) {
+    private void handleReserve(GameState state, String s) {
         String[] p = s.split("\\s+");
-        if (p.length < 3) { err("Usage: reserve <tier> <slot>   e.g.  reserve t1 slot3"); return; }
-        ok("Reserved " + p[1] + " " + p[2] + "  (stub)");
-        sleep(1200);
+        if (p.length < 3) {
+            err("Usage: reserve <tier> <slot>   e.g.  reserve t1 slot3");
+            return;
+        }
+
+        actionLog.add(state.getCurrentPlayer().getName() + " requested reserve " + p[1] + " " + p[2]);
+        ok("Reserved " + p[1] + " " + p[2] + "  (pending rules integration)");
+        sleep(800);
     }
 
-    private void handlePass() {
-        ok("Turn passed.  (stub)");
-        sleep(1200);
+    private void handlePass(GameState state) {
+        String current = state.getCurrentPlayer().getName();
+        state.advanceToNextPlayer();
+        if (state.getCurrentPlayerIndex() == 0) {
+            roundNumber++;
+        }
+        actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
+        ok("Turn passed.");
+        sleep(600);
     }
 
     // -------------------------------------------------------------------------
     // Rendering utilities
     // -------------------------------------------------------------------------
 
+    private String formatStats(Map<GemColor, Integer> stats, boolean includeGold) {
+        StringBuilder sb = new StringBuilder();
+        List<GemColor> order = includeGold ? BANK_ORDER : CARD_ORDER;
+
+        for (GemColor color : order) {
+            if (!includeGold && color == GemColor.GOLD) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(" ");
+            }
+            int value = stats == null ? 0 : stats.getOrDefault(color, 0);
+            sb.append(GEM_LABEL.getOrDefault(color, "?")).append(":").append(value);
+        }
+
+        return sb.toString();
+    }
+
+    private String formatCardCost(Card card) {
+        if (card == null || card.getCost() == null) {
+            return "-";
+        }
+
+        Map<GemColor, Integer> req = card.getCost().asMap();
+        StringBuilder sb = new StringBuilder();
+        for (GemColor color : CARD_ORDER) {
+            int count = req.getOrDefault(color, 0);
+            if (count <= 0) {
+                continue;
+            }
+            sb.append(gemCodeLower(color)).append(count);
+        }
+        return sb.length() == 0 ? "-" : sb.toString();
+    }
+
+    private String formatNobleRequirements(Map<GemColor, Integer> req) {
+        if (req == null || req.isEmpty()) {
+            return "-";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (GemColor color : CARD_ORDER) {
+            int count = req.getOrDefault(color, 0);
+            if (count <= 0) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(" ");
+            }
+            sb.append(GEM_ANSI.getOrDefault(color, WHITE))
+                    .append(GEM_LABEL.getOrDefault(color, "?"))
+                    .append(":")
+                    .append(count)
+                    .append(RESET);
+        }
+        return sb.length() == 0 ? "-" : sb.toString();
+    }
+
     /**
      * Colours a stats string like "W:2 R:1 U:3" token by token.
      * Each token is coloured by its first letter.
      */
     private String colorStats(String stats) {
-        if (stats == null || stats.isBlank()) return "";
+        if (stats == null || stats.isBlank()) {
+            return "";
+        }
         StringBuilder sb = new StringBuilder();
         boolean first = true;
         for (String t : stats.split("\\s+")) {
-            if (t.isEmpty()) continue;
-            if (!first) sb.append("  ");
+            if (t.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                sb.append("  ");
+            }
             sb.append(gemAnsi(t.charAt(0))).append(BOLD).append(t).append(RESET);
             first = false;
         }
         return sb.toString();
     }
 
-    /**
-     * Colours a noble requirement string like "u:3 g:3".
-     * Each token is coloured by its first letter (lowercase gem code).
-     */
-    private String colorReq(String req) {
-        StringBuilder sb = new StringBuilder();
-        for (String t : req.split("\\s+")) {
-            sb.append(gemAnsiLower(t.charAt(0))).append(t).append(RESET).append(" ");
-        }
-        // trim trailing space
-        String result = sb.toString();
-        return result.endsWith(" ") ? result.substring(0, result.length() - 1) : result;
-    }
-
     /** Maps uppercase gem stat letter (W/R/U/G/K/*) to ANSI colour. */
     private String gemAnsi(char c) {
-        switch (c) {
-            case 'W': return WHITE;
-            case 'R': return RED;
-            case 'U': return BLUE;
-            case 'G': return GREEN;
-            case 'K': return GREY;
-            case '*': return GOLD;
-            default:  return WHITE;
-        }
+        return switch (c) {
+            case 'W' -> WHITE;
+            case 'R' -> RED;
+            case 'U' -> BLUE;
+            case 'G' -> GREEN;
+            case 'K' -> GREY;
+            case '*' -> GOLD;
+            default  -> WHITE;
+        };
     }
 
-    /** Maps lowercase noble req letter (w/r/u/g/k) to ANSI colour. */
-    private String gemAnsiLower(char c) {
-        switch (c) {
-            case 'w': return WHITE;
-            case 'r': return RED;
-            case 'u': return BLUE;
-            case 'g': return GREEN;
-            case 'k': return GREY;
-            default:  return WHITE;
-        }
+    private char gemCodeLower(GemColor color) {
+        return switch (color) {
+            case WHITE -> 'w';
+            case RED -> 'r';
+            case BLUE -> 'u';
+            case GREEN -> 'g';
+            case BLACK -> 'k';
+            case GOLD -> '*';
+        };
     }
 
     /**
@@ -528,7 +588,9 @@ public class GameBoardUI {
     private String joinTiles(String[] tiles, int gapSize) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < tiles.length; i++) {
-            if (i > 0) sb.append(sp(gapSize));
+            if (i > 0) {
+                sb.append(sp(gapSize));
+            }
             sb.append(tiles[i]);
         }
         return sb.toString();
@@ -537,8 +599,9 @@ public class GameBoardUI {
     /** Renders 3 reserved card slots: [ ][ ][ ] */
     private String reservedSlots(int count) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 3; i++)
-            sb.append(i < count ? CYAN + "[\u25a0]" + RESET : DIM + "[ ]" + RESET);
+        for (int i = 0; i < 3; i++) {
+            sb.append(i < count ? CYAN + "[■]" + RESET : DIM + "[ ]" + RESET);
+        }
         return sb.toString();
     }
 
@@ -558,17 +621,19 @@ public class GameBoardUI {
     /** Returns n repetitions of character c as a String. */
     private String rep(char c, int n) {
         StringBuilder sb = new StringBuilder(n);
-        for (int i = 0; i < n; i++) sb.append(c);
+        for (int i = 0; i < n; i++) {
+            sb.append(c);
+        }
         return sb.toString();
     }
 
     private void ok(String msg) {
-        System.out.println("\n" + GREEN + "  \u2714  " + msg + RESET);
+        System.out.println("\n" + GREEN + "  ✔  " + msg + RESET);
     }
 
     private void err(String msg) {
-        System.out.println("\n" + RED + "  \u2716  " + msg + RESET);
-        sleep(1200);
+        System.out.println("\n" + RED + "  ✖  " + msg + RESET);
+        sleep(1000);
     }
 
     private void clearScreen() {
@@ -577,14 +642,10 @@ public class GameBoardUI {
     }
 
     private void sleep(int ms) {
-        try { Thread.sleep(ms); }
-        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
-
-    // -------------------------------------------------------------------------
-    // Temporary main — remove once wired into App.java
-    // -------------------------------------------------------------------------
-    public static void main(String[] args) {
-        new GameBoardUI().show();
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
