@@ -103,6 +103,58 @@ class InputHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> handler.promptActionChoice(-1));
     }
 
+    // ==================== Token Parsing Tests ====================
+
+    @Test
+    @DisplayName("parseTierToken accepts t2/tier3/1 formats")
+    void parseTierTokenAcceptsCommonFormats() {
+        assertEquals(2, handler.parseTierToken("t2"));
+        assertEquals(3, handler.parseTierToken("tier3"));
+        assertEquals(1, handler.parseTierToken("1"));
+    }
+
+    @Test
+    @DisplayName("parseTierToken throws on invalid tier")
+    void parseTierTokenThrowsOnInvalidTier() {
+        assertThrows(IllegalArgumentException.class, () -> handler.parseTierToken("t0"));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseTierToken("tier4"));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseTierToken("abc"));
+    }
+
+    @Test
+    @DisplayName("parseSlotToken accepts slot2/s3/4 formats and returns zero-based index")
+    void parseSlotTokenAcceptsCommonFormats() {
+        assertEquals(1, handler.parseSlotToken("slot2"));
+        assertEquals(2, handler.parseSlotToken("s3"));
+        assertEquals(3, handler.parseSlotToken("4"));
+    }
+
+    @Test
+    @DisplayName("parseSlotToken throws on invalid slot")
+    void parseSlotTokenThrowsOnInvalidSlot() {
+        assertThrows(IllegalArgumentException.class, () -> handler.parseSlotToken("slot0"));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseSlotToken("5"));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseSlotToken("xyz"));
+    }
+
+    @Test
+    @DisplayName("parseGemSequence parses compact and spaced gem input")
+    void parseGemSequenceParsesCompactAndSpacedInput() {
+        List<GemColor> compact = handler.parseGemSequence("wru");
+        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), compact);
+
+        List<GemColor> spaced = handler.parseGemSequence("w r u");
+        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), spaced);
+    }
+
+    @Test
+    @DisplayName("parseGemSequence throws on invalid or empty gem input")
+    void parseGemSequenceThrowsOnInvalidOrEmptyInput() {
+        assertThrows(IllegalArgumentException.class, () -> handler.parseGemSequence(""));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseGemSequence("123"));
+        assertThrows(IllegalArgumentException.class, () -> handler.parseGemSequence("wx"));
+    }
+
     // ==================== promptPlayerCount() Tests ====================
 
     @Test
