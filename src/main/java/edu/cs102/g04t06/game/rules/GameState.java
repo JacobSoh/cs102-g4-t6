@@ -21,6 +21,7 @@ public class GameState {
 
     private final List<Player> players;
     private int currentPlayerIndex;
+    private int roundNumber;
     private final CardMarket market;
     private GemCollection gemBank;
     private final List<Noble> availableNobles;
@@ -37,6 +38,7 @@ public class GameState {
      */
     public GameState(List<Player> players, CardMarket market, GemCollection gemBank, List<Noble> availableNobles, int winningThreshold) {
         this.players = players;
+        this.roundNumber = 1;
         this.market = market != null ? market : new CardMarket(
                 // level 1
                 new ArrayList<>() {{
@@ -132,6 +134,14 @@ public class GameState {
     }
 
     /**
+     * gets the current round number (1-based).
+     * @return the current round number
+     */
+    public int getRoundNumber() {
+        return this.roundNumber;
+    }
+
+    /**
      * gets all players in turn order.
      * @return the players in this game state
      */
@@ -184,6 +194,9 @@ public class GameState {
      */
     public void advanceToNextPlayer() {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size();
+        if (this.currentPlayerIndex == 0) {
+            this.roundNumber++;
+        }
     }
 
     /**

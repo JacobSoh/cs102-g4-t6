@@ -3,7 +3,6 @@ package edu.cs102.g04t06.game.presentation.console;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.cs102.g04t06.App;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 import edu.cs102.g04t06.game.rules.GameState;
@@ -12,10 +11,7 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 /**
  * Routes console screens through one navigation flow.
  */
-public class ConsoleUI {
-    private static final String RESET = "\u001B[0m";
-    private static final String BOLD  = "\u001B[1m";
-    private static final String RED   = "\u001B[31m";
+public class ConsoleUI implements ThemeStyleSheet {
 
     private enum Route {
         LOAD_SCREEN,
@@ -25,16 +21,13 @@ public class ConsoleUI {
         EXIT
     }
 
-    @SuppressWarnings("unused")
-    private final App application;
     private final LoadScreenUI loadScreenUI;
     private final MainMenuUI mainMenuUI;
     private final PlayerSetupUI playerSetupUI;
     private final GameBoardUI gameBoardUI;
     private GameState gameState;
 
-    public ConsoleUI(App application) {
-        this.application = application;
+    public ConsoleUI() {
         this.loadScreenUI = new LoadScreenUI();
         this.mainMenuUI = new MainMenuUI();
         this.playerSetupUI = new PlayerSetupUI();
@@ -45,7 +38,7 @@ public class ConsoleUI {
      * Primary app entry flow:
      * load screen -> main menu -> setup/new game -> game board.
      */
-    public void showOnBoarding() {
+    public void showLoadScreen() {
         route(Route.LOAD_SCREEN);
     }
 
@@ -138,10 +131,6 @@ public class ConsoleUI {
      * GameState handles default market/bank/noble initialization when null is passed.
      */
     private GameState createInitialGameState(PlayerSetupResult setup) {
-        List<Player> players = new ArrayList<>();
-        for (int i = 0; i < setup.allPlayerNames.size(); i++) {
-            players.add(new Player(setup.allPlayerNames.get(i), i));
-        }
-        return new GameState(players, null, null, null, 15);
+        return new GameState(new ArrayList<>(setup.players), null, null, null, 15);
     }
 }

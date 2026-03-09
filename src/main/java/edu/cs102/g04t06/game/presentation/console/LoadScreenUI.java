@@ -1,6 +1,6 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import java.io.IOException;
+import java.util.Scanner;
 
 /**
  * LoadScreenUI
@@ -9,36 +9,14 @@ import java.io.IOException;
  * Shows the game title in ASCII art, a brief description of Splendor,
  * and waits for the user to press any key before proceeding to the Main Menu.
  */
-public class LoadScreenUI {
-
-    // -------------------------------------------------------------------------
-    // ANSI Colour Codes
-    // -------------------------------------------------------------------------
-    private static final String RESET   = "\u001B[0m";
-    private static final String BOLD    = "\u001B[1m";
-    private static final String GOLD    = "\u001B[38;5;220m";   // amber/gold title
-    private static final String WHITE   = "\u001B[37m";
-    private static final String DIM     = "\u001B[2m";
-    private static final String CYAN    = "\u001B[36m";
-    private static final String GREEN   = "\u001B[32m";
-
-    // -------------------------------------------------------------------------
-    // ASCII Art Title
-    // -------------------------------------------------------------------------
-    private static final String[] TITLE_ART = {
-        "  ███████╗██████╗ ██╗     ███████╗███╗   ██╗██████╗  ██████╗ ██████╗  ",
-        "  ██╔════╝██╔══██╗██║     ██╔════╝████╗  ██║██╔══██╗██╔═══██╗██╔══██╗ ",
-        "  ███████╗██████╔╝██║     █████╗  ██╔██╗ ██║██║  ██║██║   ██║██████╔╝ ",
-        "  ╚════██║██╔═══╝ ██║     ██╔══╝  ██║╚██╗██║██║  ██║██║   ██║██╔══██╗ ",
-        "  ███████║██║     ███████╗███████╗██║ ╚████║██████╔╝╚██████╔╝██║  ██║ ",
-        "  ╚══════╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═══╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝ "
-    };
+public class LoadScreenUI implements ThemeStyleSheet {
 
     // -------------------------------------------------------------------------
     // Layout constants
     // -------------------------------------------------------------------------
     private static final int    BOX_WIDTH   = 72;   // inner width of the panel
     private static final String VERSION     = "v1.0.0";
+    private final Scanner scanner = new Scanner(System.in);
 
     // -------------------------------------------------------------------------
     // Public entry point
@@ -54,7 +32,7 @@ public class LoadScreenUI {
         printDivider();
         printDescriptionBox();
         printFooter();
-        waitForKeyPress();
+        waitForEnter();
     }
 
     // -------------------------------------------------------------------------
@@ -63,7 +41,7 @@ public class LoadScreenUI {
 
     /** Clears the terminal using ANSI escape codes. */
     private void clearScreen() {
-        System.out.print("\033[H\033[2J");
+        System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 
@@ -113,40 +91,29 @@ public class LoadScreenUI {
         System.out.println();
     }
 
-    /** Prints the version number and the "press any key" prompt. */
+    /** Prints the version number and the "press Enter" prompt. */
     private void printFooter() {
         String versionStr  = DIM + WHITE + VERSION + RESET;
-        String promptStr   = GREEN + BOLD + "  Press any key to continue..." + RESET;
+        String promptStr   = GREEN + BOLD + "  Press Enter to continue..." + RESET;
 
         System.out.println("  " + versionStr);
         System.out.println();
-        System.out.println(promptStr);
-        System.out.println();
+        System.out.print(promptStr + " ");
     }
 
     // -------------------------------------------------------------------------
     // Input
     // -------------------------------------------------------------------------
 
-    /** Blocks until the user presses any key, then returns. */
-    private void waitForKeyPress() {
-        try {
-            // Switch terminal to raw mode so we don't need Enter pressed
-            new ProcessBuilder("sh", "-c", "stty raw -echo </dev/tty")
-                    .inheritIO().start().waitFor();
-            System.in.read(); // wait for single keypress
-        } catch (IOException | InterruptedException e) {
-            // Fallback: just wait for Enter if raw mode unavailable
-            try { System.in.read(); }
-            catch (IOException ex) { Thread.currentThread().interrupt(); }
-        } finally {
-            // Restore terminal to normal cooked mode
-            try {
-                new ProcessBuilder("sh", "-c", "stty sane </dev/tty")
-                        .inheritIO().start().waitFor();
-            } catch (IOException | InterruptedException e) {
-                Thread.currentThread().interrupt();
+    /** Blocks until the user submits an empty line (Enter only). */
+    private void waitForEnter() {
+        while (true) {
+            String input = scanner.nextLine();
+            if (input.isBlank()) {
+                return;
             }
+            System.out.println(RED + "  Please press Enter only to continue." + RESET);
+            System.out.print(GREEN + "  > " + RESET);
         }
     }
 
@@ -159,7 +126,7 @@ public class LoadScreenUI {
      * visible length for padding calculations.
      */
     private String stripAnsi(String s) {
-        return s.replaceAll("\u001B\\[[;\\d]*m", "");
+        return s.replaceAll(ANSI_REGEX, "");
     }
 
     // -------------------------------------------------------------------------

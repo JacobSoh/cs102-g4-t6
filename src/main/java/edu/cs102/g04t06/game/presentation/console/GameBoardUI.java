@@ -21,25 +21,8 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  *
  * Renders the full Splendor game board in the console.
  *
- * ANSI codes use \033 (octal 033 = decimal 27 = ESC), the most
- * reliable escape literal in Java string constants.
  */
-public class GameBoardUI {
-
-    // -------------------------------------------------------------------------
-    // ANSI Colour Codes — all use \033 (octal ESC)
-    // -------------------------------------------------------------------------
-    private static final String RESET  = "\033[0m";
-    private static final String BOLD   = "\033[1m";
-    private static final String DIM    = "\033[2m";
-    private static final String GOLD   = "\033[38;5;220m";
-    private static final String WHITE  = "\033[37m";
-    private static final String GREEN  = "\033[32m";
-    private static final String BLUE   = "\033[34m";
-    private static final String RED    = "\033[31m";
-    private static final String CYAN   = "\033[36m";
-    private static final String PURPLE = "\033[35m";
-    private static final String GREY   = "\033[90m";   // bright-black for K (black gems)
+public class GameBoardUI implements ThemeStyleSheet {
 
     // Gem colour → ANSI
     private static final Map<GemColor, String> GEM_ANSI = new EnumMap<>(GemColor.class);
@@ -87,7 +70,6 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
-    private int roundNumber = 1;
     private final GameRules rules = new GameRules();
     private final InputHandler inputHandler = new InputHandler();
 
@@ -135,7 +117,7 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     private void render(GameState state) {
         boardTop();
-        printHeader();
+        printHeader(state);
         printNobles(state.getAvailableNobles());
         printTier("TIER 3", state.getMarket().getVisibleCards(3), state.getMarket().getDeckSize(3));
         printTier("TIER 2", state.getMarket().getVisibleCards(2), state.getMarket().getDeckSize(2));
@@ -180,9 +162,9 @@ public class GameBoardUI {
     // -------------------------------------------------------------------------
     // Header
     // -------------------------------------------------------------------------
-    private void printHeader() {
+    private void printHeader(GameState state) {
         String left  = GOLD + BOLD + "SPLENDOR" + RESET;
-        String mid   = WHITE + "Round " + roundNumber + RESET;
+        String mid   = WHITE + "Round " + state.getRoundNumber() + RESET;
         String right = DIM + WHITE + "[?] Help    [Q] Quit" + RESET;
 
         int g1 = (INNER / 2) - vlen(left) - vlen(mid) / 2;
@@ -396,6 +378,8 @@ public class GameBoardUI {
     // ACTION line + prompt
     // -------------------------------------------------------------------------
     private void printActionLine() {
+        line(DIM + WHITE + "  Commands: take wru | take ww | buy t2 slot1 | reserve t1 slot3" + RESET);
+        line(DIM + WHITE + "            pass | q" + RESET);
         line(GREEN + BOLD + "ACTION >" + RESET);
     }
 
@@ -431,7 +415,7 @@ public class GameBoardUI {
 
         List<GemColor> colors;
         try {
-            colors = parseGemSequence(payloadRaw);
+            colors = inputHandler.parseGemSequence(payloadRaw);
         } catch (IllegalArgumentException e) {
             err(e.getMessage());
             return;
@@ -485,8 +469,8 @@ public class GameBoardUI {
         int tier;
         int slotIndex;
         try {
-            tier = parseTierToken(p[1]);
-            slotIndex = parseSlotToken(p[2]);
+            tier = inputHandler.parseTierToken(p[1]);
+            slotIndex = inputHandler.parseSlotToken(p[2]);
         } catch (IllegalArgumentException e) {
             err(e.getMessage());
             return;
@@ -537,8 +521,8 @@ public class GameBoardUI {
         int tier;
         int slotIndex;
         try {
-            tier = parseTierToken(p[1]);
-            slotIndex = parseSlotToken(p[2]);
+            tier = inputHandler.parseTierToken(p[1]);
+            slotIndex = inputHandler.parseSlotToken(p[2]);
         } catch (IllegalArgumentException e) {
             err(e.getMessage());
             return;
@@ -617,7 +601,7 @@ public class GameBoardUI {
 
             List<GemColor> toReturnColors;
             try {
-                toReturnColors = parseGemSequence(input);
+                toReturnColors = inputHandler.parseGemSequence(input);
             } catch (IllegalArgumentException e) {
                 err(e.getMessage());
                 continue;
@@ -684,64 +668,6 @@ public class GameBoardUI {
 
     private void advanceTurn(GameState state) {
         state.advanceToNextPlayer();
-        if (state.getCurrentPlayerIndex() == 0) {
-            roundNumber++;
-        }
-    }
-
-    private int parseTierToken(String token) {
-        String t = token.toLowerCase().trim();
-        t = t.replace("tier", "");
-        t = t.startsWith("t") ? t.substring(1) : t;
-        try {
-            int tier = Integer.parseInt(t);
-            if (tier < 1 || tier > 3) {
-                throw new IllegalArgumentException("Tier must be 1, 2, or 3.");
-            }
-            return tier;
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid tier. Use t1, t2, or t3.");
-        }
-    }
-
-    private int parseSlotToken(String token) {
-        String t = token.toLowerCase().trim();
-        t = t.replace("slot", "");
-        t = t.startsWith("s") ? t.substring(1) : t;
-        try {
-            int slot = Integer.parseInt(t);
-            if (slot < 1 || slot > 4) {
-                throw new IllegalArgumentException("Slot must be 1 to 4.");
-            }
-            return slot - 1;
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid slot. Use slot1..slot4.");
-        }
-    }
-
-    private List<GemColor> parseGemSequence(String raw) {
-        String cleaned = raw.toUpperCase().replaceAll("[^A-Z*]", "");
-        if (cleaned.isEmpty()) {
-            throw new IllegalArgumentException("No gem codes provided.");
-        }
-
-        List<GemColor> result = new ArrayList<>();
-        for (char c : cleaned.toCharArray()) {
-            result.add(parseGemCode(c));
-        }
-        return result;
-    }
-
-    private GemColor parseGemCode(char c) {
-        return switch (c) {
-            case 'W' -> GemColor.WHITE;
-            case 'U' -> GemColor.BLUE;
-            case 'G' -> GemColor.GREEN;
-            case 'R' -> GemColor.RED;
-            case 'K' -> GemColor.BLACK;
-            case '*' -> GemColor.GOLD;
-            default -> throw new IllegalArgumentException("Invalid gem code: " + c);
-        };
     }
 
     private GemCollection buildPayment(Player player, GemCollection actualCost) {
@@ -921,10 +847,9 @@ public class GameBoardUI {
 
     /**
      * Visible length of s: strips ANSI escape sequences before measuring.
-     * Pattern: ESC (0x1B = \033) followed by [ then digits/semicolons then m.
      */
     private int vlen(String s) {
-        return s.replaceAll("\033\\[[;\\d]*m", "").length();
+        return s.replaceAll(ANSI_REGEX, "").length();
     }
 
     /** Returns n spaces. */
@@ -951,7 +876,7 @@ public class GameBoardUI {
     }
 
     private void clearScreen() {
-        System.out.print("\033[H\033[2J");
+        System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 

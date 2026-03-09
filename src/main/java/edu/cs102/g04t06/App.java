@@ -27,7 +27,7 @@ public class App {
      * Renders the onboarding screen in the console.
      */
     public void showOnBoarding() {
-        this.consoleUI.showOnBoarding();
+        this.consoleUI.showLoadScreen();
     }
 
     /**

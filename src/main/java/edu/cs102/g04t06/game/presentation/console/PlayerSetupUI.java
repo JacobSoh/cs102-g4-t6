@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import edu.cs102.g04t06.game.rules.entities.Player;
+
 /**
  * PlayerSetupUI
  *
@@ -15,21 +17,7 @@ import java.util.Scanner;
  *
  * Returns a PlayerSetupResult containing everything the game needs.
  */
-public class PlayerSetupUI {
-
-    // -------------------------------------------------------------------------
-    // ANSI Colour Codes
-    // -------------------------------------------------------------------------
-    private static final String RESET  = "\u001B[0m";
-    private static final String BOLD   = "\u001B[1m";
-    private static final String GOLD   = "\u001B[38;5;220m";
-    private static final String WHITE  = "\u001B[37m";
-    private static final String DIM    = "\u001B[2m";
-    private static final String GREEN  = "\u001B[32m";
-    private static final String BLUE   = "\u001B[34m";
-    private static final String RED    = "\u001B[31m";
-    private static final String CYAN   = "\u001B[36m";
-    private static final String YELLOW = "\u001B[33m";
+public class PlayerSetupUI implements ThemeStyleSheet {
 
     private static final int BOX_WIDTH = 50;
 
@@ -45,19 +33,21 @@ public class PlayerSetupUI {
         public final String       localPlayerName;   // the human at this machine
         public final boolean      isOnline;          // true = online, false = offline/CPU
         public final int          totalPlayers;      // 2–4
-        public final List<String> allPlayerNames;    // index 0 = local player, rest = friends/CPUs
+        public final List<Player> players;           // index 0 = local player, rest = friends/CPUs
         public final List<Boolean> isHuman;          // true = human, false = CPU
 
         public PlayerSetupResult(String localPlayerName,
                                  boolean isOnline,
-                                 int totalPlayers,
-                                 List<String> allPlayerNames,
+                                 List<Player> players,
                                  List<Boolean> isHuman) {
+            if (players.size() != isHuman.size()) {
+                throw new IllegalArgumentException("players and isHuman size must match");
+            }
             this.localPlayerName = localPlayerName;
             this.isOnline        = isOnline;
-            this.totalPlayers    = totalPlayers;
-            this.allPlayerNames  = allPlayerNames;
-            this.isHuman         = isHuman;
+            this.players         = List.copyOf(players);
+            this.totalPlayers    = this.players.size();
+            this.isHuman         = List.copyOf(isHuman);
         }
 
         @Override
@@ -65,9 +55,9 @@ public class PlayerSetupUI {
             StringBuilder sb = new StringBuilder();
             sb.append("Mode: ").append(isOnline ? "Online" : "Offline").append("\n");
             sb.append("Players (").append(totalPlayers).append("):\n");
-            for (int i = 0; i < allPlayerNames.size(); i++) {
+            for (int i = 0; i < players.size(); i++) {
                 sb.append("  ").append(i + 1).append(". ")
-                  .append(allPlayerNames.get(i))
+                  .append(players.get(i).getName())
                   .append(isHuman.get(i) ? " [Human]" : " [CPU]")
                   .append("\n");
             }
@@ -110,24 +100,23 @@ public class PlayerSetupUI {
         int opponentCount = stepChooseOpponentCount(localName, mode);
 
         // Step 4 — build player lists
-        List<String>  names   = new ArrayList<>();
-        List<Boolean> humans  = new ArrayList<>();
+        List<Player> players = new ArrayList<>();
+        List<Boolean> humans = new ArrayList<>();
 
-        names.add(localName);
+        players.add(new Player(localName, 0));
         humans.add(true); // local player is always human
 
         if (mode == ModeChoice.ONLINE) {
-            collectFriendNames(localName, opponentCount, names, humans);
+            collectFriendNames(opponentCount, players, humans);
         } else {
-            addCpuPlayers(opponentCount, names, humans);
+            addCpuPlayers(opponentCount, players, humans);
         }
 
         // Summary screen
         PlayerSetupResult result = new PlayerSetupResult(
                 localName,
                 mode == ModeChoice.ONLINE,
-                names.size(),
-                names,
+                players,
                 humans
         );
         showSummary(result);
@@ -239,8 +228,7 @@ public class PlayerSetupUI {
     // -------------------------------------------------------------------------
     // Step 4a — Collect friend names (online)
     // -------------------------------------------------------------------------
-    private void collectFriendNames(String localName, int count,
-                                    List<String> names, List<Boolean> humans) {
+    private void collectFriendNames(int count, List<Player> players, List<Boolean> humans) {
         for (int i = 1; i <= count; i++) {
             while (true) {
                 clearScreen();
@@ -261,13 +249,13 @@ public class PlayerSetupUI {
                     sleep(1000);
                     continue;
                 }
-                if (name.equalsIgnoreCase(localName) || names.contains(name)) {
+                if (nameExistsIgnoreCase(players, name)) {
                     printError("That name is already taken. Choose a different name.");
                     sleep(1000);
                     continue;
                 }
 
-                names.add(name);
+                players.add(new Player(name, players.size()));
                 humans.add(true);
                 break;
             }
@@ -277,10 +265,10 @@ public class PlayerSetupUI {
     // -------------------------------------------------------------------------
     // Step 4b — Auto-generate CPU players (offline)
     // -------------------------------------------------------------------------
-    private void addCpuPlayers(int count, List<String> names, List<Boolean> humans) {
+    private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
-            names.add(cpuNames[i]);
+            players.add(new Player(cpuNames[i], players.size()));
             humans.add(false);
         }
     }
@@ -300,8 +288,8 @@ public class PlayerSetupUI {
         System.out.println(WHITE + "  Players:" + RESET);
         System.out.println();
 
-        for (int i = 0; i < result.allPlayerNames.size(); i++) {
-            String name    = result.allPlayerNames.get(i);
+        for (int i = 0; i < result.players.size(); i++) {
+            String name    = result.players.get(i).getName();
             boolean human  = result.isHuman.get(i);
             String tag     = human
                     ? GREEN + "[Human]" + RESET
@@ -312,15 +300,15 @@ public class PlayerSetupUI {
         }
 
         System.out.println();
-        System.out.println(GREEN + BOLD + "  Press any key to start the game..." + RESET);
-        waitForKeyPress();
+        System.out.print(GREEN + BOLD + "  Press Enter to start the game... " + RESET);
+        waitForEnter();
     }
 
     // -------------------------------------------------------------------------
     // Rendering helpers
     // -------------------------------------------------------------------------
     private void clearScreen() {
-        System.out.print("\033[H\033[2J");
+        System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 
@@ -353,20 +341,14 @@ public class PlayerSetupUI {
     // -------------------------------------------------------------------------
     // Input helpers
     // -------------------------------------------------------------------------
-    private void waitForKeyPress() {
-        try {
-            new ProcessBuilder("sh", "-c", "stty raw -echo </dev/tty")
-                    .inheritIO().start().waitFor();
-            System.in.read();
-        } catch (Exception e) {
-            try { System.in.read(); } catch (Exception ex) { /* ignore */ }
-        } finally {
-            try {
-                new ProcessBuilder("sh", "-c", "stty sane </dev/tty")
-                        .inheritIO().start().waitFor();
-            } catch (Exception e) {
-                Thread.currentThread().interrupt();
+    private void waitForEnter() {
+        while (true) {
+            String input = scanner.nextLine();
+            if (input.isBlank()) {
+                return;
             }
+            System.out.println(RED + "  Please press Enter only to continue." + RESET);
+            System.out.print(GREEN + "  > " + RESET);
         }
     }
 
@@ -376,7 +358,16 @@ public class PlayerSetupUI {
     }
 
     private String stripAnsi(String s) {
-        return s.replaceAll("\u001B\\[[;\\d]*m", "");
+        return s.replaceAll(ANSI_REGEX, "");
+    }
+
+    private boolean nameExistsIgnoreCase(List<Player> players, String candidateName) {
+        for (Player player : players) {
+            if (player.getName().equalsIgnoreCase(candidateName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -------------------------------------------------------------------------
