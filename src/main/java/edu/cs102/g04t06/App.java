@@ -13,7 +13,7 @@ public class App {
      * Creates the application instance.
      */
     public App() {
-        this.consoleUI = new ConsoleUI(this);
+        this.consoleUI = new ConsoleUI();
     }
 
     /**
