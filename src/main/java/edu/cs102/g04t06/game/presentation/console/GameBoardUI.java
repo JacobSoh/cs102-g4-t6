@@ -23,6 +23,8 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  *
  */
 public class GameBoardUI implements ThemeStyleSheet {
+    private static final String ACTION_PROMPT = "ACTION > ";
+    private static final int ACTION_CURSOR_OFFSET = 4 + ACTION_PROMPT.length(); // "  ║ " + prompt
 
     // Gem colour → ANSI
     private static final Map<GemColor, String> GEM_ANSI = new EnumMap<>(GemColor.class);
@@ -378,13 +380,20 @@ public class GameBoardUI implements ThemeStyleSheet {
     // ACTION line + prompt
     // -------------------------------------------------------------------------
     private void printActionLine() {
-        line(DIM + WHITE + "  Commands: take wru | take ww | buy t2 slot1 | reserve t1 slot3" + RESET);
-        line(DIM + WHITE + "            pass | q" + RESET);
-        line(GREEN + BOLD + "ACTION >" + RESET);
+        line(DIM + WHITE + "  ┌ Available Actions ────────────────────────────────────────────────┐" + RESET);
+        line(DIM + WHITE + "  . take w r u      : take 3 different gems" + RESET);
+        line(DIM + WHITE + "  . take w w        : take 2 same gems (bank must have >= 4)" + RESET);
+        line(DIM + WHITE + "  . buy t2 slot1    : buy visible card from tier/slot" + RESET);
+        line(DIM + WHITE + "  . reserve t1 slot3: reserve visible card and gain gold if available" + RESET);
+        line(DIM + WHITE + "  . pass            : skip turn      . q : return to main menu" + RESET);
+        line(DIM + WHITE + "  └────────────────────────────────────────────────────────────────────┘" + RESET);
+        line(GREEN + BOLD + ACTION_PROMPT + RESET);
     }
 
     private String promptAction() {
-        System.out.print(WHITE + "  ║ " + RESET + GREEN + BOLD + "  > " + RESET);
+        // Move cursor into the ACTION row inside the board:
+        // up 2 lines (past bottom border + current line), carriage return, then right to prompt end.
+        System.out.print("\u001B[2A\r\u001B[" + ACTION_CURSOR_OFFSET + "C");
         return scanner.nextLine().trim();
     }
 
