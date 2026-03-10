@@ -1,16 +1,17 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import edu.cs102.g04t06.App;
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
+import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
  * Routes console screens through one navigation flow.
  */
-public class ConsoleUI {
-    private static final String RESET = "\u001B[0m";
-    private static final String BOLD  = "\u001B[1m";
-    private static final String RED   = "\u001B[31m";
+public class ConsoleUI implements ThemeStyleSheet {
 
     private enum Route {
         LOAD_SCREEN,
@@ -20,15 +21,13 @@ public class ConsoleUI {
         EXIT
     }
 
-    @SuppressWarnings("unused")
-    private final App application;
     private final LoadScreenUI loadScreenUI;
     private final MainMenuUI mainMenuUI;
     private final PlayerSetupUI playerSetupUI;
     private final GameBoardUI gameBoardUI;
+    private GameState gameState;
 
-    public ConsoleUI(App application) {
-        this.application = application;
+    public ConsoleUI() {
         this.loadScreenUI = new LoadScreenUI();
         this.mainMenuUI = new MainMenuUI();
         this.playerSetupUI = new PlayerSetupUI();
@@ -39,7 +38,7 @@ public class ConsoleUI {
      * Primary app entry flow:
      * load screen -> main menu -> setup/new game -> game board.
      */
-    public void showOnBoarding() {
+    public void showLoadScreen() {
         route(Route.LOAD_SCREEN);
     }
 
@@ -94,11 +93,16 @@ public class ConsoleUI {
         if (setup == null) {
             return Route.MAIN_MENU;
         }
+        this.gameState = createInitialGameState(setup);
         return Route.GAME_BOARD;
     }
 
     private Route handleGameBoard() {
-        gameBoardUI.show();
+        if (gameState == null) {
+            printLoadGameStub();
+            return Route.MAIN_MENU;
+        }
+        gameBoardUI.show(gameState);
         return Route.MAIN_MENU;
     }
 
@@ -120,5 +124,13 @@ public class ConsoleUI {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Builds a playable in-memory state from setup data.
+     * GameState handles default market/bank/noble initialization when null is passed.
+     */
+    private GameState createInitialGameState(PlayerSetupResult setup) {
+        return new GameState(new ArrayList<>(setup.players), null, null, null, 15);
     }
 }

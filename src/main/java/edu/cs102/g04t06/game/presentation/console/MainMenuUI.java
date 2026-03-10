@@ -1,6 +1,6 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import java.io.IOException;
+import java.util.Scanner;
 
 /**
  * MainMenuUI
@@ -10,19 +10,7 @@ import java.io.IOException;
  * Returns a MenuChoice enum so the caller (ConsoleUI / App) can
  * decide what screen to navigate to next.
  */
-public class MainMenuUI {
-
-    // -------------------------------------------------------------------------
-    // ANSI Colour Codes
-    // -------------------------------------------------------------------------
-    private static final String RESET  = "\u001B[0m";
-    private static final String BOLD   = "\u001B[1m";
-    private static final String GOLD   = "\u001B[38;5;220m";
-    private static final String WHITE  = "\u001B[37m";
-    private static final String DIM    = "\u001B[2m";
-    private static final String GREEN  = "\u001B[32m";
-    private static final String BLUE   = "\u001B[34m";
-    private static final String RED    = "\u001B[31m";
+public class MainMenuUI implements ThemeStyleSheet {
 
     // -------------------------------------------------------------------------
     // ASCII Art Title (smaller than load screen, suits a menu)
@@ -38,6 +26,7 @@ public class MainMenuUI {
 
     private static final int    BOX_WIDTH = 30;
     private static final String VERSION   = "v1.0.0";
+    private final Scanner scanner = new Scanner(System.in);
 
     // -------------------------------------------------------------------------
     // Menu choice — returned to the caller after the user picks an option
@@ -53,7 +42,7 @@ public class MainMenuUI {
     // -------------------------------------------------------------------------
 
     /**
-     * Displays the main menu and blocks until the user presses a valid key.
+     * Displays the main menu and blocks until the user enters a valid option.
      *
      * @return the MenuChoice corresponding to what the user selected
      */
@@ -64,7 +53,7 @@ public class MainMenuUI {
             printMenu();
             printFooter();
 
-            char key = readKey();
+            char key = readChoice();
 
             switch (Character.toLowerCase(key)) {
                 case 'n': return MenuChoice.NEW_GAME;
@@ -83,7 +72,7 @@ public class MainMenuUI {
     // -------------------------------------------------------------------------
 
     private void clearScreen() {
-        System.out.print("\033[H\033[2J");
+        System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 
@@ -123,12 +112,11 @@ public class MainMenuUI {
     private void printFooter() {
         System.out.println(DIM + WHITE + "  " + VERSION + RESET);
         System.out.println();
-        System.out.println(WHITE + "  Press a key: " + GREEN + BOLD + "█" + RESET);
-        System.out.println();
+        System.out.print(WHITE + "  Enter choice and press Enter: " + RESET);
     }
 
     private void printInvalidKey() {
-        System.out.println(RED + "  Invalid key. Please press N, L, or Q." + RESET);
+        System.out.println(RED + "  Invalid choice. Enter N, L, or Q then press Enter." + RESET);
         sleep(1000);
     }
 
@@ -168,26 +156,15 @@ public class MainMenuUI {
     // -------------------------------------------------------------------------
 
     /**
-     * Reads a single keypress from stdin without requiring Enter.
-     * Falls back to a buffered read if raw mode is unavailable.
+     * Reads one line and returns the first non-whitespace character.
+     * Returns '\0' when the line is empty.
      */
-    private char readKey() {
-        try {
-            new ProcessBuilder("sh", "-c", "stty raw -echo </dev/tty")
-                    .inheritIO().start().waitFor();
-            int ch = System.in.read();
-            return (char) ch;
-        } catch (IOException | InterruptedException e) {
-            try { return (char) System.in.read(); }
-            catch (IOException ex) { return 'q'; }
-        } finally {
-            try {
-                new ProcessBuilder("sh", "-c", "stty sane </dev/tty")
-                        .inheritIO().start().waitFor();
-            } catch (IOException | InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+    private char readChoice() {
+        String input = scanner.nextLine().trim();
+        if (input.isEmpty()) {
+            return '\0';
         }
+        return input.charAt(0);
     }
 
     private void sleep(int ms) {

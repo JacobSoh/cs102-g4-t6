@@ -13,7 +13,7 @@ public class App {
      * Creates the application instance.
      */
     public App() {
-        this.consoleUI = new ConsoleUI(this);
+        this.consoleUI = new ConsoleUI();
     }
 
     /**
@@ -27,7 +27,7 @@ public class App {
      * Renders the onboarding screen in the console.
      */
     public void showOnBoarding() {
-        this.consoleUI.showOnBoarding();
+        this.consoleUI.showLoadScreen();
     }
 
     /**

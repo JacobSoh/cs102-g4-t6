@@ -66,12 +66,15 @@ class GameStateTest {
         GameState state = makeGameState(new ArrayList<>(), new GemCollection());
 
         assertEquals(0, state.getCurrentPlayerIndex());
+        assertEquals(1, state.getRoundNumber());
 
         state.advanceToNextPlayer();
         assertEquals(1, state.getCurrentPlayerIndex());
+        assertEquals(1, state.getRoundNumber());
 
         state.advanceToNextPlayer();
         assertEquals(0, state.getCurrentPlayerIndex());
+        assertEquals(2, state.getRoundNumber());
     }
 
     @Test

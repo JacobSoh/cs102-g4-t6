@@ -45,6 +45,83 @@ public class InputHandler {
     }
 
     /**
+     * Parses a tier token such as "t1", "tier2", or "3".
+     *
+     * @param token raw tier token
+     * @return parsed tier in range [1, 3]
+     * @throws IllegalArgumentException if token cannot be parsed or out of range
+     */
+    public int parseTierToken(String token) {
+        String t = token.toLowerCase().trim();
+        t = t.replace("tier", "");
+        t = t.startsWith("t") ? t.substring(1) : t;
+        try {
+            int tier = Integer.parseInt(t);
+            if (tier < 1 || tier > 3) {
+                throw new IllegalArgumentException("Tier must be 1, 2, or 3.");
+            }
+            return tier;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid tier. Use t1, t2, or t3.");
+        }
+    }
+
+    /**
+     * Parses a slot token such as "slot1", "s2", or "4".
+     *
+     * @param token raw slot token
+     * @return zero-based slot index in range [0, 3]
+     * @throws IllegalArgumentException if token cannot be parsed or out of range
+     */
+    public int parseSlotToken(String token) {
+        String t = token.toLowerCase().trim();
+        t = t.replace("slot", "");
+        t = t.startsWith("s") ? t.substring(1) : t;
+        try {
+            int slot = Integer.parseInt(t);
+            if (slot < 1 || slot > 4) {
+                throw new IllegalArgumentException("Slot must be 1 to 4.");
+            }
+            return slot - 1;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid slot. Use slot1..slot4.");
+        }
+    }
+
+    /**
+     * Parses a gem-code sequence into gem colors.
+     * Supported codes: W, U, G, R, K, *
+     *
+     * @param raw raw input sequence (e.g. "w r u" or "WRU")
+     * @return parsed gem colors in order entered
+     * @throws IllegalArgumentException if no codes or any code is invalid
+     */
+    public List<GemColor> parseGemSequence(String raw) {
+        String cleaned = raw.toUpperCase().replaceAll("[^A-Z*]", "");
+        if (cleaned.isEmpty()) {
+            throw new IllegalArgumentException("No gem codes provided.");
+        }
+
+        List<GemColor> result = new ArrayList<>();
+        for (char c : cleaned.toCharArray()) {
+            result.add(parseGemCode(c));
+        }
+        return result;
+    }
+
+    private GemColor parseGemCode(char c) {
+        return switch (c) {
+            case 'W' -> GemColor.WHITE;
+            case 'U' -> GemColor.BLUE;
+            case 'G' -> GemColor.GREEN;
+            case 'R' -> GemColor.RED;
+            case 'K' -> GemColor.BLACK;
+            case '*' -> GemColor.GOLD;
+            default -> throw new IllegalArgumentException("Invalid gem code: " + c);
+        };
+    }
+
+    /**
      * Resolves a card selection from the visible market and, optionally, the
      * player's reserved hand into the corresponding {@link Card} object.
      * Visible cards at the given level are listed first (indices 1–4), followed
