@@ -8,18 +8,7 @@ package edu.cs102.g04t06.game.presentation.console;
 // ConsoleUI is a pure navigator: its public API (showLoadScreen, showLobby,
 // showGame) all terminate with System.exit(0), so routing behaviour is tested
 // by invoking the private handler methods directly via reflection.
-//
-// Three concern areas are covered:
-//   1. Constructor — instance creation succeeds.
-//   2. PlayerSetupResult — the key data object passed into createInitialGameState.
-//   3. Private handlers — routing decisions, stub output, full init pipeline.
 // =============================================================================
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +20,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
