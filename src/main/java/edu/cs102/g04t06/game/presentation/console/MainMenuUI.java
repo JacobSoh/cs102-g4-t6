@@ -171,13 +171,4 @@ public class MainMenuUI implements ThemeStyleSheet {
         try { Thread.sleep(ms); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
-
-    // -------------------------------------------------------------------------
-    // Temporary main — remove once wired into App.java
-    // -------------------------------------------------------------------------
-    public static void main(String[] args) {
-        MainMenuUI menu = new MainMenuUI();
-        MenuChoice choice = menu.show();
-        System.out.println("\nYou selected: " + choice);
-    }
 }
