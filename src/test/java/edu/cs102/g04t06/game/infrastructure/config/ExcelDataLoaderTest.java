@@ -395,14 +395,15 @@ class ExcelDataLoaderTest {
     }
     
     @Test
-    @DisplayName("Actual noble file with quoted commas should fail with clear parse error")
-    void actualNobleFileWithQuotedCommasShouldFailClearly() {
+    @DisplayName("Actual noble file with quoted commas should load successfully")
+    void actualNobleFileWithQuotedCommasShouldLoadSuccessfully() {
         File nobleFile = new File(ACTUAL_NOBLE_FILE);
-        
+
         if (nobleFile.exists()) {
-            RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                    ExcelDataLoader.loadNobles(ACTUAL_NOBLE_FILE));
-            assertTrue(exception.getMessage().contains("Error parsing noble"));
+            List<Noble> nobles = ExcelDataLoader.loadNobles(ACTUAL_NOBLE_FILE);
+            assertFalse(nobles.isEmpty(), "Nobles should be loaded from file");
+            assertTrue(nobles.stream().anyMatch(n -> n.getName().contains(",")),
+                    "At least one noble name should contain a comma");
         }
     }
     

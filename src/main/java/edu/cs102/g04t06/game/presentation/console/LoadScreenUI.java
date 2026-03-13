@@ -129,10 +129,4 @@ public class LoadScreenUI implements ThemeStyleSheet {
         return s.replaceAll(ANSI_REGEX, "");
     }
 
-    // -------------------------------------------------------------------------
-    // Temporary main — remove once wired into App.java
-    // -------------------------------------------------------------------------
-    public static void main(String[] args) {
-    new LoadScreenUI().show();
-    }
 }

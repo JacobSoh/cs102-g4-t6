@@ -225,23 +225,24 @@ public class ExcelDataLoader {
      * @return Parsed Noble object
      */
     private static Noble parseNobleFromCsvLine(String line) {
-        String[] parts = line.split(",", -1); // -1 to keep trailing empty strings
-        
-        if (parts.length < 6) {
-            throw new RuntimeException("Invalid noble format. Expected 6 columns, got " + parts.length);
+        String[] parts = splitCsvLine(line);
+
+        if (parts.length < 7) {
+            throw new RuntimeException("Invalid noble format. Expected 7 columns, got " + parts.length);
         }
-        
+
         // Column indices (0-based)
-        // 0: PV (points)
-        // 1: Black requirement
-        // 2: Blue requirement
-        // 3: Green requirement
-        // 4: Red requirement
-        // 5: White requirement
-        
+        // 0: ID
+        // 1: Name
+        // 2: Black requirement
+        // 3: Blue requirement
+        // 4: Green requirement
+        // 5: Red requirement
+        // 6: White requirement
+
         int id = parseIntValue(parts[0], "ID");
-        String name = parts[1];
-        
+        String name = parts[1].trim();
+
         int reqBlack = parseIntValue(parts[2], "Black requirement");
         int reqBlue = parseIntValue(parts[3], "Blue requirement");
         int reqGreen = parseIntValue(parts[4], "Green requirement");
@@ -258,6 +259,33 @@ public class ExcelDataLoader {
         return new Noble(id, name, requirements);
     }
     
+    /**
+     * Splits a CSV line into fields, respecting double-quoted fields that may
+     * contain commas. Surrounding quotes are stripped from each field.
+     *
+     * @param line raw CSV line
+     * @return array of field values
+     */
+    private static String[] splitCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                fields.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        fields.add(current.toString());
+        return fields.toArray(new String[0]);
+    }
+
     /**
      * Safely parses an integer value from a string.
      * 

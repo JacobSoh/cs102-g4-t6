@@ -1,11 +1,17 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import edu.cs102.g04t06.game.execution.GameEngine;
+import edu.cs102.g04t06.game.infrastructure.config.ConfigLoader;
+import edu.cs102.g04t06.game.infrastructure.config.ExcelDataLoader;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Card;
+import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
@@ -127,10 +133,27 @@ public class ConsoleUI implements ThemeStyleSheet {
     }
 
     /**
-     * Builds a playable in-memory state from setup data.
-     * GameState handles default market/bank/noble initialization when null is passed.
+     * Builds a fully initialised GameState from setup data.
+     * Loads card and noble data from CSV files via ExcelDataLoader,
+     * reads game settings via ConfigLoader, and delegates assembly to GameEngine.
      */
     private GameState createInitialGameState(PlayerSetupResult setup) {
-        return new GameState(new ArrayList<>(setup.players), null, null, null, 15);
+        ConfigLoader config = new ConfigLoader("config.properties");
+        HashMap<String, String> paths = config.getDataFilePath();
+        String cardPath = paths.get("card");
+        String noblePath = paths.get("noblePath");
+
+        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(cardPath);
+        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(cardPath);
+        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(cardPath);
+        List<Noble> allNobles = ExcelDataLoader.loadNobles(noblePath);
+
+        List<String> playerNames = new ArrayList<>();
+        for (Player p : setup.players) {
+            playerNames.add(p.getName());
+        }
+
+        return new GameEngine().initializeGame(
+                setup.totalPlayers, playerNames, config, level1, level2, level3, allNobles);
     }
 }

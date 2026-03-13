@@ -370,13 +370,4 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         return false;
     }
 
-    // -------------------------------------------------------------------------
-    // Temporary main — remove once wired into App.java
-    // -------------------------------------------------------------------------
-    public static void main(String[] args) {
-        PlayerSetupUI ui = new PlayerSetupUI();
-        PlayerSetupResult result = ui.show();
-        System.out.println("\nSetup complete!");
-        System.out.println(result);
-    }
 }
