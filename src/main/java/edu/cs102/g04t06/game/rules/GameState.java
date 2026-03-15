@@ -26,6 +26,7 @@ public class GameState {
     private GemCollection gemBank;
     private final List<Noble> availableNobles;
     private boolean gameOver;
+    private boolean finalRoundTriggered;
     private final int winningThreshold;
 
     /**
@@ -181,6 +182,10 @@ public class GameState {
         return this.gameOver;
     }
 
+    public boolean isFinalRoundTriggered() {
+        return this.finalRoundTriggered;
+    }
+
     /**
      * gets the points needed to trigger game end.
      * @return the winning threshold
@@ -196,6 +201,9 @@ public class GameState {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size();
         if (this.currentPlayerIndex == 0) {
             this.roundNumber++;
+            if (this.finalRoundTriggered) {
+                this.gameOver = true;
+            }
         }
     }
 
@@ -205,6 +213,10 @@ public class GameState {
      */
     public void setGameOver(boolean gameOver) {
         this.gameOver = gameOver;
+    }
+
+    public void triggerFinalRound() {
+        this.finalRoundTriggered = true;
     }
 
     /**

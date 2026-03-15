@@ -78,15 +78,18 @@ public class GameBoardUI implements ThemeStyleSheet {
     private final GameRules rules = new GameRules();
     private final InputHandler inputHandler = new InputHandler();
     private int actionLinesFromBottom = 1;
+    private int statusLinesFromBottom = 1;
     private String actionStatus = "";
 
     private static final class MainAreaRender {
         private final List<String> lines;
         private final int actionLineIndex;
+        private final int statusLineIndex;
 
-        private MainAreaRender(List<String> lines, int actionLineIndex) {
+        private MainAreaRender(List<String> lines, int actionLineIndex, int statusLineIndex) {
             this.lines = lines;
             this.actionLineIndex = actionLineIndex;
+            this.statusLineIndex = statusLineIndex;
         }
     }
 
@@ -145,6 +148,7 @@ public class GameBoardUI implements ThemeStyleSheet {
         List<String> sidebar = buildPlayerSidebar(state.getPlayers(), state.getCurrentPlayer());
         List<String> combined = combineColumns(mainArea.lines, sidebar, MAIN_WIDTH, SIDEBAR_WIDTH);
         actionLinesFromBottom = combined.size() - mainArea.actionLineIndex;
+        statusLinesFromBottom = combined.size() - mainArea.statusLineIndex;
         for (String row : combined) {
             line(row);
         }
@@ -589,9 +593,10 @@ public class GameBoardUI implements ThemeStyleSheet {
         actionLog.add(player.getName() + " bought " + purchaseLabel);
         ok("Bought " + purchaseLabel);
 
-        handleNobleClaim(state, player);
+        handleEndOfTurnNobleClaim(state, player);
         handleWinCheck(state, player);
         advanceTurn(state);
+        handleGameEnd(state);
         sleep(800);
     }
 
@@ -643,13 +648,18 @@ public class GameBoardUI implements ThemeStyleSheet {
             handleReturnExcessGems(state, player);
         }
 
+        handleEndOfTurnNobleClaim(state, player);
         advanceTurn(state);
+        handleGameEnd(state);
         sleep(800);
     }
 
     private void handlePass(GameState state) {
-        String current = state.getCurrentPlayer().getName();
+        Player player = state.getCurrentPlayer();
+        String current = player.getName();
+        handleEndOfTurnNobleClaim(state, player);
         advanceTurn(state);
+        handleGameEnd(state);
         actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
         ok("Turn passed.");
         sleep(600);
@@ -677,23 +687,23 @@ public class GameBoardUI implements ThemeStyleSheet {
             handleReturnExcessGems(state, player);
         }
 
+        handleEndOfTurnNobleClaim(state, player);
         advanceTurn(state);
+        handleGameEnd(state);
         sleep(800);
     }
 
     private void handleReturnExcessGems(GameState state, Player player) {
         int excess = player.getGemCount() - 10;
+        String promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
         while (excess > 0) {
-            System.out.print(WHITE + "  ║ " + RESET
-                    + RED + "You have " + player.getGemCount()
-                    + " gems. Return " + excess + " gem(s): " + RESET);
-            String input = scanner.nextLine().trim();
+            String input = promptActionStatus(state, promptMessage);
 
             List<GemColor> toReturnColors;
             try {
                 toReturnColors = inputHandler.parseGemSequence(input);
             } catch (IllegalArgumentException e) {
-                err(e.getMessage());
+                promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
                 continue;
             }
 
@@ -703,12 +713,14 @@ public class GameBoardUI implements ThemeStyleSheet {
                 state.addGemsToBank(toReturn);
                 actionLog.add(player.getName() + " returned " + formatGemShort(toReturn));
             } catch (IllegalArgumentException | IllegalStateException e) {
-                err(e.getMessage());
+                promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
                 continue;
             }
 
             excess = player.getGemCount() - 10;
+            promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
         }
+        actionStatus = "";
     }
 
     private void handleNobleClaim(GameState state, Player player) {
@@ -748,12 +760,35 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
-    private void handleWinCheck(GameState state, Player player) {
-        if (rules.hasPlayerWon(player, state.getWinningThreshold())) {
-            state.setGameOver(true);
-            actionLog.add(player.getName() + " reached " + player.getPoints() + " points. Game over.");
-            ok("Game over! " + player.getName() + " wins.");
+    private void handleEndOfTurnNobleClaim(GameState state, Player player) {
+        int claimedBefore = player.getClaimedNobles().size();
+        handleNobleClaim(state, player);
+        if (player.getClaimedNobles().size() > claimedBefore) {
+            handleWinCheck(state, player);
         }
+    }
+
+    private void handleWinCheck(GameState state, Player player) {
+        if (!state.isFinalRoundTriggered() && rules.hasPlayerWon(player, state.getWinningThreshold())) {
+            state.triggerFinalRound();
+            actionLog.add(player.getName() + " reached " + player.getPoints() + " points. Final round triggered.");
+            ok(player.getName() + " reached " + player.getPoints() + " points. Final round triggered.");
+        }
+    }
+
+    private void handleGameEnd(GameState state) {
+        if (!state.isGameOver()) {
+            return;
+        }
+
+        Player winner = rules.getWinner(state.getPlayers(), state.getWinningThreshold());
+        if (winner == null) {
+            ok("Game over!");
+            return;
+        }
+
+        actionLog.add("Final round complete. Winner: " + winner.getName() + " with " + winner.getPoints() + " points.");
+        ok("Game over! " + winner.getName() + " wins with " + winner.getPoints() + " points.");
     }
 
     private void advanceTurn(GameState state) {
@@ -977,8 +1012,9 @@ public class GameBoardUI implements ThemeStyleSheet {
                 formatActionStatus()
         );
         int actionLineIndex = lines.size() + 2 + 4;
+        int statusLineIndex = lines.size() + 2 + 5;
         appendMarketPanel(lines, "ACTIONS", "", actionBody);
-        return new MainAreaRender(lines, actionLineIndex);
+        return new MainAreaRender(lines, actionLineIndex, statusLineIndex);
     }
 
     private List<String> buildPlayerSidebar(List<Player> players, Player currentPlayer) {
@@ -1253,6 +1289,24 @@ public class GameBoardUI implements ThemeStyleSheet {
 
     private String formatActionStatus() {
         return actionStatus;
+    }
+
+    private String truncateVisible(String text, int maxVisibleChars) {
+        if (vlen(text) <= maxVisibleChars) {
+            return text;
+        }
+        return text.substring(0, Math.max(0, maxVisibleChars - 3)) + "...";
+    }
+
+    private String promptActionStatus(GameState state, String message) {
+        String visibleMessage = truncateVisible(message, MAIN_WIDTH - 2);
+        actionStatus = RED + visibleMessage + RESET;
+        clearScreen();
+        render(state);
+        System.out.print("\u001B[" + statusLinesFromBottom + "A\r\u001B[" + (4 + vlen(visibleMessage)) + "C\u001B[?25h");
+        String input = scanner.nextLine().trim();
+        System.out.print("\u001B[?25l");
+        return input;
     }
 
     private void clearScreen() {
