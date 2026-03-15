@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Scanner;
 
 import edu.cs102.g04t06.game.exception.NobleNotAvailableException;
-import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.GameRules;
+import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
 import edu.cs102.g04t06.game.rules.entities.Noble;
@@ -25,6 +25,7 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 public class GameBoardUI implements ThemeStyleSheet {
     private static final String ACTION_PROMPT = "ACTION > ";
     private static final int ACTION_CURSOR_OFFSET = 4 + ACTION_PROMPT.length(); // "  ║ " + prompt
+    private static final int MAX_LOG_ENTRIES = 2;
 
     // Gem colour → ANSI
     private static final Map<GemColor, String> GEM_ANSI = new EnumMap<>(GemColor.class);
@@ -98,6 +99,10 @@ public class GameBoardUI implements ThemeStyleSheet {
                 break;
             }
             String input = promptAction();
+            if (input.equals("?")) {
+                showHelpOverlay();
+                continue;
+            }
             if (input.equalsIgnoreCase("q")) {
                 break;
             }
@@ -118,6 +123,7 @@ public class GameBoardUI implements ThemeStyleSheet {
     // Master render
     // -------------------------------------------------------------------------
     private void render(GameState state) {
+        System.out.print("\u001B[2;1H");
         boardTop();
         printHeader(state);
         printNobles(state.getAvailableNobles());
@@ -131,6 +137,43 @@ public class GameBoardUI implements ThemeStyleSheet {
         boardBottom();
     }
 
+    private void showHelpOverlay() {
+        clearScreen();
+        System.out.print("\u001B[2;1H");
+        boardTop();
+        line(GOLD + BOLD + "SPLENDOR HELP" + RESET
+                + sp(INNER - "SPLENDOR HELP".length() - "Press ? to return".length())
+                + DIM + WHITE + "Press ? to return" + RESET);
+        divider();
+        line(BOLD + WHITE + "Gem Actions" + RESET
+                + " - take 3 different or 2 same gems; bank needs 4+ for doubles.");
+        line(DIM + WHITE + "  Gem limit: a player may hold at most 10 gems after their turn." + RESET);
+        blank();
+        line(BOLD + WHITE + "Card Actions" + RESET
+                + " - buy a visible card or buy from your reserved slots.");
+        line(BOLD + WHITE + "Reserve Action" + RESET
+                + " - reserve a card, gain a gold (*) if available, max 3 reserved.");
+        blank();
+        line(BOLD + WHITE + "Noble Claiming" + RESET
+                + " - automatic at end of turn if your card bonuses meet the noble cost.");
+        line(BOLD + WHITE + "Winning Condition" + RESET
+                + " - first to 15 points triggers the final round; most points wins.");
+        blank();
+        line(BOLD + WHITE + "Card Costs" + RESET
+                + " - shorthand like " + DIM + "w2r3k1" + RESET + " means 2 white, 3 red, 1 black.");
+        line(BOLD + WHITE + "Gold Wildcard" + RESET
+                + " - gold (*) can substitute for any gem color when buying.");
+        blank();
+        line(DIM + WHITE + "Examples:" + RESET);
+        line(DIM + WHITE + "  take w r u   |   take w w   |   buy t2 slot1   |   buy reserve" + RESET);
+        line(DIM + WHITE + "  reserve t1 slot3   |   pass   |   q to leave the game board" + RESET);
+        blank();
+        line(GREEN + BOLD + "Press any key, then Enter, to return to the game board." + RESET);
+        boardBottom();
+        System.out.print("\u001B[1A\r\u001B[4C");
+        scanner.nextLine();
+    }
+
     // -------------------------------------------------------------------------
     // Board frame
     // -------------------------------------------------------------------------
@@ -139,7 +182,7 @@ public class GameBoardUI implements ThemeStyleSheet {
     }
 
     private void boardBottom() {
-        System.out.println(WHITE + "  ╚" + rep('═', FILL) + "╝" + RESET);
+        System.out.print(WHITE + "  ╚" + rep('═', FILL) + "╝" + RESET);
     }
 
     /** One content line padded to INNER visible width. */
@@ -364,7 +407,7 @@ public class GameBoardUI implements ThemeStyleSheet {
             return;
         }
 
-        int start = Math.max(0, actionLog.size() - 3);
+        int start = Math.max(0, actionLog.size() - MAX_LOG_ENTRIES);
         List<String> recent = actionLog.subList(start, actionLog.size());
 
         for (int i = 0; i < recent.size(); i++) {
@@ -381,19 +424,17 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     private void printActionLine() {
         line(DIM + WHITE + "  ┌ Available Actions ────────────────────────────────────────────────┐" + RESET);
-        line(DIM + WHITE + "  . take w r u      : take 3 different gems" + RESET);
-        line(DIM + WHITE + "  . take w w        : take 2 same gems (bank must have >= 4)" + RESET);
-        line(DIM + WHITE + "  . buy t2 slot1    : buy visible card from tier/slot" + RESET);
-        line(DIM + WHITE + "  . reserve t1 slot3: reserve visible card and gain gold if available" + RESET);
-        line(DIM + WHITE + "  . pass            : skip turn      . q : return to main menu" + RESET);
-        line(DIM + WHITE + "  └────────────────────────────────────────────────────────────────────┘" + RESET);
+        line(DIM + WHITE + "  . take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET);
+        line(DIM + WHITE + "  . take w w    : take 2 same gems    . buy reserve  : buy reserve card" + RESET);
+        line(DIM + WHITE + "  . reserve t1 slot1 : reserve + gold      . pass         : skip turn" + RESET);
+        line(DIM + WHITE + "  └───────────────────────────────────────────────────────────────────┘" + RESET);
         line(GREEN + BOLD + ACTION_PROMPT + RESET);
     }
 
     private String promptAction() {
         // Move cursor into the ACTION row inside the board:
-        // up 2 lines (past bottom border + current line), carriage return, then right to prompt end.
-        System.out.print("\u001B[2A\r\u001B[" + ACTION_CURSOR_OFFSET + "C");
+        // up 1 line (from bottom border to action row), carriage return, then right to prompt end.
+        System.out.print("\u001B[1A\r\u001B[" + ACTION_CURSOR_OFFSET + "C");
         return scanner.nextLine().trim();
     }
 
@@ -470,30 +511,49 @@ public class GameBoardUI implements ThemeStyleSheet {
 
     private void handleBuy(GameState state, String s) {
         String[] p = s.split("\\s+");
-        if (p.length < 3) {
-            err("Usage: buy <tier> <slot>   e.g.  buy t2 slot1");
-            return;
-        }
-
-        int tier;
-        int slotIndex;
-        try {
-            tier = inputHandler.parseTierToken(p[1]);
-            slotIndex = inputHandler.parseSlotToken(p[2]);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        Card card;
-        try {
-            card = state.getMarket().getVisibleCard(tier, slotIndex);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
+        if (p.length < 2) {
+            err("Usage: buy <tier> <slot> or buy reserve");
             return;
         }
 
         Player player = state.getCurrentPlayer();
+        boolean fromReserved;
+        String purchaseLabel;
+        Card card;
+
+        try {
+            if (isReservedBuyToken(p[1])) {
+                int reservedSlotIndex = promptReservedSlotSelection(player);
+                int reservedSelection = state.getMarket().getVisibleCards(1).size() + reservedSlotIndex + 1;
+                card = inputHandler.promptCardSelection(
+                        state.getMarket(),
+                        1,
+                        true,
+                        player.getReservedCards(),
+                        reservedSelection);
+                fromReserved = true;
+                purchaseLabel = "reserved slot" + (reservedSlotIndex + 1);
+            } else {
+                if (p.length < 3) {
+                    err("Usage: buy <tier> <slot>   e.g.  buy t2 slot1");
+                    return;
+                }
+                int tier = inputHandler.parseTierToken(p[1]);
+                int slotIndex = inputHandler.parseSlotToken(p[2]);
+                card = inputHandler.promptCardSelection(
+                        state.getMarket(),
+                        tier,
+                        false,
+                        player.getReservedCards(),
+                        slotIndex + 1);
+                fromReserved = false;
+                purchaseLabel = "t" + tier + " slot" + (slotIndex + 1);
+            }
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
+            return;
+        }
+
         if (!rules.canAffordCard(player, card)) {
             err("Cannot afford that card.");
             return;
@@ -509,10 +569,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
 
         player.addCard(card);
-        state.getMarket().removeCard(card);
+        if (!fromReserved) {
+            state.getMarket().removeCard(card);
+        }
 
-        actionLog.add(player.getName() + " bought t" + tier + " slot" + (slotIndex + 1));
-        ok("Bought t" + tier + " slot" + (slotIndex + 1));
+        actionLog.add(player.getName() + " bought " + purchaseLabel);
+        ok("Bought " + purchaseLabel);
 
         handleNobleClaim(state, player);
         handleWinCheck(state, player);
@@ -578,6 +640,35 @@ public class GameBoardUI implements ThemeStyleSheet {
         actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
         ok("Turn passed.");
         sleep(600);
+    }
+
+    private boolean isReservedBuyToken(String token) {
+        return "reserved".equalsIgnoreCase(token)
+                || "reserve".equalsIgnoreCase(token)
+                || "r".equalsIgnoreCase(token);
+    }
+
+    private int promptReservedSlotSelection(Player player) {
+        List<Card> reservedCards = player.getReservedCards();
+        if (reservedCards.isEmpty()) {
+            throw new IllegalArgumentException("You do not have any reserved cards.");
+        }
+
+        System.out.println();
+        System.out.println(WHITE + "Your reserved cards:" + RESET);
+        for (int i = 0; i < reservedCards.size(); i++) {
+            System.out.println("  " + (i + 1) + ". " + formatReservedCardSummary(reservedCards.get(i)));
+        }
+        System.out.print(GREEN + "Which slot? > " + RESET);
+        return inputHandler.parseSlotToken(scanner.nextLine().trim());
+    }
+
+    private String formatReservedCardSummary(Card card) {
+        String gemLabel = GEM_LABEL.getOrDefault(card.getBonus(), "?");
+        String gemAnsi = GEM_ANSI.getOrDefault(card.getBonus(), WHITE);
+        return gemAnsi + BOLD + gemLabel + RESET
+                + WHITE + " " + card.getPoints() + "pts  " + RESET
+                + DIM + WHITE + formatCardCost(card) + RESET;
     }
 
     private void applyTake(GameState state, Player player, GemCollection requested, String verb) {
