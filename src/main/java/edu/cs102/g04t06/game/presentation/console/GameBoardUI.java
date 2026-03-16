@@ -93,10 +93,18 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Creates a board UI that reads input from standard input.
+     */
     public GameBoardUI() {
         this(new Scanner(System.in));
     }
 
+    /**
+     * Creates a board UI backed by the supplied scanner.
+     *
+     * @param scanner scanner used for interactive commands
+     */
     GameBoardUI(Scanner scanner) {
         this.scanner = scanner;
     }
@@ -104,6 +112,11 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Public entry points
     // -------------------------------------------------------------------------
+    /**
+     * Runs the interactive game loop until the match ends or the user exits.
+     *
+     * @param state game state to render and mutate
+     */
     public void show(GameState state) {
         if (state == null) {
             throw new IllegalArgumentException("GameState must not be null");
@@ -139,6 +152,11 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Master render
     // -------------------------------------------------------------------------
+    /**
+     * Renders the full board, sidebar, and action area for the current state.
+     *
+     * @param state state to render
+     */
     private void render(GameState state) {
         System.out.print("\u001B[?25l");
         System.out.print("\u001B[2;1H");
@@ -155,6 +173,9 @@ public class GameBoardUI implements ThemeStyleSheet {
         boardBottom();
     }
 
+    /**
+     * Displays the full-screen help overlay until the user dismisses it.
+     */
     private void showHelpOverlay() {
         clearScreen();
         System.out.print("\u001B[2;1H");
@@ -195,15 +216,25 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Board frame
     // -------------------------------------------------------------------------
+    /**
+     * Prints the top border of the outer board frame.
+     */
     private void boardTop() {
         System.out.println(WHITE + "  ╔" + rep('═', FILL) + "╗" + RESET);
     }
 
+    /**
+     * Prints the bottom border of the outer board frame.
+     */
     private void boardBottom() {
         System.out.print(WHITE + "  ╚" + rep('═', FILL) + "╝" + RESET);
     }
 
-    /** One content line padded to INNER visible width. */
+    /**
+     * Prints one content row padded to the full board width.
+     *
+     * @param content row content excluding the outer border
+     */
     private void line(String content) {
         int pad = INNER - vlen(content);
         if (pad < 0) {
@@ -214,10 +245,16 @@ public class GameBoardUI implements ThemeStyleSheet {
                 + WHITE + " ║" + RESET);
     }
 
+    /**
+     * Prints an empty content row inside the outer frame.
+     */
     private void blank() {
         line("");
     }
 
+    /**
+     * Prints a full-width divider inside the outer frame.
+     */
     private void divider() {
         System.out.println(WHITE + "  ╠" + rep('═', FILL) + "╣" + RESET);
     }
@@ -225,6 +262,11 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Header
     // -------------------------------------------------------------------------
+    /**
+     * Renders the board header with title, round counter, and help hints.
+     *
+     * @param state state whose round number is displayed
+     */
     private void printHeader(GameState state) {
         String left  = GOLD + BOLD + "SPLENDOR" + RESET;
         String mid   = WHITE + "Round " + state.getRoundNumber() + RESET;
@@ -245,6 +287,11 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Nobles
     // -------------------------------------------------------------------------
+    /**
+     * Renders the nobles section.
+     *
+     * @param nobles nobles currently available for claiming
+     */
     private void printNobles(List<Noble> nobles) {
         line(PURPLE + BOLD + "NOBLES" + RESET);
 
@@ -291,6 +338,13 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Tier sections
     // -------------------------------------------------------------------------
+    /**
+     * Renders one development card tier section.
+     *
+     * @param label title shown for the tier
+     * @param cards visible cards in the tier
+     * @param deckCount remaining deck size for the tier
+     */
     private void printTier(String label, List<Card> cards, int deckCount) {
         String hL = BOLD + WHITE + label + RESET;
         String hR = DIM + WHITE + "DECK: " + RESET + BOLD + WHITE + deckCount + RESET;
@@ -345,6 +399,11 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Bank gems
     // -------------------------------------------------------------------------
+    /**
+     * Renders the shared gem bank counts.
+     *
+     * @param bank gem bank to display
+     */
     private void printBank(GemCollection bank) {
         line(BOLD + WHITE + "BANK GEMS:" + RESET);
 
@@ -363,6 +422,12 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Player panels
     // -------------------------------------------------------------------------
+    /**
+     * Renders the legacy full-width player strip.
+     *
+     * @param players players to render
+     * @param currentPlayer active player in the state
+     */
     private void printPlayers(List<Player> players, Player currentPlayer) {
         if (players == null || players.isEmpty()) {
             line(DIM + WHITE + "No players in game state." + RESET);
@@ -380,6 +445,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         divider();
     }
 
+    /**
+     * Renders the active player in the legacy player strip.
+     *
+     * @param p active player
+     */
     private void printCurrentPlayer(Player p) {
         String ind   = GREEN + BOLD + "► " + RESET;
         String name  = CYAN  + BOLD + p.getName() + " (you)" + RESET;
@@ -403,6 +473,11 @@ public class GameBoardUI implements ThemeStyleSheet {
                 + DIM + WHITE + "   (Total: " + p.getGemCount() + ")" + RESET);
     }
 
+    /**
+     * Renders a non-active player in the legacy player strip.
+     *
+     * @param p player to render
+     */
     private void printOtherPlayer(Player p) {
         String cardStats = formatStats(p.calculateBonuses(), false);
         line(RED + BOLD + p.getName() + RESET
@@ -417,6 +492,9 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Log
     // -------------------------------------------------------------------------
+    /**
+     * Renders the legacy single-line action log.
+     */
     private void printLog() {
         StringBuilder sb = new StringBuilder(DIM + WHITE + "LOG:  " + RESET);
         if (actionLog.isEmpty()) {
@@ -440,6 +518,9 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // ACTION line + prompt
     // -------------------------------------------------------------------------
+    /**
+     * Renders the legacy action guide and prompt row.
+     */
     private void printActionLine() {
         line(DIM + WHITE + "  ┌ Available Actions ────────────────────────────────────────────────┐" + RESET);
         line(DIM + WHITE + "  . take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET);
@@ -449,6 +530,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         line(GREEN + BOLD + ACTION_PROMPT + RESET);
     }
 
+    /**
+     * Places the cursor on the action prompt row and reads one command line.
+     *
+     * @return trimmed player command
+     */
     private String promptAction() {
         // Move cursor into the ACTION row inside the board:
         System.out.print("\u001B[" + actionLinesFromBottom + "A\r\u001B[" + ACTION_CURSOR_OFFSET + "C\u001B[?25h");
@@ -458,6 +544,12 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Action dispatch
     // -------------------------------------------------------------------------
+    /**
+     * Dispatches one command string to the matching action handler.
+     *
+     * @param state game state to mutate
+     * @param input raw player input
+     */
     private void handleAction(GameState state, String input) {
         String s = input.toLowerCase().trim();
         if (s.startsWith("take")) {
@@ -473,6 +565,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Parses and executes a gem-taking command.
+     *
+     * @param state game state to mutate
+     * @param s normalized command text
+     */
     private void handleTake(GameState state, String s) {
         String payloadRaw = s.replaceFirst("^take", "").trim();
         if (payloadRaw.isEmpty()) {
@@ -526,6 +624,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Parses and executes a buy command from either the market or reserved slots.
+     *
+     * @param state game state to mutate
+     * @param s normalized command text
+     */
     private void handleBuy(GameState state, String s) {
         String[] p = s.split("\\s+");
         if (p.length < 3) {
@@ -600,6 +704,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         sleep(800);
     }
 
+    /**
+     * Parses and executes a reserve-card command.
+     *
+     * @param state game state to mutate
+     * @param s normalized command text
+     */
     private void handleReserve(GameState state, String s) {
         String[] p = s.split("\\s+");
         if (p.length < 3) {
@@ -654,6 +764,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         sleep(800);
     }
 
+    /**
+     * Ends the current turn without another game action.
+     *
+     * @param state game state to advance
+     */
     private void handlePass(GameState state) {
         Player player = state.getCurrentPlayer();
         String current = player.getName();
@@ -665,12 +780,26 @@ public class GameBoardUI implements ThemeStyleSheet {
         sleep(600);
     }
 
+    /**
+     * Checks whether the supplied command token targets reserved-card buying.
+     *
+     * @param token command token to inspect
+     * @return true if the token refers to reserved cards
+     */
     private boolean isReservedBuyToken(String token) {
         return "reserved".equalsIgnoreCase(token)
                 || "reserve".equalsIgnoreCase(token)
                 || "r".equalsIgnoreCase(token);
     }
 
+    /**
+     * Applies a validated gem-taking action and advances turn flow.
+     *
+     * @param state game state to mutate
+     * @param player acting player
+     * @param requested gems to move from bank to player
+     * @param verb status verb shown after success
+     */
     private void applyTake(GameState state, Player player, GemCollection requested, String verb) {
         try {
             state.removeGemsFromBank(requested);
@@ -693,6 +822,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         sleep(800);
     }
 
+    /**
+     * Forces a player over the gem limit to return gems until legal again.
+     *
+     * @param state game state to mutate
+     * @param player player returning gems
+     */
     private void handleReturnExcessGems(GameState state, Player player) {
         int excess = player.getGemCount() - 10;
         String promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
@@ -723,6 +858,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         actionStatus = "";
     }
 
+    /**
+     * Resolves noble claiming for a player, including multi-choice selection.
+     *
+     * @param state game state containing available nobles
+     * @param player player attempting to claim a noble
+     */
     private void handleNobleClaim(GameState state, Player player) {
         List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
         if (claimable.isEmpty()) {
@@ -760,6 +901,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Applies end-of-turn noble claiming and any resulting win trigger.
+     *
+     * @param state game state to inspect
+     * @param player player whose turn is ending
+     */
     private void handleEndOfTurnNobleClaim(GameState state, Player player) {
         int claimedBefore = player.getClaimedNobles().size();
         handleNobleClaim(state, player);
@@ -768,6 +915,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Triggers the final round when a player first reaches the winning threshold.
+     *
+     * @param state game state to update
+     * @param player player being evaluated
+     */
     private void handleWinCheck(GameState state, Player player) {
         if (!state.isFinalRoundTriggered() && rules.hasPlayerWon(player, state.getWinningThreshold())) {
             state.triggerFinalRound();
@@ -776,6 +929,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Resolves and announces the winner after the final round completes.
+     *
+     * @param state completed game state
+     */
     private void handleGameEnd(GameState state) {
         if (!state.isGameOver()) {
             return;
@@ -791,10 +949,22 @@ public class GameBoardUI implements ThemeStyleSheet {
         ok("Game over! " + winner.getName() + " wins with " + winner.getPoints() + " points.");
     }
 
+    /**
+     * Advances play to the next player.
+     *
+     * @param state game state whose turn order should advance
+     */
     private void advanceTurn(GameState state) {
         state.advanceToNextPlayer();
     }
 
+    /**
+     * Builds the concrete gem payment for a purchase, including gold substitution.
+     *
+     * @param player player paying for a card
+     * @param actualCost card cost after permanent bonuses
+     * @return gem collection to deduct from the player
+     */
     private GemCollection buildPayment(Player player, GemCollection actualCost) {
         Map<GemColor, Integer> pay = new EnumMap<>(GemColor.class);
         int goldNeeded = 0;
@@ -817,6 +987,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return new GemCollection(pay);
     }
 
+    /**
+     * Formats a gem collection into compact shorthand like {@code w2 r1}.
+     *
+     * @param gems gems to format
+     * @return compact gem shorthand
+     */
     private String formatGemShort(GemCollection gems) {
         StringBuilder sb = new StringBuilder();
         for (GemColor color : GemColor.values()) {
@@ -832,6 +1008,13 @@ public class GameBoardUI implements ThemeStyleSheet {
     // Rendering utilities
     // -------------------------------------------------------------------------
 
+    /**
+     * Formats gem statistics into space-separated label/value tokens.
+     *
+     * @param stats gem counts to format
+     * @param includeGold whether gold should be included
+     * @return formatted stat string
+     */
     private String formatStats(Map<GemColor, Integer> stats, boolean includeGold) {
         StringBuilder sb = new StringBuilder();
         List<GemColor> order = includeGold ? BANK_ORDER : CARD_ORDER;
@@ -850,6 +1033,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.toString();
     }
 
+    /**
+     * Formats a card cost into shorthand such as {@code w2r3k1}.
+     *
+     * @param card card whose cost should be formatted
+     * @return shorthand cost string
+     */
     private String formatCardCost(Card card) {
         if (card == null || card.getCost() == null) {
             return "-";
@@ -867,6 +1056,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.length() == 0 ? "-" : sb.toString();
     }
 
+    /**
+     * Formats noble requirements using colored gem tokens.
+     *
+     * @param req noble requirements map
+     * @return formatted requirement string
+     */
     private String formatNobleRequirements(Map<GemColor, Integer> req) {
         if (req == null || req.isEmpty()) {
             return "-";
@@ -926,6 +1121,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         };
     }
 
+    /**
+     * Maps a gem color to its lowercase shorthand character.
+     *
+     * @param color gem color to encode
+     * @return lowercase shorthand character
+     */
     private char gemCodeLower(GemColor color) {
         return switch (color) {
             case WHITE -> 'w';
@@ -991,6 +1192,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.toString();
     }
 
+    /**
+     * Builds the left-hand market column of the board as renderable rows.
+     *
+     * @param state state to render
+     * @return prepared render rows plus prompt row metadata
+     */
     private MainAreaRender buildMainArea(GameState state) {
         List<String> lines = new ArrayList<>();
         appendMarketPanel(lines, "NOBLES", "", buildNoblePanelLines(state.getAvailableNobles()));
@@ -1017,6 +1224,13 @@ public class GameBoardUI implements ThemeStyleSheet {
         return new MainAreaRender(lines, actionLineIndex, statusLineIndex);
     }
 
+    /**
+     * Builds the right-hand player sidebar as stacked cards.
+     *
+     * @param players players to display
+     * @param currentPlayer active player for highlighting
+     * @return sidebar rows
+     */
     private List<String> buildPlayerSidebar(List<Player> players, Player currentPlayer) {
         List<String> lines = new ArrayList<>();
         lines.add(DIM + WHITE + "PLAYERS" + RESET);
@@ -1029,6 +1243,15 @@ public class GameBoardUI implements ThemeStyleSheet {
         return lines;
     }
 
+    /**
+     * Combines left and right column render rows into a single board row list.
+     *
+     * @param left left column rows
+     * @param right right column rows
+     * @param leftWidth visible width of the left column
+     * @param rightWidth visible width of the right column
+     * @return merged rows
+     */
     private List<String> combineColumns(List<String> left, List<String> right, int leftWidth, int rightWidth) {
         int total = Math.max(left.size(), right.size());
         List<String> rows = new ArrayList<>(total);
@@ -1040,6 +1263,14 @@ public class GameBoardUI implements ThemeStyleSheet {
         return rows;
     }
 
+    /**
+     * Appends one boxed market panel to the left-column render buffer.
+     *
+     * @param lines target row buffer
+     * @param title left-aligned panel title
+     * @param rightTitle optional right-aligned panel title
+     * @param body panel body rows
+     */
     private void appendMarketPanel(List<String> lines, String title, String rightTitle, List<String> body) {
         lines.add(panelTop(MAIN_WIDTH));
         lines.add(panelHeader(MAIN_WIDTH, title, rightTitle));
@@ -1049,6 +1280,13 @@ public class GameBoardUI implements ThemeStyleSheet {
         lines.add(panelBottom(MAIN_WIDTH));
     }
 
+    /**
+     * Appends one player's sidebar card to the right-column render buffer.
+     *
+     * @param lines target row buffer
+     * @param player player to render
+     * @param isCurrentPlayer whether this player is active
+     */
     private void appendPlayerCard(List<String> lines, Player player, boolean isCurrentPlayer) {
         String borderColor = isCurrentPlayer ? GREEN : WHITE;
         String nameColor = isCurrentPlayer ? CYAN : playerAccent(player);
@@ -1071,6 +1309,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         lines.add(panelBottom(SIDEBAR_WIDTH, borderColor));
     }
 
+    /**
+     * Builds the noble section body rows.
+     *
+     * @param nobles nobles currently available
+     * @return render rows for the noble panel
+     */
     private List<String> buildNoblePanelLines(List<Noble> nobles) {
         if (nobles == null || nobles.isEmpty()) {
             return List.of(DIM + WHITE + "No nobles available." + RESET);
@@ -1099,6 +1343,12 @@ public class GameBoardUI implements ThemeStyleSheet {
                 " " + joinTiles(botRow, 1));
     }
 
+    /**
+     * Builds one tier section body from visible development cards.
+     *
+     * @param cards cards to render
+     * @return render rows for that tier panel
+     */
     private List<String> buildTierPanelLines(List<Card> cards) {
         if (cards == null || cards.isEmpty()) {
             return List.of(DIM + WHITE + "No cards visible." + RESET);
@@ -1132,6 +1382,12 @@ public class GameBoardUI implements ThemeStyleSheet {
                 " " + joinTiles(botRow, 1));
     }
 
+    /**
+     * Formats the bank gem counts into one colored row.
+     *
+     * @param bank bank to display
+     * @return formatted bank row
+     */
     private String formatBankLine(GemCollection bank) {
         StringBuilder sb = new StringBuilder();
         for (GemColor color : BANK_ORDER) {
@@ -1143,6 +1399,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.toString();
     }
 
+    /**
+     * Formats the recent action log as a single row.
+     *
+     * @return formatted log row
+     */
     private String formatLogLine() {
         if (actionLog.isEmpty()) {
             return DIM + WHITE + "No actions yet" + RESET;
@@ -1160,6 +1421,14 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.toString();
     }
 
+    /**
+     * Formats and wraps gem stats so they fit within a sidebar card.
+     *
+     * @param stats stats to render
+     * @param includeGold whether to include gold
+     * @param width visible row width for wrapping
+     * @return wrapped stat rows
+     */
     private List<String> splitStatsLines(Map<GemColor, Integer> stats, boolean includeGold, int width) {
         List<String> tokens = new ArrayList<>();
         List<GemColor> order = includeGold ? BANK_ORDER : CARD_ORDER;
@@ -1173,6 +1442,13 @@ public class GameBoardUI implements ThemeStyleSheet {
         return wrapTokens(tokens, width);
     }
 
+    /**
+     * Wraps preformatted tokens into rows that fit within a target width.
+     *
+     * @param tokens tokens to wrap
+     * @param width visible row width
+     * @return wrapped rows
+     */
     private List<String> wrapTokens(List<String> tokens, int width) {
         List<String> lines = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -1194,6 +1470,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return lines.isEmpty() ? List.of("") : lines;
     }
 
+    /**
+     * Formats reserved cards as compact sidebar slot markers.
+     *
+     * @param reservedCards reserved cards owned by a player
+     * @return formatted reserved slot string
+     */
     private String formatReservedTokens(List<Card> reservedCards) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 3; i++) {
@@ -1216,6 +1498,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         return sb.toString();
     }
 
+    /**
+     * Chooses a sidebar accent color based on turn order.
+     *
+     * @param player player whose accent is needed
+     * @return ANSI color code for that player
+     */
     private String playerAccent(Player player) {
         int index = Math.floorMod(player.getTurnOrder(), 4);
         return switch (index) {
@@ -1226,34 +1514,93 @@ public class GameBoardUI implements ThemeStyleSheet {
         };
     }
 
+    /**
+     * Wraps one token in the ANSI color associated with a gem color.
+     *
+     * @param color gem color driving the styling
+     * @param text token text to color
+     * @return colored token
+     */
     private String coloredToken(GemColor color, String text) {
         return GEM_ANSI.getOrDefault(color, WHITE) + BOLD + text + RESET;
     }
 
+    /**
+     * Builds the top border of a boxed panel using the default border color.
+     *
+     * @param width visible panel width
+     * @return formatted top border row
+     */
     private String panelTop(int width) {
         return panelTop(width, WHITE);
     }
 
+    /**
+     * Builds the top border of a boxed panel.
+     *
+     * @param width visible panel width
+     * @param borderColor ANSI color for the border
+     * @return formatted top border row
+     */
     private String panelTop(int width, String borderColor) {
         return borderColor + "┌" + rep('─', width - 2) + "┐" + RESET;
     }
 
+    /**
+     * Builds the bottom border of a boxed panel using the default color.
+     *
+     * @param width visible panel width
+     * @return formatted bottom border row
+     */
     private String panelBottom(int width) {
         return panelBottom(width, WHITE);
     }
 
+    /**
+     * Builds the bottom border of a boxed panel.
+     *
+     * @param width visible panel width
+     * @param borderColor ANSI color for the border
+     * @return formatted bottom border row
+     */
     private String panelBottom(int width, String borderColor) {
         return borderColor + "└" + rep('─', width - 2) + "┘" + RESET;
     }
 
+    /**
+     * Builds a horizontal divider row for a boxed panel.
+     *
+     * @param width visible panel width
+     * @param borderColor ANSI color for the divider
+     * @return formatted divider row
+     */
     private String panelDivider(int width, String borderColor) {
         return borderColor + "├" + rep('─', width - 2) + "┤" + RESET;
     }
 
+    /**
+     * Builds a panel header row using default colors.
+     *
+     * @param width visible panel width
+     * @param title left-aligned title
+     * @param rightTitle right-aligned title
+     * @return formatted header row
+     */
     private String panelHeader(int width, String title, String rightTitle) {
         return panelHeader(width, title, rightTitle, WHITE, BOLD + WHITE, DIM + WHITE);
     }
 
+    /**
+     * Builds a panel header row with caller-supplied colors.
+     *
+     * @param width visible panel width
+     * @param title left-aligned title
+     * @param rightTitle right-aligned title
+     * @param borderColor ANSI border color
+     * @param titleColor ANSI title color
+     * @param rightColor ANSI right-title color
+     * @return formatted header row
+     */
     private String panelHeader(int width, String title, String rightTitle, String borderColor,
             String titleColor, String rightColor) {
         String left = titleColor + title + RESET;
@@ -1265,10 +1612,25 @@ public class GameBoardUI implements ThemeStyleSheet {
         return borderColor + "│" + RESET + left + sp(gap) + right + borderColor + "│" + RESET;
     }
 
+    /**
+     * Builds one boxed panel body row using the default border color.
+     *
+     * @param width visible panel width
+     * @param content row content
+     * @return formatted body row
+     */
     private String panelBody(int width, String content) {
         return panelBody(width, content, WHITE);
     }
 
+    /**
+     * Builds one boxed panel body row.
+     *
+     * @param width visible panel width
+     * @param content row content
+     * @param borderColor ANSI border color
+     * @return formatted body row
+     */
     private String panelBody(int width, String content, String borderColor) {
         int bodyWidth = width - 2;
         int pad = bodyWidth - vlen(content);
@@ -1278,19 +1640,41 @@ public class GameBoardUI implements ThemeStyleSheet {
         return borderColor + "│" + RESET + content + sp(pad) + borderColor + "│" + RESET;
     }
 
+    /**
+     * Updates the action status line with a success message.
+     *
+     * @param msg success message to display
+     */
     private void ok(String msg) {
         actionStatus = GREEN + BOLD + msg + RESET;
     }
 
+    /**
+     * Updates the action status line with an error message and pauses briefly.
+     *
+     * @param msg error message to display
+     */
     private void err(String msg) {
         actionStatus = RED + BOLD + msg + RESET;
         sleep(1000);
     }
 
+    /**
+     * Returns the current action status line contents.
+     *
+     * @return formatted action status string
+     */
     private String formatActionStatus() {
         return actionStatus;
     }
 
+    /**
+     * Truncates a string based on visible width rather than ANSI length.
+     *
+     * @param text text to truncate
+     * @param maxVisibleChars maximum visible characters allowed
+     * @return original or truncated text
+     */
     private String truncateVisible(String text, int maxVisibleChars) {
         if (vlen(text) <= maxVisibleChars) {
             return text;
@@ -1298,6 +1682,13 @@ public class GameBoardUI implements ThemeStyleSheet {
         return text.substring(0, Math.max(0, maxVisibleChars - 3)) + "...";
     }
 
+    /**
+     * Re-renders the board with a temporary inline status prompt and reads input.
+     *
+     * @param state current game state
+     * @param message prompt text to show in the status row
+     * @return trimmed user input entered for that prompt
+     */
     private String promptActionStatus(GameState state, String message) {
         String visibleMessage = truncateVisible(message, MAIN_WIDTH - 2);
         actionStatus = RED + visibleMessage + RESET;
@@ -1309,11 +1700,19 @@ public class GameBoardUI implements ThemeStyleSheet {
         return input;
     }
 
+    /**
+     * Clears the terminal and moves the cursor to the home position.
+     */
     private void clearScreen() {
         System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 
+    /**
+     * Sleeps for a short UI delay while preserving interruption status.
+     *
+     * @param ms sleep duration in milliseconds
+     */
     private void sleep(int ms) {
         try {
             Thread.sleep(ms);

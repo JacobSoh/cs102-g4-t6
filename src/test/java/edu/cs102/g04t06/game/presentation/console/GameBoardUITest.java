@@ -1,10 +1,13 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -99,6 +102,19 @@ class GameBoardUITest {
         return new GameState(List.of(alice, bob), market, bank, new ArrayList<>(List.of(noble)), 15);
     }
 
+    @SuppressWarnings("unchecked")
+    private List<String> actionLog(GameBoardUI ui) throws Exception {
+        Field actionLogField = GameBoardUI.class.getDeclaredField("actionLog");
+        actionLogField.setAccessible(true);
+        return (List<String>) actionLogField.get(ui);
+    }
+
+    private void invokePrivate(GameBoardUI ui, String methodName, Class<?>[] paramTypes, Object... args) throws Exception {
+        Method method = GameBoardUI.class.getDeclaredMethod(methodName, paramTypes);
+        method.setAccessible(true);
+        method.invoke(ui, args);
+    }
+
     @Test
     void displayGameState_producesNonEmptyOutput() {
         boardUI.displayGameState(makeGameState());
@@ -143,5 +159,92 @@ class GameBoardUITest {
 
         assertTrue(out.contains("W:3"), "Noble white requirement should be rendered");
         assertTrue(out.contains("R:3"), "Noble red requirement should be rendered");
+    }
+
+    @Test
+    void displayGameState_showsUpdatedReserveBuyGuide() {
+        boardUI.displayGameState(makeGameState());
+        String out = plainOutput();
+
+        assertTrue(out.contains("buy reserve 1"), "Actions guide should show the reserve slot syntax");
+    }
+
+    @Test
+    void displayGameState_rendersOnlyTwoMostRecentLogEntries() throws Exception {
+        actionLog(boardUI).add("old entry");
+        actionLog(boardUI).add("middle entry");
+        actionLog(boardUI).add("latest entry");
+
+        boardUI.displayGameState(makeGameState());
+        String out = plainOutput();
+
+        assertFalse(out.contains("old entry"), "Oldest log entry should be omitted when more than two exist");
+        assertTrue(out.contains("middle entry"), "Second most recent log entry should remain visible");
+        assertTrue(out.contains("latest entry"), "Most recent log entry should remain visible");
+    }
+
+    @Test
+    void displayGameState_rendersFullOtherPlayerDetailsIncludingReservedCards() {
+        GameState state = makeGameState();
+        Player bob = state.getPlayers().get(1);
+        bob.addGems(new GemCollection()
+                .add(GemColor.BLUE, 1)
+                .add(GemColor.GREEN, 2)
+                .add(GemColor.BLACK, 1)
+                .add(GemColor.GOLD, 1));
+        bob.addCard(makeCard(1, 0, GemColor.WHITE, Map.of(GemColor.RED, 1)));
+        bob.addCard(makeCard(1, 1, GemColor.GREEN, Map.of(GemColor.BLUE, 2)));
+        bob.addReservedCard(makeCard(2, 1, GemColor.RED, Map.of(GemColor.WHITE, 2)));
+
+        boardUI.displayGameState(state);
+        String out = plainOutput();
+
+        assertTrue(out.contains("PLAYERS"), "Sidebar should include the player lineup heading");
+        assertTrue(out.contains("Bonus"), "Sidebar should render bonus details");
+        assertTrue(out.contains("Reserved: [R1]"), "Sidebar should show reserved cards with their owner panel");
+        assertTrue(out.contains("W:1"), "Sidebar should include full gem or bonus tokens, not only totals");
+        assertTrue(out.contains("G:2"), "Sidebar should include all gem colors for other players");
+    }
+
+    @Test
+    void endOfTurnWinCheck_triggersFinalRoundAndEndsOnlyAfterRoundWrap() throws Exception {
+        GameState state = makeGameState();
+        Player alice = state.getPlayers().get(0);
+        for (int i = 0; i < 15; i++) {
+            alice.addCard(makeCard(1, 1, GemColor.WHITE, Map.of(GemColor.RED, 1)));
+        }
+
+        invokePrivate(boardUI, "handleWinCheck", new Class<?>[]{GameState.class, Player.class}, state, alice);
+
+        assertTrue(state.isFinalRoundTriggered(), "Reaching the threshold should trigger the final round");
+        assertFalse(state.isGameOver(), "Game should not end immediately when the threshold is reached");
+
+        state.advanceToNextPlayer();
+        assertFalse(state.isGameOver(), "Game should continue for remaining players in the round");
+
+        state.advanceToNextPlayer();
+        assertTrue(state.isGameOver(), "Game should end only after the round wraps back to player 1");
+    }
+
+    @Test
+    void handleGameEnd_picksHighestScoringEligibleWinnerAtRoundEnd() throws Exception {
+        GameState state = makeGameState();
+        Player alice = state.getPlayers().get(0);
+        Player bob = state.getPlayers().get(1);
+        for (int i = 0; i < 15; i++) {
+            alice.addCard(makeCard(1, 1, GemColor.WHITE, Map.of(GemColor.RED, 1)));
+        }
+        for (int i = 0; i < 16; i++) {
+            bob.addCard(makeCard(1, 1, GemColor.BLUE, Map.of(GemColor.WHITE, 1)));
+        }
+
+        state.triggerFinalRound();
+        state.setGameOver(true);
+
+        invokePrivate(boardUI, "handleGameEnd", new Class<?>[]{GameState.class}, state);
+
+        assertTrue(actionLog(boardUI).stream().anyMatch(entry -> entry.contains("Winner: Bob")),
+                "Final winner should be chosen from all eligible players at round end");
+        assertTrue(plainOutput().isBlank(), "Winner announcement should be kept in UI state rather than printed directly");
     }
 }
