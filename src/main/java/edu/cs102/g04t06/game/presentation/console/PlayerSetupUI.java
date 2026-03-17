@@ -321,15 +321,20 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     private void printOptionBox(String[] options) {
-        System.out.println(WHITE + "  ┌" + "─".repeat(BOX_WIDTH) + "┐" + RESET);
+        int contentWidth = BOX_WIDTH;
+        for (String option : options) {
+            contentWidth = Math.max(contentWidth, stripAnsi(option).length() + 1);
+        }
+
+        System.out.println(WHITE + "  ┌" + "─".repeat(contentWidth) + "┐" + RESET);
         for (String option : options) {
             int visibleLen = stripAnsi(option).length();
-            int padding    = BOX_WIDTH - visibleLen - 2;
+            int padding = contentWidth - visibleLen - 1;
             if (padding < 0) padding = 0;
             System.out.println(WHITE + "  │ " + RESET + option
                     + " ".repeat(padding) + WHITE + "│" + RESET);
         }
-        System.out.println(WHITE + "  └" + "─".repeat(BOX_WIDTH) + "┘" + RESET);
+        System.out.println(WHITE + "  └" + "─".repeat(contentWidth) + "┘" + RESET);
         System.out.println();
     }
 
