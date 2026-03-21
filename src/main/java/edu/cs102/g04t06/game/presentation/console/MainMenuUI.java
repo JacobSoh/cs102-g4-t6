@@ -33,6 +33,8 @@ public class MainMenuUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     public enum MenuChoice {
         NEW_GAME,
+        HOST_LAN,
+        JOIN_LAN,
         LOAD_GAME,
         QUIT
     }
@@ -57,6 +59,8 @@ public class MainMenuUI implements ThemeStyleSheet {
 
             switch (Character.toLowerCase(key)) {
                 case 'n': return MenuChoice.NEW_GAME;
+                case 'h': return MenuChoice.HOST_LAN;
+                case 'j': return MenuChoice.JOIN_LAN;
                 case 'l': return MenuChoice.LOAD_GAME;
                 case 'q': return MenuChoice.QUIT;
                 default:
@@ -96,6 +100,8 @@ public class MainMenuUI implements ThemeStyleSheet {
 
         String title     = centreInBox("MAIN MENU", BOX_WIDTH);
         String newGame   = menuLine(GREEN,  "N", "New Game",   BOX_WIDTH);
+        String hostLan   = menuLine(CYAN,   "H", "Host LAN",   BOX_WIDTH);
+        String joinLan   = menuLine(PURPLE, "J", "Join LAN",   BOX_WIDTH);
         String loadGame  = menuLine(BLUE,   "L", "Load Game",  BOX_WIDTH);
         String quit      = menuLine(WHITE,  "Q", "Quit",       BOX_WIDTH);
 
@@ -103,6 +109,8 @@ public class MainMenuUI implements ThemeStyleSheet {
         System.out.println(WHITE + "  │" + BOLD + WHITE + title   + RESET + WHITE + "│" + RESET);
         System.out.println(WHITE + div    + RESET);
         System.out.println(WHITE + "  │" + newGame  + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + hostLan  + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + joinLan  + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + loadGame + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + quit     + WHITE + "│" + RESET);
         System.out.println(WHITE + bottom + RESET);
@@ -116,7 +124,7 @@ public class MainMenuUI implements ThemeStyleSheet {
     }
 
     private void printInvalidKey() {
-        System.out.println(RED + "  Invalid choice. Enter N, L, or Q then press Enter." + RESET);
+        System.out.println(RED + "  Invalid choice. Enter N, H, J, L, or Q then press Enter." + RESET);
         sleep(1000);
     }
 

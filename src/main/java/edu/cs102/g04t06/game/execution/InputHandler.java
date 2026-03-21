@@ -1,4 +1,4 @@
-package edu.cs102.g04t06.game.presentation.console;
+package edu.cs102.g04t06.game.execution;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -13,29 +13,12 @@ import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 /**
- * Validates and processes player input for the Splendor game.
- * Input values are supplied as parameters (e.g. from a GUI event handler)
- * rather than read from standard input. Each method validates its parameters
- * and throws {@link IllegalArgumentException} on invalid input.
+ * Validates and parses command input values for the Splendor game.
  */
 public class InputHandler {
 
-    /**
-     * Creates a new InputHandler 
-    */
     public InputHandler() {}
 
-    /**
-     * Validates a player's chosen action number.
-     *
-     * @param choice the action number supplied by the player (must be 1–4):
-     *               1 = Take 3 different gems,
-     *               2 = Take 2 gems of the same colour,
-     *               3 = Purchase a card,
-     *               4 = Reserve a card
-     * @return the validated choice
-     * @throws IllegalArgumentException if {@code choice} is not in [1, 4]
-     */
     public int promptActionChoice(int choice) {
         if (choice < 1 || choice > 4) {
             throw new IllegalArgumentException(
@@ -44,13 +27,6 @@ public class InputHandler {
         return choice;
     }
 
-    /**
-     * Parses a tier token such as "t1", "tier2", or "3".
-     *
-     * @param token raw tier token
-     * @return parsed tier in range [1, 3]
-     * @throws IllegalArgumentException if token cannot be parsed or out of range
-     */
     public int parseTierToken(String token) {
         String t = token.toLowerCase().trim();
         t = t.replace("tier", "");
@@ -66,13 +42,6 @@ public class InputHandler {
         }
     }
 
-    /**
-     * Parses a slot token such as "slot1", "s2", or "4".
-     *
-     * @param token raw slot token
-     * @return zero-based slot index in range [0, 3]
-     * @throws IllegalArgumentException if token cannot be parsed or out of range
-     */
     public int parseSlotToken(String token) {
         String t = token.toLowerCase().trim();
         t = t.replace("slot", "");
@@ -88,14 +57,6 @@ public class InputHandler {
         }
     }
 
-    /**
-     * Parses a gem-code sequence into gem colors.
-     * Supported codes: W, U, G, R, K, *
-     *
-     * @param raw raw input sequence (e.g. "w r u" or "WRU")
-     * @return parsed gem colors in order entered
-     * @throws IllegalArgumentException if no codes or any code is invalid
-     */
     public List<GemColor> parseGemSequence(String raw) {
         String cleaned = raw.toUpperCase().replaceAll("[^A-Z*]", "");
         if (cleaned.isEmpty()) {
@@ -121,20 +82,6 @@ public class InputHandler {
         };
     }
 
-    /**
-     * Resolves a card selection from the visible market and, optionally, the
-     * player's reserved hand into the corresponding {@link Card} object.
-     * Visible cards at the given level are listed first (indices 1–4), followed
-     * by reserved cards if {@code includeReserved} is {@code true}.
-     *
-     * @param market          the current card market
-     * @param level           the market level to draw visible cards from (1, 2, or 3)
-     * @param includeReserved if {@code true}, reserved cards are appended as additional options
-     * @param reservedCards   the player's currently reserved cards; may be {@code null} or empty
-     * @param selection       1-based index of the card chosen by the player
-     * @return the {@link Card} at the given selection index
-     * @throws IllegalArgumentException if {@code selection} is out of the valid range
-     */
     public Card promptCardSelection(CardMarket market, int level,
             boolean includeReserved, List<Card> reservedCards, int selection) {
 
@@ -152,16 +99,6 @@ public class InputHandler {
         return options.get(selection - 1);
     }
 
-    /**
-     * Builds and validates a {@link GemCollection} from a list of gem colours
-     * chosen by the player. GOLD may not be selected through this method.
-     *
-     * @param count  the exact number of gems that must be selected
-     * @param colors the gem colours chosen by the player; size must equal {@code count}
-     * @return a {@link GemCollection} containing the chosen gems
-     * @throws IllegalArgumentException if {@code colors.size()} does not equal {@code count},
-     *                                  or any colour is {@link GemColor#GOLD}
-     */
     public GemCollection promptGemSelection(int count, List<GemColor> colors) {
         if (colors.size() != count) {
             throw new IllegalArgumentException(
@@ -180,20 +117,6 @@ public class InputHandler {
         return new GemCollection(selected);
     }
 
-    /**
-     * Validates the gems a player wishes to return to the supply and builds
-     * the corresponding {@link GemCollection}. The player must actually hold
-     * all gems in {@code gemsToReturn}.
-     *
-     * @param player       the player who must return gems
-     * @param excessCount  the exact number of gems that must be returned
-     * @param gemsToReturn the gem colours the player chose to return;
-     *                     size must equal {@code excessCount}
-     * @return a {@link GemCollection} representing the gems to return
-     * @throws IllegalArgumentException if {@code gemsToReturn.size()} does not equal
-     *                                  {@code excessCount}, or the player does not hold
-     *                                  the specified gems
-     */
     public GemCollection promptGemsToReturn(Player player, int excessCount,
             List<GemColor> gemsToReturn) {
 
@@ -217,15 +140,6 @@ public class InputHandler {
         return returnCollection;
     }
 
-    /**
-     * Resolves a noble selection from the list of claimable nobles into the
-     * corresponding {@link Noble} object.
-     *
-     * @param claimable the non-empty list of nobles the player may claim
-     * @param selection 1-based index of the noble chosen by the player
-     * @return the {@link Noble} at the given selection index
-     * @throws IllegalArgumentException if {@code selection} is out of the valid range
-     */
     public Noble promptNobleSelection(List<Noble> claimable, int selection) {
         if (selection < 1 || selection > claimable.size()) {
             throw new IllegalArgumentException(
@@ -235,14 +149,6 @@ public class InputHandler {
         return claimable.get(selection - 1);
     }
 
-    /**
-     * Validates the number of players for a game session.
-     * Splendor supports 2 to 4 players.
-     *
-     * @param count the player count supplied (must be 2–4)
-     * @return the validated player count
-     * @throws IllegalArgumentException if {@code count} is not in [2, 4]
-     */
     public int promptPlayerCount(int count) {
         if (count < 2 || count > 4) {
             throw new IllegalArgumentException(
@@ -251,14 +157,6 @@ public class InputHandler {
         return count;
     }
 
-    /**
-     * Validates a list of player names and returns a defensive copy.
-     * Every name must be non-null and non-blank after trimming.
-     *
-     * @param names the player names supplied in turn order
-     * @return a new list containing the validated names
-     * @throws IllegalArgumentException if any name is {@code null} or blank
-     */
     public List<String> promptPlayerNames(List<String> names) {
         for (String name : names) {
             if (name == null || name.trim().isEmpty()) {
