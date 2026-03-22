@@ -36,6 +36,9 @@ public class HardAIStrategy implements AIStrategy {
     /**
      * Scores every purchasable card, reservable card, and gem-take combination,
      * then returns the highest-scored action.
+     * @param current gamestate
+     * @param the AI Player
+     * @return Best Action to take
      */
     @Override
     public AIAction decideAction(GameState state, Player self) {
@@ -97,8 +100,16 @@ public class HardAIStrategy implements AIStrategy {
     }
 
     /**
-     * Picks the noble that scores highest by points plus overlap bonus
-     * with remaining available (non-claimable) nobles.
+     * Picks the noble that opponents are closest to claiming (blocking strategy).
+     * Since all nobles are worth the same 3 points, the tiebreaker is denying the most urgent opponent
+     *
+     * Score per candidate = sum over opponents of 1 / (deficit + 1)
+     * where deficit = total bonus cards the opponent still needs for that noble.
+     * A deficit of 0 means the opponent can already claim it next turn → highest urgency.
+     * @param list of claimable nobles
+     * @param current game state
+     * @param AI player
+     * @return the noble that opponents are closest to taking
      */
     @Override
     public Noble chooseNoble(List<Noble> claimable, GameState state, Player self) {
@@ -106,14 +117,14 @@ public class HardAIStrategy implements AIStrategy {
         double bestScore = Double.NEGATIVE_INFINITY;
 
         for (Noble candidate : claimable) {
-            double score = candidate.getPoints();
-            // Bonus: overlap with remaining nobles not yet claimable
-            for (Noble other : state.getAvailableNobles()) {
-                if (claimable.contains(other)) continue;
-                score += countRequirementOverlap(candidate, other) * 0.5;
+            double blockingScore = 0.0;
+            for (Player opponent : state.getPlayers()) {
+                if (opponent == self) continue;
+                int deficit = opponentNobleDeficit(candidate, opponent);
+                blockingScore += 1.0 / (deficit + 1);
             }
-            if (score > bestScore) {
-                bestScore = score;
+            if (blockingScore > bestScore) {
+                bestScore = blockingScore;
                 best = candidate;
             }
         }
@@ -124,6 +135,10 @@ public class HardAIStrategy implements AIStrategy {
     /**
      * Returns exactly excessCount gems to give back to the bank.
      * Keeps gems needed for the highest-valued target card; returns the rest first.
+     * @param AI Player
+     * @param number of extra gems
+     * @param current game state
+     * @return the gem collection of gems to be returned
      */
     @Override
     public GemCollection chooseGemsToReturn(Player self, int excessCount, GameState state) {
@@ -187,6 +202,19 @@ public class HardAIStrategy implements AIStrategy {
     // =========================================================
     // Card scoring sub-methods
     // =========================================================
+
+    /**
+     * Returns how many more bonus cards {@code opponent} needs to claim {@code noble}.
+     * A value of 0 means the opponent already meets all requirements.
+     */
+    private int opponentNobleDeficit(Noble noble, Player opponent) {
+        Map<GemColor, Integer> bonuses = opponent.calculateBonuses();
+        int deficit = 0;
+        for (Map.Entry<GemColor, Integer> entry : noble.getRequirements().entrySet()) {
+            deficit += Math.max(0, entry.getValue() - bonuses.getOrDefault(entry.getKey(), 0));
+        }
+        return deficit;
+    }
 
     /**
      * Central scoring formula:
