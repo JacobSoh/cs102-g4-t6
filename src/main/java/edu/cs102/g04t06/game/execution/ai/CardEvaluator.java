@@ -139,8 +139,8 @@ public class CardEvaluator{
                         } else {
                             deficit.put(color, newValue);
                         }
+                        tookTwo = true;
                     }
-                    tookTwo = true;
                     break;
                 }
 
