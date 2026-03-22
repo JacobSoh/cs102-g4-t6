@@ -6,7 +6,7 @@ import java.util.Scanner;
  * MainMenuUI
  *
  * Displays the main menu after the load screen.
- * Presents three options: New Game, Load Game, and Quit.
+ * Presents the available start options after the load screen.
  * Returns a MenuChoice enum so the caller (ConsoleUI / App) can
  * decide what screen to navigate to next.
  */
@@ -32,7 +32,7 @@ public class MainMenuUI implements ThemeStyleSheet {
     // Menu choice — returned to the caller after the user picks an option
     // -------------------------------------------------------------------------
     public enum MenuChoice {
-        NEW_GAME,
+        OFFLINE_PLAY,
         HOST_LAN,
         JOIN_LAN,
         LOAD_GAME,
@@ -58,7 +58,7 @@ public class MainMenuUI implements ThemeStyleSheet {
             char key = readChoice();
 
             switch (Character.toLowerCase(key)) {
-                case 'n': return MenuChoice.NEW_GAME;
+                case 'o': return MenuChoice.OFFLINE_PLAY;
                 case 'h': return MenuChoice.HOST_LAN;
                 case 'j': return MenuChoice.JOIN_LAN;
                 case 'l': return MenuChoice.LOAD_GAME;
@@ -99,7 +99,7 @@ public class MainMenuUI implements ThemeStyleSheet {
         String bottom = "  └" + "─".repeat(BOX_WIDTH) + "┘";
 
         String title     = centreInBox("MAIN MENU", BOX_WIDTH);
-        String newGame   = menuLine(GREEN,  "N", "New Game",   BOX_WIDTH);
+        String offlinePlay = menuLine(GREEN,  "O", "Offline Play", BOX_WIDTH);
         String hostLan   = menuLine(CYAN,   "H", "Host LAN",   BOX_WIDTH);
         String joinLan   = menuLine(PURPLE, "J", "Join LAN",   BOX_WIDTH);
         String loadGame  = menuLine(BLUE,   "L", "Load Game",  BOX_WIDTH);
@@ -108,7 +108,7 @@ public class MainMenuUI implements ThemeStyleSheet {
         System.out.println(WHITE + top    + RESET);
         System.out.println(WHITE + "  │" + BOLD + WHITE + title   + RESET + WHITE + "│" + RESET);
         System.out.println(WHITE + div    + RESET);
-        System.out.println(WHITE + "  │" + newGame  + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + offlinePlay + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + hostLan  + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + joinLan  + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + loadGame + WHITE + "│" + RESET);
@@ -124,7 +124,7 @@ public class MainMenuUI implements ThemeStyleSheet {
     }
 
     private void printInvalidKey() {
-        System.out.println(RED + "  Invalid choice. Enter N, H, J, L, or Q then press Enter." + RESET);
+        System.out.println(RED + "  Invalid choice. Enter O, H, J, L, or Q then press Enter." + RESET);
         sleep(1000);
     }
 
@@ -133,7 +133,7 @@ public class MainMenuUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
 
     /**
-     * Builds a single menu row, e.g.:  "  [ N ]  New Game           "
+     * Builds a single menu row, e.g.:  "  [ O ]  Offline Play       "
      * The key bracket is coloured, the label is white.
      */
     private String menuLine(String colour, String key, String label, int width) {

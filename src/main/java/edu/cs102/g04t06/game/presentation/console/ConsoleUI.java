@@ -91,7 +91,7 @@ public class ConsoleUI implements ThemeStyleSheet {
     private Route handleMainMenu() {
         MenuChoice choice = mainMenuUI.show();
         return switch (choice) {
-            case NEW_GAME -> Route.PLAYER_SETUP;
+            case OFFLINE_PLAY -> Route.PLAYER_SETUP;
             case HOST_LAN -> Route.HOST_LAN_SETUP;
             case JOIN_LAN -> Route.JOIN_LAN_SETUP;
             case LOAD_GAME -> {

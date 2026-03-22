@@ -23,9 +23,8 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  */
 public class GameBoardUI implements ThemeStyleSheet {
     private static final String ACTION_PROMPT = "ACTION > ";
-    private static final String READ_ONLY_PROMPT = "LAN MODE - use prompt below";
-    private static final int ACTION_CURSOR_OFFSET = 5 + ACTION_PROMPT.length(); // "  ║ " + prompt + 1 space
-    private static final int MAX_LOG_ENTRIES = 5;
+    private static final String YOUR_TURN_PROMPT = "YOUR TURN > ";
+    private static final String WAITING_PROMPT = "WAITING > ";
     private static final int MAIN_WIDTH = 88;
     private static final int SIDEBAR_WIDTH = 27;
 
@@ -165,8 +164,48 @@ public class GameBoardUI implements ThemeStyleSheet {
         if (state == null) {
             throw new IllegalArgumentException("GameState must not be null");
         }
-        this.actionPromptLabel = READ_ONLY_PROMPT;
+        this.actionPromptLabel = WAITING_PROMPT;
         this.actionStatus = statusMessage == null ? "" : CYAN + statusMessage + RESET;
+        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+        clearScreen();
+        render(state);
+    }
+
+    /**
+     * Renders the board in LAN interactive mode and collects a command inside the panel.
+     *
+     * @param state game state to render
+     * @param statusMessage inline status or error message
+     * @param statusColor ANSI color for the status line
+     * @param logEntries log entries to display
+     * @return trimmed user input
+     */
+    public String promptNetworkTurn(GameState state, String statusMessage, String statusColor, List<String> logEntries) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        this.actionPromptLabel = YOUR_TURN_PROMPT;
+        this.actionStatus = formatInlineStatus(statusMessage, statusColor);
+        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+        clearScreen();
+        render(state);
+        return promptAction();
+    }
+
+    /**
+     * Renders a passive LAN board state using a waiting prompt label.
+     *
+     * @param state game state to render
+     * @param statusMessage message shown below the waiting prompt
+     * @param statusColor ANSI color for the status line
+     * @param logEntries log entries to display
+     */
+    public void displayNetworkState(GameState state, String statusMessage, String statusColor, List<String> logEntries) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        this.actionPromptLabel = WAITING_PROMPT;
+        this.actionStatus = formatInlineStatus(statusMessage, statusColor);
         this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
         clearScreen();
         render(state);
@@ -535,16 +574,7 @@ public class GameBoardUI implements ThemeStyleSheet {
             line(sb.toString());
             return;
         }
-
-        int start = Math.max(0, actionLog.size() - MAX_LOG_ENTRIES);
-        List<String> recent = actionLog.subList(start, actionLog.size());
-
-        for (int i = 0; i < recent.size(); i++) {
-            sb.append(WHITE).append(recent.get(i)).append(RESET);
-            if (i < recent.size() - 1) {
-                sb.append(DIM).append(WHITE).append("   |   ").append(RESET);
-            }
-        }
+        sb.append(WHITE).append(actionLog.get(actionLog.size() - 1)).append(RESET);
         line(sb.toString());
     }
 
@@ -570,7 +600,8 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private String promptAction() {
         // Move cursor into the ACTION row inside the board:
-        System.out.print("\u001B[" + actionLinesFromBottom + "A\r\u001B[" + ACTION_CURSOR_OFFSET + "C\u001B[?25h");
+        int cursorOffset = 5 + vlen(actionPromptLabel);
+        System.out.print("\u001B[" + actionLinesFromBottom + "A\r\u001B[" + cursorOffset + "C\u001B[?25h");
         return scanner.nextLine().trim();
     }
 
@@ -1033,14 +1064,8 @@ public class GameBoardUI implements ThemeStyleSheet {
         if (source == null || source.isEmpty()) {
             return List.of(DIM + WHITE + "No actions yet" + RESET);
         }
-
-        int start = Math.max(0, source.size() - MAX_LOG_ENTRIES);
-        List<String> recent = source.subList(start, source.size());
-        List<String> lines = new ArrayList<>(recent.size());
-        for (String entry : recent) {
-            lines.add(WHITE + entry + RESET);
-        }
-        return lines;
+        String latest = source.get(source.size() - 1);
+        return List.of(WHITE + latest + RESET);
     }
 
     /**
@@ -1288,6 +1313,21 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private String formatActionStatus() {
         return actionStatus;
+    }
+
+    /**
+     * Formats an inline status line for the action panel.
+     *
+     * @param message status text to show
+     * @param color ANSI color to apply
+     * @return formatted status text
+     */
+    private String formatInlineStatus(String message, String color) {
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+        String safeColor = color == null ? WHITE : color;
+        return safeColor + message + RESET;
     }
 
     /**

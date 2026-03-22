@@ -8,7 +8,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
 import edu.cs102.g04t06.game.execution.TurnProcessor;
@@ -23,7 +22,6 @@ public class LanGameServer implements ThemeStyleSheet {
     private final int port;
     private final int totalPlayers;
     private final String hostPlayerName;
-    private final Scanner scanner = new Scanner(System.in);
     private final GameBoardUI boardUI = new GameBoardUI();
     private final TurnProcessor turnProcessor = new TurnProcessor();
     private final GameStateFactory gameStateFactory = new GameStateFactory();
@@ -31,6 +29,7 @@ public class LanGameServer implements ThemeStyleSheet {
     private final List<String> globalLog = new ArrayList<>();
     private String lastActionMessage = "No actions yet";
     private String finalGameMessage = "Match complete.";
+    private String hostInlineError = "";
 
     public LanGameServer(int port, int totalPlayers, String hostPlayerName) {
         this.port = port;
@@ -121,16 +120,16 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void handleHostTurn(GameState state) {
         while (!state.isGameOver()) {
-            System.out.println();
-            System.out.println(CYAN + "Your turn as host: " + state.getCurrentPlayer().getName() + RESET);
-            System.out.print(WHITE + "Command > " + RESET);
-            String input = scanner.nextLine().trim();
+            String input = boardUI.promptNetworkTurn(
+                    state,
+                    hostInlineError,
+                    RED + BOLD,
+                    getRecentGlobalLog());
+            hostInlineError = "";
 
             TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
             if (!result.isSuccess()) {
-                renderHostState(state);
-                System.out.println(RED + result.getMessage() + RESET);
-                sleep(900);
+                hostInlineError = result.getMessage();
                 continue;
             }
 
@@ -146,16 +145,21 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private boolean handleHostGemReturn(GameState state, TurnProcessor.TurnResult initialResult) {
-        System.out.println(YELLOW + initialResult.getMessage() + RESET);
         while (true) {
-            boardUI.displayReadOnlyState(state, "Return gems at the prompt below.", getRecentGlobalLog());
-            System.out.println();
-            System.out.print(WHITE + "Return " + initialResult.getExcessCount() + " gem(s) > " + RESET);
-            String input = scanner.nextLine().trim();
+            String statusMessage = hostInlineError;
+            if (statusMessage == null || statusMessage.isBlank()) {
+                statusMessage = "Return " + initialResult.getExcessCount() + " gem(s).";
+            }
+            String statusColor = (hostInlineError == null || hostInlineError.isBlank()) ? YELLOW : RED + BOLD;
+            String input = boardUI.promptNetworkTurn(
+                    state,
+                    statusMessage,
+                    statusColor,
+                    getRecentGlobalLog());
+            hostInlineError = "";
             TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, input);
             if (!result.isSuccess()) {
-                System.out.println(RED + result.getMessage() + RESET);
-                sleep(900);
+                hostInlineError = result.getMessage();
                 continue;
             }
             broadcastTurnOutcome(state, 0, result.getMessage());
@@ -304,13 +308,8 @@ public class LanGameServer implements ThemeStyleSheet {
         boardUI.displayReadOnlyState(
                 state,
                 state.isGameOver() ? finalGameMessage
-                        : state.getCurrentPlayerIndex() == 0
-                            ? "Enter your move at the prompt below."
-                            : "Waiting for " + state.getCurrentPlayer().getName() + " to play.",
+                        : "Waiting for " + state.getCurrentPlayer().getName() + " to play.",
                 getRecentGlobalLog());
-        if (actingPlayerIndex == 0 && hostMessage != null && !hostMessage.isBlank()) {
-            System.out.println(CYAN + hostMessage + RESET);
-        }
     }
 
     private void broadcastPassiveState(String message, GameState state, int activePlayerIndex) {
@@ -332,9 +331,7 @@ public class LanGameServer implements ThemeStyleSheet {
         }
         String statusMessage = state.isGameOver()
                 ? finalGameMessage
-                : state.getCurrentPlayerIndex() == 0
-                    ? "Enter your move at the prompt below."
-                    : "Waiting for " + state.getCurrentPlayer().getName() + " to play.";
+                : "Waiting for " + state.getCurrentPlayer().getName() + " to play.";
         boardUI.displayReadOnlyState(state, statusMessage, getRecentGlobalLog());
     }
 
@@ -346,8 +343,10 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private List<String> getRecentGlobalLog() {
-        int start = Math.max(0, globalLog.size() - 5);
-        return new ArrayList<>(globalLog.subList(start, globalLog.size()));
+        if (globalLog.isEmpty()) {
+            return List.of();
+        }
+        return List.of(globalLog.get(globalLog.size() - 1));
     }
 
     private void broadcast(NetworkMessage message) {

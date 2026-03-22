@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.presentation.network;
 
-import java.util.Scanner;
-
 import edu.cs102.g04t06.game.presentation.console.GameBoardUI;
 import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
 
@@ -9,8 +7,8 @@ import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
  * Console UI controller for a LAN client session.
  */
 public class LanSessionUI implements ThemeStyleSheet {
-    private final Scanner scanner = new Scanner(System.in);
     private final GameBoardUI boardUI = new GameBoardUI();
+    private String inlineError = "";
 
     public NetworkMessage handle(NetworkMessage message) {
         return switch (message.type) {
@@ -34,11 +32,15 @@ public class LanSessionUI implements ThemeStyleSheet {
 
     private void render(NetworkMessage message) {
         if (message.state != null) {
-            String statusMessage = (message.message != null && !message.message.isBlank())
-                    ? message.message
-                    : "Waiting for turn...";
-            boardUI.displayReadOnlyState(message.state, statusMessage, message.logEntries);
-            System.out.println();
+            String statusMessage = inlineError;
+            String statusColor = RED + BOLD;
+            if (statusMessage == null || statusMessage.isBlank()) {
+                statusMessage = (message.message != null && !message.message.isBlank())
+                        ? message.message
+                        : "Waiting for turn...";
+                statusColor = CYAN;
+            }
+            boardUI.displayNetworkState(message.state, statusMessage, statusColor, message.logEntries);
         }
 
         if (message.state == null && message.message != null && !message.message.isBlank()) {
@@ -47,25 +49,41 @@ public class LanSessionUI implements ThemeStyleSheet {
     }
 
     private NetworkMessage promptCommand(NetworkMessage message) {
-        render(message);
-        System.out.print(WHITE + "Command > " + RESET);
+        String statusMessage = inlineError;
+        String statusColor = RED + BOLD;
+        if (statusMessage == null || statusMessage.isBlank()) {
+            statusMessage = message.message;
+            statusColor = CYAN;
+        }
+        String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
+        inlineError = "";
         NetworkMessage reply = NetworkMessage.of(MessageType.MOVE_SUBMIT, null);
-        reply.command = scanner.nextLine().trim();
+        reply.command = input;
         return reply;
     }
 
     private NetworkMessage promptGemReturn(NetworkMessage message) {
-        render(message);
         int excess = message.excessCount == null ? 0 : message.excessCount;
-        System.out.print(WHITE + "Return " + excess + " gem(s) > " + RESET);
+        String statusMessage = inlineError;
+        String statusColor = RED + BOLD;
+        if (statusMessage == null || statusMessage.isBlank()) {
+            statusMessage = "Return " + excess + " gem(s).";
+            statusColor = YELLOW;
+        }
+        String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
+        inlineError = "";
         NetworkMessage reply = NetworkMessage.of(MessageType.RETURN_GEMS, null);
-        reply.command = scanner.nextLine().trim();
+        reply.command = input;
         return reply;
     }
 
     private void printStatusLine(NetworkMessage message) {
         String text = safeMessage(message);
         if (text.isBlank()) {
+            return;
+        }
+        if (message.type == MessageType.ERROR && message.state != null) {
+            inlineError = text;
             return;
         }
         String color = switch (message.type) {
