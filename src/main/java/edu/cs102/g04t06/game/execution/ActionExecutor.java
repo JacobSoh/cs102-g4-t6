@@ -37,7 +37,7 @@ public class ActionExecutor {
             return new ActionResult(true, "Gems taken, but you now exceed 10. Must return excess!");
         }
 
-        return new ActionResult(true, "Successfully took 2 " + color + " gems.");
+        return new ActionResult(true, "Successfully took 2 " + color.name() + " gems.");
     }
 
     public static ActionResult executeTakeThreeDifferentGems(GameState state, GemCollection selection) {

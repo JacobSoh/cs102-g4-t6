@@ -14,7 +14,7 @@ public class LoadScreenUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Layout constants
     // -------------------------------------------------------------------------
-    private static final int    BOX_WIDTH   = 72;   // inner width of the panel
+    private static final int    BOX_WIDTH   = 72;   // minimum inner width of the panel
     private static final String VERSION     = "v1.0.0";
     private final Scanner scanner = new Scanner(System.in);
 
@@ -66,28 +66,32 @@ public class LoadScreenUI implements ThemeStyleSheet {
      */
     private void printDescriptionBox() {
         String[] description = {
-            "  Welcome to SPLENDOR — a game of gem trading and card development.",
+            "  Welcome to SPLENDOR - a game of gem trading and card development.",
             "",
             "  Collect gems, acquire development cards, and attract noble patrons",
             "  to build the most prestigious jewellery empire.",
             "",
             "  Be the first player to reach " + GOLD + "15 prestige points" + WHITE + " to win."
         };
+        int contentWidth = BOX_WIDTH;
+        for (String line : description) {
+            contentWidth = Math.max(contentWidth, stripAnsi(line).length() + 1);
+        }
 
         // Top border
-        System.out.println(WHITE + "  ┌" + "─".repeat(BOX_WIDTH) + "┐" + RESET);
+        System.out.println(WHITE + "  ┌" + "─".repeat(contentWidth) + "┐" + RESET);
 
         // Description lines
         for (String line : description) {
             int visibleLen = stripAnsi(line).length();
-            int padding    = BOX_WIDTH - visibleLen - 2; // -2 for leading spaces
+            int padding    = contentWidth - visibleLen - 1;
             if (padding < 0) padding = 0;
             System.out.println(WHITE + "  │ " + RESET + WHITE + line
-                    + " ".repeat(padding) + "│" + RESET);
+                    + " ".repeat(padding) + WHITE + "│" + RESET);
         }
 
         // Bottom border
-        System.out.println(WHITE + "  └" + "─".repeat(BOX_WIDTH) + "┘" + RESET);
+        System.out.println(WHITE + "  └" + "─".repeat(contentWidth) + "┘" + RESET);
         System.out.println();
     }
 

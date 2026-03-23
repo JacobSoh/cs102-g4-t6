@@ -34,7 +34,7 @@ public class ConfigLoader {
      */
     public ConfigLoader(String configPath) {
         this.properties = new Properties();
-        try (InputStream cf = getClass().getClassLoader().getResourceAsStream(configPath)) {
+        try (InputStream cf = getClass().getResourceAsStream("/" + configPath)) {
             if (cf == null) {
                 throw new FileNotFoundException("File does not exists: " + configPath);
             }

@@ -9,11 +9,9 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 /**
  * PlayerSetupUI
  *
- * Collects all player configuration before the game starts:
+ * Collects the local offline player configuration before the game starts:
  *   1. The local player's name
- *   2. Online (friends) or Offline (CPU) mode
- *   3. Number of opponents (1–3, so total players 2–4)
- *   4. Friend names (online) or auto-generated CPU names (offline)
+ *   2. Number of CPU opponents (1-3, so total players 2-4)
  *
  * Returns a PlayerSetupResult containing everything the game needs.
  */
@@ -66,14 +64,6 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     // -------------------------------------------------------------------------
-    // Mode choice
-    // -------------------------------------------------------------------------
-    public enum ModeChoice {
-        ONLINE,
-        OFFLINE
-    }
-
-    // -------------------------------------------------------------------------
     // Scanner (shared across steps)
     // -------------------------------------------------------------------------
     private final Scanner scanner = new Scanner(System.in);
@@ -83,39 +73,21 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
 
     /**
-     * Runs the full player setup flow and returns a populated PlayerSetupResult.
-     * Returns null when the user selects Back from mode selection.
+     * Runs the offline player setup flow and returns a populated PlayerSetupResult.
      */
     public PlayerSetupResult show() {
-        // Step 1 — local player name
         String localName = stepGetLocalName();
-
-        // Step 2 — online or offline
-        ModeChoice mode = stepChooseMode(localName);
-        if (mode == null) {
-            return null;
-        }
-
-        // Step 3 — number of opponents
-        int opponentCount = stepChooseOpponentCount(localName, mode);
-
-        // Step 4 — build player lists
+        int opponentCount = stepChooseOpponentCount(localName);
         List<Player> players = new ArrayList<>();
         List<Boolean> humans = new ArrayList<>();
 
         players.add(new Player(localName, 0));
-        humans.add(true); // local player is always human
+        humans.add(true);
+        addCpuPlayers(opponentCount, players, humans);
 
-        if (mode == ModeChoice.ONLINE) {
-            collectFriendNames(opponentCount, players, humans);
-        } else {
-            addCpuPlayers(opponentCount, players, humans);
-        }
-
-        // Summary screen
         PlayerSetupResult result = new PlayerSetupResult(
                 localName,
-                mode == ModeChoice.ONLINE,
+                false,
                 players,
                 humans
         );
@@ -129,7 +101,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     private String stepGetLocalName() {
         while (true) {
             clearScreen();
-            printHeader("PLAYER SETUP", "Step 1 of 3 — Your Name");
+            printHeader("PLAYER SETUP", "Step 1 of 2 — Your Name");
 
             System.out.println(WHITE + "  Enter your name: " + RESET);
             System.out.print(GREEN + "  > " + RESET);
@@ -151,57 +123,19 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     // -------------------------------------------------------------------------
-    // Step 2 — Choose online or offline
+    // Step 2 — Number of CPU opponents
     // -------------------------------------------------------------------------
-    private ModeChoice stepChooseMode(String localName) {
+    private int stepChooseOpponentCount(String localName) {
         while (true) {
             clearScreen();
-            printHeader("PLAYER SETUP", "Step 2 of 3 — Game Mode");
-
-            System.out.println(WHITE + "  Hello, " + GOLD + BOLD + localName + RESET
-                    + WHITE + "! How would you like to play?" + RESET);
-            System.out.println();
-
-            printOptionBox(new String[]{
-                GREEN + BOLD + "[ O ]" + RESET + WHITE + "  Play Online  " + RESET
-                        + DIM + "(with friends)" + RESET,
-                BLUE  + BOLD + "[ F ]" + RESET + WHITE + "  Play Offline " + RESET
-                        + DIM + "(vs CPU)" + RESET,
-                WHITE +        "[ B ]" + RESET + WHITE + "  Back to Main Menu" + RESET
-            });
-
-            System.out.print(GREEN + "  > " + RESET);
-            String input = scanner.nextLine().trim().toLowerCase();
-
-            switch (input) {
-                case "o": return ModeChoice.ONLINE;
-                case "f": return ModeChoice.OFFLINE;
-                case "b": return null; // caller can handle back navigation if needed
-                default:
-                    printError("Invalid choice. Press O, F, or B.");
-                    sleep(1000);
-            }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Step 3 — Number of opponents
-    // -------------------------------------------------------------------------
-    private int stepChooseOpponentCount(String localName, ModeChoice mode) {
-        String modeLabel = (mode == ModeChoice.ONLINE) ? "friends" : "CPU opponents";
-
-        while (true) {
-            clearScreen();
-            printHeader("PLAYER SETUP", "Step 3 of 3 — Number of Opponents");
+            printHeader("PLAYER SETUP", "Step 2 of 2 — Number of Opponents");
 
             System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD
                     + localName + RESET);
             System.out.println(WHITE + "  Mode: " + RESET
-                    + (mode == ModeChoice.ONLINE
-                        ? GREEN + "Online" + RESET
-                        : BLUE  + "Offline (vs CPU)" + RESET));
+                    + BLUE  + "Offline (vs CPU)" + RESET);
             System.out.println();
-            System.out.println(WHITE + "  How many " + modeLabel
+            System.out.println(WHITE + "  How many CPU opponents"
                     + " would you like? " + DIM + "(1–3)" + RESET);
             System.out.println();
 
@@ -226,44 +160,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     // -------------------------------------------------------------------------
-    // Step 4a — Collect friend names (online)
-    // -------------------------------------------------------------------------
-    private void collectFriendNames(int count, List<Player> players, List<Boolean> humans) {
-        for (int i = 1; i <= count; i++) {
-            while (true) {
-                clearScreen();
-                printHeader("PLAYER SETUP", "Online — Friend " + i + " of " + count);
-
-                System.out.println(WHITE + "  Enter name for Friend " + i + ":" + RESET);
-                System.out.print(GREEN + "  > " + RESET);
-
-                String name = scanner.nextLine().trim();
-
-                if (name.isEmpty()) {
-                    printError("Name cannot be empty.");
-                    sleep(1000);
-                    continue;
-                }
-                if (name.length() > 20) {
-                    printError("Name must be 20 characters or fewer.");
-                    sleep(1000);
-                    continue;
-                }
-                if (nameExistsIgnoreCase(players, name)) {
-                    printError("That name is already taken. Choose a different name.");
-                    sleep(1000);
-                    continue;
-                }
-
-                players.add(new Player(name, players.size()));
-                humans.add(true);
-                break;
-            }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Step 4b — Auto-generate CPU players (offline)
+    // Step 3 — Auto-generate CPU players
     // -------------------------------------------------------------------------
     private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};

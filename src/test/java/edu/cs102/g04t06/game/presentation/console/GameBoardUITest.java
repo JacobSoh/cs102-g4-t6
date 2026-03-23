@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -109,12 +108,6 @@ class GameBoardUITest {
         return (List<String>) actionLogField.get(ui);
     }
 
-    private void invokePrivate(GameBoardUI ui, String methodName, Class<?>[] paramTypes, Object... args) throws Exception {
-        Method method = GameBoardUI.class.getDeclaredMethod(methodName, paramTypes);
-        method.setAccessible(true);
-        method.invoke(ui, args);
-    }
-
     @Test
     void displayGameState_producesNonEmptyOutput() {
         boardUI.displayGameState(makeGameState());
@@ -170,17 +163,23 @@ class GameBoardUITest {
     }
 
     @Test
-    void displayGameState_rendersOnlyTwoMostRecentLogEntries() throws Exception {
-        actionLog(boardUI).add("old entry");
-        actionLog(boardUI).add("middle entry");
-        actionLog(boardUI).add("latest entry");
+    void displayGameState_rendersOnlyFiveMostRecentLogEntries() throws Exception {
+        actionLog(boardUI).add("entry 1");
+        actionLog(boardUI).add("entry 2");
+        actionLog(boardUI).add("entry 3");
+        actionLog(boardUI).add("entry 4");
+        actionLog(boardUI).add("entry 5");
+        actionLog(boardUI).add("entry 6");
 
         boardUI.displayGameState(makeGameState());
         String out = plainOutput();
 
-        assertFalse(out.contains("old entry"), "Oldest log entry should be omitted when more than two exist");
-        assertTrue(out.contains("middle entry"), "Second most recent log entry should remain visible");
-        assertTrue(out.contains("latest entry"), "Most recent log entry should remain visible");
+        assertFalse(out.contains("entry 1"), "Oldest log entry should be omitted when more than five exist");
+        assertTrue(out.contains("entry 2"), "Second oldest retained log entry should remain visible");
+        assertTrue(out.contains("entry 3"), "Middle retained log entry should remain visible");
+        assertTrue(out.contains("entry 4"), "Recent retained log entry should remain visible");
+        assertTrue(out.contains("entry 5"), "Recent retained log entry should remain visible");
+        assertTrue(out.contains("entry 6"), "Most recent log entry should remain visible");
     }
 
     @Test
@@ -206,45 +205,4 @@ class GameBoardUITest {
         assertTrue(out.contains("G:2"), "Sidebar should include all gem colors for other players");
     }
 
-    @Test
-    void endOfTurnWinCheck_triggersFinalRoundAndEndsOnlyAfterRoundWrap() throws Exception {
-        GameState state = makeGameState();
-        Player alice = state.getPlayers().get(0);
-        for (int i = 0; i < 15; i++) {
-            alice.addCard(makeCard(1, 1, GemColor.WHITE, Map.of(GemColor.RED, 1)));
-        }
-
-        invokePrivate(boardUI, "handleWinCheck", new Class<?>[]{GameState.class, Player.class}, state, alice);
-
-        assertTrue(state.isFinalRoundTriggered(), "Reaching the threshold should trigger the final round");
-        assertFalse(state.isGameOver(), "Game should not end immediately when the threshold is reached");
-
-        state.advanceToNextPlayer();
-        assertFalse(state.isGameOver(), "Game should continue for remaining players in the round");
-
-        state.advanceToNextPlayer();
-        assertTrue(state.isGameOver(), "Game should end only after the round wraps back to player 1");
-    }
-
-    @Test
-    void handleGameEnd_picksHighestScoringEligibleWinnerAtRoundEnd() throws Exception {
-        GameState state = makeGameState();
-        Player alice = state.getPlayers().get(0);
-        Player bob = state.getPlayers().get(1);
-        for (int i = 0; i < 15; i++) {
-            alice.addCard(makeCard(1, 1, GemColor.WHITE, Map.of(GemColor.RED, 1)));
-        }
-        for (int i = 0; i < 16; i++) {
-            bob.addCard(makeCard(1, 1, GemColor.BLUE, Map.of(GemColor.WHITE, 1)));
-        }
-
-        state.triggerFinalRound();
-        state.setGameOver(true);
-
-        invokePrivate(boardUI, "handleGameEnd", new Class<?>[]{GameState.class}, state);
-
-        assertTrue(actionLog(boardUI).stream().anyMatch(entry -> entry.contains("Winner: Bob")),
-                "Final winner should be chosen from all eligible players at round end");
-        assertTrue(plainOutput().isBlank(), "Winner announcement should be kept in UI state rather than printed directly");
-    }
 }

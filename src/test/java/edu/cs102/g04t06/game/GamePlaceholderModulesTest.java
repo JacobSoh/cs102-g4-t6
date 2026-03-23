@@ -28,8 +28,8 @@ class GamePlaceholderModulesTest {
             "package edu.cs102.g04t06.game.presentation.console;"
         );
         expectedPackages.put(
-            "src/main/java/edu/cs102/g04t06/game/presentation/console/InputHandler.java",
-            "package edu.cs102.g04t06.game.presentation.console;"
+            "src/main/java/edu/cs102/g04t06/game/execution/InputHandler.java",
+            "package edu.cs102.g04t06.game.execution;"
         );
         expectedPackages.put(
             "src/main/java/edu/cs102/g04t06/game/infrastructure/data/ExcelDataLoader.java",

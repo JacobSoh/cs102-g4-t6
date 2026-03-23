@@ -7,8 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import edu.cs102.g04t06.game.exception.NobleNotAvailableException;
-import edu.cs102.g04t06.game.rules.GameRules;
+import edu.cs102.g04t06.game.execution.TurnProcessor;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
@@ -24,8 +23,8 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  */
 public class GameBoardUI implements ThemeStyleSheet {
     private static final String ACTION_PROMPT = "ACTION > ";
-    private static final int ACTION_CURSOR_OFFSET = 5 + ACTION_PROMPT.length(); // "  ║ " + prompt + 1 space
-    private static final int MAX_LOG_ENTRIES = 2;
+    private static final String YOUR_TURN_PROMPT = "YOUR TURN > ";
+    private static final String WAITING_PROMPT = "WAITING > ";
     private static final int MAIN_WIDTH = 88;
     private static final int SIDEBAR_WIDTH = 27;
 
@@ -75,11 +74,12 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
-    private final GameRules rules = new GameRules();
-    private final InputHandler inputHandler = new InputHandler();
+    private final TurnProcessor turnProcessor = new TurnProcessor();
     private int actionLinesFromBottom = 1;
     private int statusLinesFromBottom = 1;
     private String actionStatus = "";
+    private String actionPromptLabel = ACTION_PROMPT;
+    private List<String> readOnlyLogEntries = null;
 
     private static final class MainAreaRender {
         private final List<String> lines;
@@ -122,6 +122,8 @@ public class GameBoardUI implements ThemeStyleSheet {
             throw new IllegalArgumentException("GameState must not be null");
         }
 
+        this.actionPromptLabel = ACTION_PROMPT;
+        this.readOnlyLogEntries = null;
         while (true) {
             clearScreen();
             render(state);
@@ -145,8 +147,78 @@ public class GameBoardUI implements ThemeStyleSheet {
         if (state == null) {
             throw new IllegalArgumentException("GameState must not be null");
         }
+        this.actionPromptLabel = ACTION_PROMPT;
+        this.actionStatus = "";
+        this.readOnlyLogEntries = null;
         clearScreen();
         render(state);
+    }
+
+    /**
+     * Renders the board in read-only mode for network flows.
+     *
+     * @param state game state to render
+     * @param statusMessage message displayed below the read-only action hint
+     */
+    public void displayReadOnlyState(GameState state, String statusMessage, List<String> logEntries) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        this.actionPromptLabel = WAITING_PROMPT;
+        this.actionStatus = statusMessage == null ? "" : CYAN + statusMessage + RESET;
+        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+        clearScreen();
+        render(state);
+    }
+
+    /**
+     * Renders the board in LAN interactive mode and collects a command inside the panel.
+     *
+     * @param state game state to render
+     * @param statusMessage inline status or error message
+     * @param statusColor ANSI color for the status line
+     * @param logEntries log entries to display
+     * @return trimmed user input
+     */
+    public String promptNetworkTurn(GameState state, String statusMessage, String statusColor, List<String> logEntries) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        this.actionPromptLabel = YOUR_TURN_PROMPT;
+        this.actionStatus = formatInlineStatus(statusMessage, statusColor);
+        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+        clearScreen();
+        render(state);
+        return promptAction();
+    }
+
+    /**
+     * Renders a passive LAN board state using a waiting prompt label.
+     *
+     * @param state game state to render
+     * @param statusMessage message shown below the waiting prompt
+     * @param statusColor ANSI color for the status line
+     * @param logEntries log entries to display
+     */
+    public void displayNetworkState(GameState state, String statusMessage, String statusColor, List<String> logEntries) {
+        if (state == null) {
+            throw new IllegalArgumentException("GameState must not be null");
+        }
+        this.actionPromptLabel = WAITING_PROMPT;
+        this.actionStatus = formatInlineStatus(statusMessage, statusColor);
+        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+        clearScreen();
+        render(state);
+    }
+
+    /**
+     * Convenience overload for read-only rendering without a log override.
+     *
+     * @param state game state to render
+     * @param statusMessage message displayed below the read-only action hint
+     */
+    public void displayReadOnlyState(GameState state, String statusMessage) {
+        displayReadOnlyState(state, statusMessage, null);
     }
 
     // -------------------------------------------------------------------------
@@ -502,16 +574,7 @@ public class GameBoardUI implements ThemeStyleSheet {
             line(sb.toString());
             return;
         }
-
-        int start = Math.max(0, actionLog.size() - MAX_LOG_ENTRIES);
-        List<String> recent = actionLog.subList(start, actionLog.size());
-
-        for (int i = 0; i < recent.size(); i++) {
-            sb.append(WHITE).append(recent.get(i)).append(RESET);
-            if (i < recent.size() - 1) {
-                sb.append(DIM).append(WHITE).append("   |   ").append(RESET);
-            }
-        }
+        sb.append(WHITE).append(actionLog.get(actionLog.size() - 1)).append(RESET);
         line(sb.toString());
     }
 
@@ -537,7 +600,8 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private String promptAction() {
         // Move cursor into the ACTION row inside the board:
-        System.out.print("\u001B[" + actionLinesFromBottom + "A\r\u001B[" + ACTION_CURSOR_OFFSET + "C\u001B[?25h");
+        int cursorOffset = 5 + vlen(actionPromptLabel);
+        System.out.print("\u001B[" + actionLinesFromBottom + "A\r\u001B[" + cursorOffset + "C\u001B[?25h");
         return scanner.nextLine().trim();
     }
 
@@ -551,274 +615,20 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param input raw player input
      */
     private void handleAction(GameState state, String input) {
-        String s = input.toLowerCase().trim();
-        if (s.startsWith("take")) {
-            handleTake(state, s);
-        } else if (s.startsWith("buy")) {
-            handleBuy(state, s);
-        } else if (s.startsWith("reserve")) {
-            handleReserve(state, s);
-        } else if (s.equals("pass")) {
-            handlePass(state);
-        } else {
-            err("Unknown command. Try: take, buy, reserve, pass, q");
-        }
-    }
-
-    /**
-     * Parses and executes a gem-taking command.
-     *
-     * @param state game state to mutate
-     * @param s normalized command text
-     */
-    private void handleTake(GameState state, String s) {
-        String payloadRaw = s.replaceFirst("^take", "").trim();
-        if (payloadRaw.isEmpty()) {
-            err("Usage: take <gem> [gem] [gem]   e.g.  take w r u");
+        TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
+        if (!result.isSuccess()) {
+            err(result.getMessage());
             return;
         }
 
-        List<GemColor> colors;
-        try {
-            colors = inputHandler.parseGemSequence(payloadRaw);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
+        if (result.isAwaitingReturn()) {
+            ok(result.getMessage());
+            handleReturnExcessGems(state);
             return;
         }
 
-        Player player = state.getCurrentPlayer();
-        GemCollection bank = state.getGemBank();
-
-        if (colors.size() == 3) {
-            GemCollection requested;
-            try {
-                requested = inputHandler.promptGemSelection(3, colors);
-            } catch (IllegalArgumentException e) {
-                err(e.getMessage());
-                return;
-            }
-            if (!rules.canTakeThreeDifferentGems(requested, bank)) {
-                err("Invalid take: must be 3 different colors available in bank.");
-                return;
-            }
-
-            applyTake(state, player, requested, "Took");
-
-        } else if (colors.size() == 2) {
-            if (colors.get(0) != colors.get(1)) {
-                err("Invalid take: for 2 gems, both must be the same color.");
-                return;
-            }
-
-            GemColor color = colors.get(0);
-            if (!rules.canTakeTwoSameGems(color, bank)) {
-                err("Invalid take: bank must have at least 4 of that color.");
-                return;
-            }
-
-            GemCollection requested = new GemCollection().add(color, 2);
-            applyTake(state, player, requested, "Took");
-
-        } else {
-            err("Invalid take: choose either 3 different gems or 2 of the same color.");
-        }
-    }
-
-    /**
-     * Parses and executes a buy command from either the market or reserved slots.
-     *
-     * @param state game state to mutate
-     * @param s normalized command text
-     */
-    private void handleBuy(GameState state, String s) {
-        String[] p = s.split("\\s+");
-        if (p.length < 3) {
-            err("Usage: buy <tier> <slot> or buy reserve <slot>");
-            return;
-        }
-
-        Player player = state.getCurrentPlayer();
-        boolean fromReserved;
-        String purchaseLabel;
-        Card card;
-
-        try {
-            if (isReservedBuyToken(p[1])) {
-                int reservedSlotIndex = inputHandler.parseSlotToken(p[2]);
-                if (reservedSlotIndex >= player.getReservedCards().size()) {
-                    err("Reserved card does not exist at that slot.");
-                    return;
-                }
-                int reservedSelection = state.getMarket().getVisibleCards(1).size() + reservedSlotIndex + 1;
-                card = inputHandler.promptCardSelection(
-                        state.getMarket(),
-                        1,
-                        true,
-                        player.getReservedCards(),
-                        reservedSelection);
-                fromReserved = true;
-                purchaseLabel = "reserved slot" + (reservedSlotIndex + 1);
-            } else {
-                int tier = inputHandler.parseTierToken(p[1]);
-                int slotIndex = inputHandler.parseSlotToken(p[2]);
-                card = inputHandler.promptCardSelection(
-                        state.getMarket(),
-                        tier,
-                        false,
-                        player.getReservedCards(),
-                        slotIndex + 1);
-                fromReserved = false;
-                purchaseLabel = "t" + tier + " slot" + (slotIndex + 1);
-            }
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        if (!rules.canAffordCard(player, card)) {
-            err("Cannot afford that card.");
-            return;
-        }
-
-        GemCollection payment = buildPayment(player, rules.calculateActualCost(player, card));
-        try {
-            player.deductGems(payment);
-            state.addGemsToBank(payment);
-        } catch (IllegalStateException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        player.addCard(card);
-        if (!fromReserved) {
-            state.getMarket().removeCard(card);
-        }
-
-        actionLog.add(player.getName() + " bought " + purchaseLabel);
-        ok("Bought " + purchaseLabel);
-
-        handleEndOfTurnNobleClaim(state, player);
-        handleWinCheck(state, player);
-        advanceTurn(state);
-        handleGameEnd(state);
-        sleep(800);
-    }
-
-    /**
-     * Parses and executes a reserve-card command.
-     *
-     * @param state game state to mutate
-     * @param s normalized command text
-     */
-    private void handleReserve(GameState state, String s) {
-        String[] p = s.split("\\s+");
-        if (p.length < 3) {
-            err("Usage: reserve <tier> <slot>   e.g.  reserve t1 slot3");
-            return;
-        }
-
-        int tier;
-        int slotIndex;
-        try {
-            tier = inputHandler.parseTierToken(p[1]);
-            slotIndex = inputHandler.parseSlotToken(p[2]);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        Player player = state.getCurrentPlayer();
-        if (!rules.canReserveCard(player)) {
-            err("You already have 3 reserved cards.");
-            return;
-        }
-
-        Card card;
-        try {
-            card = state.getMarket().getVisibleCard(tier, slotIndex);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        player.addReservedCard(card);
-        state.getMarket().removeCard(card);
-
-        // Gain a gold gem if available
-        if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
-            GemCollection gold = new GemCollection().add(GemColor.GOLD, 1);
-            state.removeGemsFromBank(gold);
-            player.addGems(gold);
-        }
-
-        actionLog.add(player.getName() + " reserved t" + tier + " slot" + (slotIndex + 1));
-        ok("Reserved t" + tier + " slot" + (slotIndex + 1));
-
-        if (rules.mustReturnGems(player)) {
-            handleReturnExcessGems(state, player);
-        }
-
-        handleEndOfTurnNobleClaim(state, player);
-        advanceTurn(state);
-        handleGameEnd(state);
-        sleep(800);
-    }
-
-    /**
-     * Ends the current turn without another game action.
-     *
-     * @param state game state to advance
-     */
-    private void handlePass(GameState state) {
-        Player player = state.getCurrentPlayer();
-        String current = player.getName();
-        handleEndOfTurnNobleClaim(state, player);
-        advanceTurn(state);
-        handleGameEnd(state);
-        actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
-        ok("Turn passed.");
-        sleep(600);
-    }
-
-    /**
-     * Checks whether the supplied command token targets reserved-card buying.
-     *
-     * @param token command token to inspect
-     * @return true if the token refers to reserved cards
-     */
-    private boolean isReservedBuyToken(String token) {
-        return "reserved".equalsIgnoreCase(token)
-                || "reserve".equalsIgnoreCase(token)
-                || "r".equalsIgnoreCase(token);
-    }
-
-    /**
-     * Applies a validated gem-taking action and advances turn flow.
-     *
-     * @param state game state to mutate
-     * @param player acting player
-     * @param requested gems to move from bank to player
-     * @param verb status verb shown after success
-     */
-    private void applyTake(GameState state, Player player, GemCollection requested, String verb) {
-        try {
-            state.removeGemsFromBank(requested);
-            player.addGems(requested);
-        } catch (IllegalArgumentException e) {
-            err(e.getMessage());
-            return;
-        }
-
-        actionLog.add(player.getName() + " took " + formatGemShort(requested));
-        ok(verb + ": " + formatGemShort(requested));
-
-        if (rules.mustReturnGems(player)) {
-            handleReturnExcessGems(state, player);
-        }
-
-        handleEndOfTurnNobleClaim(state, player);
-        advanceTurn(state);
-        handleGameEnd(state);
+        actionLog.add(result.getMessage());
+        ok(result.getMessage());
         sleep(800);
     }
 
@@ -826,182 +636,27 @@ public class GameBoardUI implements ThemeStyleSheet {
      * Forces a player over the gem limit to return gems until legal again.
      *
      * @param state game state to mutate
-     * @param player player returning gems
      */
-    private void handleReturnExcessGems(GameState state, Player player) {
+    private void handleReturnExcessGems(GameState state) {
+        Player player = state.getCurrentPlayer();
         int excess = player.getGemCount() - 10;
         String promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
         while (excess > 0) {
             String input = promptActionStatus(state, promptMessage);
 
-            List<GemColor> toReturnColors;
-            try {
-                toReturnColors = inputHandler.parseGemSequence(input);
-            } catch (IllegalArgumentException e) {
+            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, input);
+            if (!result.isSuccess()) {
                 promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
                 continue;
             }
 
-            try {
-                GemCollection toReturn = inputHandler.promptGemsToReturn(player, excess, toReturnColors);
-                player.deductGems(toReturn);
-                state.addGemsToBank(toReturn);
-                actionLog.add(player.getName() + " returned " + formatGemShort(toReturn));
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
-                continue;
-            }
-
+            actionLog.add(result.getMessage());
+            ok(result.getMessage());
             excess = player.getGemCount() - 10;
             promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
         }
         actionStatus = "";
-    }
-
-    /**
-     * Resolves noble claiming for a player, including multi-choice selection.
-     *
-     * @param state game state containing available nobles
-     * @param player player attempting to claim a noble
-     */
-    private void handleNobleClaim(GameState state, Player player) {
-        List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
-        if (claimable.isEmpty()) {
-            return;
-        }
-
-        Noble chosen = claimable.get(0);
-        if (claimable.size() > 1) {
-            System.out.println();
-            System.out.println(WHITE + "Choose a noble to claim:" + RESET);
-            for (int i = 0; i < claimable.size(); i++) {
-                Noble n = claimable.get(i);
-                System.out.println("  " + (i + 1) + ". " + n.getName() + " (" + n.getPoints() + " pts)");
-            }
-            System.out.print(GREEN + "  > " + RESET);
-            String input = scanner.nextLine().trim();
-            int idx;
-            try {
-                idx = Integer.parseInt(input) - 1;
-            } catch (NumberFormatException e) {
-                idx = 0;
-            }
-            if (idx >= 0 && idx < claimable.size()) {
-                chosen = claimable.get(idx);
-            }
-        }
-
-        try {
-            Noble claimed = state.removeNoble(chosen);
-            player.claimNoble(claimed);
-            actionLog.add(player.getName() + " claimed noble " + claimed.getName());
-            ok("Claimed noble: " + claimed.getName());
-        } catch (NobleNotAvailableException e) {
-            err(e.getMessage());
-        }
-    }
-
-    /**
-     * Applies end-of-turn noble claiming and any resulting win trigger.
-     *
-     * @param state game state to inspect
-     * @param player player whose turn is ending
-     */
-    private void handleEndOfTurnNobleClaim(GameState state, Player player) {
-        int claimedBefore = player.getClaimedNobles().size();
-        handleNobleClaim(state, player);
-        if (player.getClaimedNobles().size() > claimedBefore) {
-            handleWinCheck(state, player);
-        }
-    }
-
-    /**
-     * Triggers the final round when a player first reaches the winning threshold.
-     *
-     * @param state game state to update
-     * @param player player being evaluated
-     */
-    private void handleWinCheck(GameState state, Player player) {
-        if (!state.isFinalRoundTriggered() && rules.hasPlayerWon(player, state.getWinningThreshold())) {
-            state.triggerFinalRound();
-            actionLog.add(player.getName() + " reached " + player.getPoints() + " points. Final round triggered.");
-            ok(player.getName() + " reached " + player.getPoints() + " points. Final round triggered.");
-        }
-    }
-
-    /**
-     * Resolves and announces the winner after the final round completes.
-     *
-     * @param state completed game state
-     */
-    private void handleGameEnd(GameState state) {
-        if (!state.isGameOver()) {
-            return;
-        }
-
-        Player winner = rules.getWinner(state.getPlayers(), state.getWinningThreshold());
-        if (winner == null) {
-            ok("Game over!");
-            return;
-        }
-
-        actionLog.add("Final round complete. Winner: " + winner.getName() + " with " + winner.getPoints() + " points.");
-        ok("Game over! " + winner.getName() + " wins with " + winner.getPoints() + " points.");
-    }
-
-    /**
-     * Advances play to the next player.
-     *
-     * @param state game state whose turn order should advance
-     */
-    private void advanceTurn(GameState state) {
-        state.advanceToNextPlayer();
-    }
-
-    /**
-     * Builds the concrete gem payment for a purchase, including gold substitution.
-     *
-     * @param player player paying for a card
-     * @param actualCost card cost after permanent bonuses
-     * @return gem collection to deduct from the player
-     */
-    private GemCollection buildPayment(Player player, GemCollection actualCost) {
-        Map<GemColor, Integer> pay = new EnumMap<>(GemColor.class);
-        int goldNeeded = 0;
-
-        for (GemColor color : GemColor.values()) {
-            if (color == GemColor.GOLD) {
-                continue;
-            }
-            int need = actualCost.getCount(color);
-            int have = player.getGems().getCount(color);
-            int payColor = Math.min(have, need);
-            pay.put(color, payColor);
-            goldNeeded += Math.max(0, need - payColor);
-        }
-
-        if (goldNeeded > 0) {
-            pay.put(GemColor.GOLD, goldNeeded);
-        }
-
-        return new GemCollection(pay);
-    }
-
-    /**
-     * Formats a gem collection into compact shorthand like {@code w2 r1}.
-     *
-     * @param gems gems to format
-     * @return compact gem shorthand
-     */
-    private String formatGemShort(GemCollection gems) {
-        StringBuilder sb = new StringBuilder();
-        for (GemColor color : GemColor.values()) {
-            int count = gems.getCount(color);
-            if (count > 0) {
-                sb.append(gemCodeLower(color)).append(count).append(" ");
-            }
-        }
-        return sb.toString().trim();
+        sleep(800);
     }
 
     // -------------------------------------------------------------------------
@@ -1208,14 +863,14 @@ public class GameBoardUI implements ThemeStyleSheet {
         appendMarketPanel(lines, "TIER 1", "DECK: " + state.getMarket().getDeckSize(1),
                 buildTierPanelLines(state.getMarket().getVisibleCards(1)));
         appendMarketPanel(lines, "BANK GEMS", "", List.of(formatBankLine(state.getGemBank())));
-        appendMarketPanel(lines, "LOG", "", List.of(formatLogLine()));
+        appendMarketPanel(lines, "LOG", "", formatLogLines());
 
         List<String> actionBody = List.of(
                 DIM + WHITE + ". take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET,
                 DIM + WHITE + ". take w w    : take 2 same gems    . buy reserve 1: buy reserve card" + RESET,
                 DIM + WHITE + ". reserve t1 slot1 : reserve + gold      . pass         : skip turn" + RESET,
                 "",
-                GREEN + BOLD + ACTION_PROMPT + RESET,
+                GREEN + BOLD + actionPromptLabel + RESET,
                 formatActionStatus()
         );
         int actionLineIndex = lines.size() + 2 + 4;
@@ -1404,21 +1059,13 @@ public class GameBoardUI implements ThemeStyleSheet {
      *
      * @return formatted log row
      */
-    private String formatLogLine() {
-        if (actionLog.isEmpty()) {
-            return DIM + WHITE + "No actions yet" + RESET;
+    private List<String> formatLogLines() {
+        List<String> source = readOnlyLogEntries != null ? readOnlyLogEntries : actionLog;
+        if (source == null || source.isEmpty()) {
+            return List.of(DIM + WHITE + "No actions yet" + RESET);
         }
-
-        StringBuilder sb = new StringBuilder();
-        int start = Math.max(0, actionLog.size() - MAX_LOG_ENTRIES);
-        List<String> recent = actionLog.subList(start, actionLog.size());
-        for (int i = 0; i < recent.size(); i++) {
-            if (i > 0) {
-                sb.append(DIM).append(WHITE).append("   |   ").append(RESET);
-            }
-            sb.append(WHITE).append(recent.get(i)).append(RESET);
-        }
-        return sb.toString();
+        String latest = source.get(source.size() - 1);
+        return List.of(WHITE + latest + RESET);
     }
 
     /**
@@ -1666,6 +1313,21 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private String formatActionStatus() {
         return actionStatus;
+    }
+
+    /**
+     * Formats an inline status line for the action panel.
+     *
+     * @param message status text to show
+     * @param color ANSI color to apply
+     * @return formatted status text
+     */
+    private String formatInlineStatus(String message, String color) {
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+        String safeColor = color == null ? WHITE : color;
+        return safeColor + message + RESET;
     }
 
     /**

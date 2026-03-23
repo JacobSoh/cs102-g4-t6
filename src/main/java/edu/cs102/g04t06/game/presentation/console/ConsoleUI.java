@@ -1,17 +1,15 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-import edu.cs102.g04t06.game.execution.GameEngine;
-import edu.cs102.g04t06.game.infrastructure.config.ConfigLoader;
-import edu.cs102.g04t06.game.infrastructure.config.ExcelDataLoader;
+import edu.cs102.g04t06.game.execution.GameStateFactory;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
+import edu.cs102.g04t06.game.presentation.network.LanGameClient;
+import edu.cs102.g04t06.game.presentation.network.LanGameServer;
+import edu.cs102.g04t06.game.presentation.network.LanSetupUI;
 import edu.cs102.g04t06.game.rules.GameState;
-import edu.cs102.g04t06.game.rules.entities.Card;
-import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
@@ -23,6 +21,8 @@ public class ConsoleUI implements ThemeStyleSheet {
         LOAD_SCREEN,
         MAIN_MENU,
         PLAYER_SETUP,
+        HOST_LAN_SETUP,
+        JOIN_LAN_SETUP,
         GAME_BOARD,
         EXIT
     }
@@ -31,6 +31,8 @@ public class ConsoleUI implements ThemeStyleSheet {
     private final MainMenuUI mainMenuUI;
     private final PlayerSetupUI playerSetupUI;
     private final GameBoardUI gameBoardUI;
+    private final LanSetupUI lanSetupUI;
+    private final GameStateFactory gameStateFactory;
     private GameState gameState;
 
     public ConsoleUI() {
@@ -38,6 +40,8 @@ public class ConsoleUI implements ThemeStyleSheet {
         this.mainMenuUI = new MainMenuUI();
         this.playerSetupUI = new PlayerSetupUI();
         this.gameBoardUI = new GameBoardUI();
+        this.lanSetupUI = new LanSetupUI();
+        this.gameStateFactory = new GameStateFactory();
     }
 
     /**
@@ -70,6 +74,8 @@ public class ConsoleUI implements ThemeStyleSheet {
                 case LOAD_SCREEN -> handleLoadScreen();
                 case MAIN_MENU -> handleMainMenu();
                 case PLAYER_SETUP -> handlePlayerSetup();
+                case HOST_LAN_SETUP -> handleHostLanSetup();
+                case JOIN_LAN_SETUP -> handleJoinLanSetup();
                 case GAME_BOARD -> handleGameBoard();
                 case EXIT -> Route.EXIT;
             };
@@ -85,7 +91,9 @@ public class ConsoleUI implements ThemeStyleSheet {
     private Route handleMainMenu() {
         MenuChoice choice = mainMenuUI.show();
         return switch (choice) {
-            case NEW_GAME -> Route.PLAYER_SETUP;
+            case OFFLINE_PLAY -> Route.PLAYER_SETUP;
+            case HOST_LAN -> Route.HOST_LAN_SETUP;
+            case JOIN_LAN -> Route.JOIN_LAN_SETUP;
             case LOAD_GAME -> {
                 printLoadGameStub();
                 yield Route.MAIN_MENU;
@@ -112,6 +120,18 @@ public class ConsoleUI implements ThemeStyleSheet {
         return Route.MAIN_MENU;
     }
 
+    private Route handleHostLanSetup() {
+        LanSetupUI.HostSetup setup = lanSetupUI.promptHostSetup();
+        new LanGameServer(setup.port, setup.totalPlayers, setup.hostPlayerName).run();
+        return Route.MAIN_MENU;
+    }
+
+    private Route handleJoinLanSetup() {
+        LanSetupUI.JoinSetup setup = lanSetupUI.promptJoinSetup();
+        new LanGameClient(setup.playerName, setup.hostAddress, setup.port).run();
+        return Route.MAIN_MENU;
+    }
+
     private void printLoadGameStub() {
         System.out.println();
         System.out.println(RED + BOLD + "Load Game is not implemented yet." + RESET);
@@ -132,28 +152,12 @@ public class ConsoleUI implements ThemeStyleSheet {
         }
     }
 
-    /**
-     * Builds a fully initialised GameState from setup data.
-     * Loads card and noble data from CSV files via ExcelDataLoader,
-     * reads game settings via ConfigLoader, and delegates assembly to GameEngine.
-     */
     private GameState createInitialGameState(PlayerSetupResult setup) {
-        ConfigLoader config = new ConfigLoader("config.properties");
-        HashMap<String, String> paths = config.getDataFilePath();
-        String cardPath = paths.get("card");
-        String noblePath = paths.get("noblePath");
-
-        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(cardPath);
-        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(cardPath);
-        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(cardPath);
-        List<Noble> allNobles = ExcelDataLoader.loadNobles(noblePath);
-
         List<String> playerNames = new ArrayList<>();
         for (Player p : setup.players) {
             playerNames.add(p.getName());
         }
 
-        return new GameEngine().initializeGame(
-                setup.totalPlayers, playerNames, config, level1, level2, level3, allNobles);
+        return gameStateFactory.createInitialGameState(setup.totalPlayers, playerNames);
     }
 }
