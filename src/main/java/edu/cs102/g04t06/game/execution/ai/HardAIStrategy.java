@@ -20,7 +20,7 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 /**
  * Turn-weighted scoring AI strategy.
  * Evaluates every possible action by score and picks the highest.
- * Adapts weights to the current game phase (early / mid / late).
+ * Adapts weights to the current game phase (bonus-chase / early / mid / late).
  */
 public class HardAIStrategy implements AIStrategy {
 
@@ -67,14 +67,15 @@ public class HardAIStrategy implements AIStrategy {
             }
         }
 
-        // 2. Score all reserve actions (0.7x — card secured but not yet owned)
+        // 2. Reserve ONLY to block an opponent who is about to win or claim a noble
         if (RULES.canReserveCard(self)) {
             for (Card card : getAllVisibleCards(state)) {
+                if (!isBlockingReserve(card, state, self)) continue;
                 double score = scoreCard(card, self, state) * 0.7;
                 if (score > bestScore) {
                     bestScore = score;
                     bestAction = new AIAction(ActionType.RESERVE_CARD, card, false, null,
-                            "AI reserves " + card.getBonus() + " card (level " + card.getLevel() + ")");
+                            "AI blocks " + card.getBonus() + " card (level " + card.getLevel() + ")");
                 }
             }
         }
@@ -84,6 +85,7 @@ public class HardAIStrategy implements AIStrategy {
         if (bestGems != null) {
             double gemScore = scoreGemTake(bestGems, state, self);
             if (bestAction == null || gemScore > bestScore) {
+                bestScore = gemScore;
                 bestAction = buildGemAction(bestGems);
             }
         }
@@ -218,8 +220,26 @@ public class HardAIStrategy implements AIStrategy {
 
     /**
      * Central scoring formula:
-     * (Prestige x W1 + NobleProgress x W2 + DiscountUtility x W3) / turnsToAcquire
+     *
+     *   base = (Prestige×W1 + NobleProgress×W2 + DiscountUtility×W3)
+     *          / turns^1.3
+     *          × diversityFactor
+     *
      * plus a blocking bonus for opponents near winning.
+     *
+     * turns^1.3 (instead of linear turns) penalizes expensive cards progressively
+     * more, pushing the AI toward affordable buys in mid game.
+     *
+     * diversityFactor = 1 / (1 + existingSameColorBonuses × 0.3) gives diminishing
+     * returns for stacking the same bonus color, naturally spreading acquisitions.
+     *
+     * The blocking bonus is kept outside the diversity/turns factors because
+     * urgency is independent of personal portfolio balance.
+     *
+     * In the bonus-chase phase (W1=0, W2=0, W3=1) this reduces to:
+     *   DiscountUtility / turns^1.3 × diversityFactor
+     * — pick the cheapest, most-useful-discount card that does not stack a color
+     * the AI already holds heavily.
      */
     private double scoreCard(Card card, Player self, GameState state) {
         double[] w = getPhaseWeights(self, state);
@@ -227,7 +247,14 @@ public class HardAIStrategy implements AIStrategy {
         double nobleProgress = calculateNobleProgress(card, self, state.getAvailableNobles());
         double discountUtil  = calculateDiscountUtility(card, state);
         int turns            = calculateTurnsToAcquire(card, self, state.getGemBank());
-        double base = (prestige * w[0] + nobleProgress * w[1] + discountUtil * w[2]) / turns;
+
+        // Diminishing-returns penalty for stacking the same bonus colour
+        int existing = self.calculateBonuses().getOrDefault(card.getBonus(), 0);
+        double diversityFactor = 1.0 / (1.0 + existing * 0.3);
+
+        double base = (prestige * w[0] + nobleProgress * w[1] + discountUtil * w[2])
+                / Math.pow(turns, 1.3)
+                * diversityFactor;
         return base + calculateBlockingBonus(card, state, self);
     }
 
@@ -274,69 +301,41 @@ public class HardAIStrategy implements AIStrategy {
      * Returns at least 1 to prevent division by zero in scoreCard.
      */
     private int calculateTurnsToAcquire(Card card, Player self, GemCollection bank) {
-        return calculateTurnsInternal(card, self.calculateBonuses(), self.getGems(), bank);
+        return calculateTurnsInternal(card, self.calculateBonuses(), self.getGems());
     }
 
     /**
      * Internal overload accepting an explicit gem state so gem-take simulations
      * can compute turns-after without mutating the real Player.
+     *
+     * Formula: turns = ceil(netDeficit / 3), where
+     *   netDeficit = sum of max(0, cost[c] - bonus[c] - held[c]) across all colors,
+     *                minus gold wildcards.
+     * Each turn takes at most 3 gems, so dividing by 3 gives a pure gem-count
+     * estimate of how many turns are needed.
      */
     private int calculateTurnsInternal(Card card, Map<GemColor, Integer> bonuses,
-                                        GemCollection playerGems, GemCollection bank) {
-        Cost actualCost = card.getCost().afterBonuses(bonuses);
-
-        Map<GemColor, Integer> deficit = new EnumMap<>(GemColor.class);
+                                        GemCollection playerGems) {
+        int totalDeficit = 0;
         for (GemColor c : NON_GOLD) {
-            int def = Math.max(0, actualCost.getRequired(c) - playerGems.getCount(c));
-            if (def > 0) {
-                deficit.put(c, def);
-            }
+            int actual = Math.max(0, card.getCost().getRequired(c) - bonuses.getOrDefault(c, 0));
+            totalDeficit += Math.max(0, actual - playerGems.getCount(c));
         }
-
-        // Gold wildcards reduce the effective deficit
-        int gold     = playerGems.getCount(GemColor.GOLD);
-        int totalDef = deficit.values().stream().mapToInt(Integer::intValue).sum();
-        totalDef     = Math.max(0, totalDef - gold);
-        if (totalDef == 0) return 1;
-
-        // Simulate turns by greedily reducing deficits each turn
-        Map<GemColor, Integer> sim = new EnumMap<>(deficit);
-        int turns = 0;
-        while (sim.values().stream().mapToInt(Integer::intValue).sum() > 0) {
-            turns++;
-            List<GemColor> colors = new ArrayList<>();
-            for (Map.Entry<GemColor, Integer> e : sim.entrySet()) {
-                if (e.getValue() > 0) colors.add(e.getKey());
-            }
-
-            if (colors.size() >= 3) {
-                // Take 3 different: reduce the top-3 deficit colors by 1
-                colors.sort((a, b) -> sim.get(b) - sim.get(a));
-                for (int i = 0; i < 3; i++) {
-                    GemColor c = colors.get(i);
-                    sim.put(c, sim.get(c) - 1);
-                }
-            } else if (colors.size() == 1) {
-                GemColor c = colors.get(0);
-                int def = sim.get(c);
-                if (def >= 2 && bank.getCount(c) >= 4) {
-                    sim.put(c, def - 2);   // Take 2 same
-                } else {
-                    sim.put(c, def - 1);
-                }
-            } else {
-                // 2 colors: reduce both by 1
-                for (GemColor c : colors) {
-                    sim.put(c, sim.get(c) - 1);
-                }
-            }
-        }
-        return Math.max(1, turns);
+        int netDeficit = Math.max(0, totalDeficit - playerGems.getCount(GemColor.GOLD));
+        if (netDeficit == 0) return 1;
+        return (netDeficit + 2) / 3;   // ceiling division: 1 gem → 1 turn, 4 gems → 2 turns
     }
 
     /**
      * Returns [W1, W2, W3] tuned to the current game phase.
-     * Early: favor discount building. Mid: balanced. Late: favor prestige points.
+     *
+     * <ul>
+     *   <li>Bonus-chase (< 3 bonuses): W=[0, 0, 1] — pure discount utility.
+     *       Acquire cheap cards that produce widely-useful permanent discounts.</li>
+     *   <li>Early (3–5 bonuses): W=[0.1, 0.3, 0.6] — discount + noble progress.</li>
+     *   <li>Mid (6–10, nobody near win): W=[0.4, 0.4, 0.2] — balanced.</li>
+     *   <li>Late (>10 bonuses or someone ≥ 10 pts): W=[0.7, 0.2, 0.1] — prestige focused.</li>
+     * </ul>
      */
     private double[] getPhaseWeights(Player self, GameState state) {
         int totalBonuses = self.calculateBonuses().values().stream()
@@ -345,11 +344,13 @@ public class HardAIStrategy implements AIStrategy {
                 .anyMatch(p -> p.getPoints() >= 10);
 
         if (totalBonuses < 5) {
-            return new double[]{0.1, 0.3, 0.6};    // Early
+            return new double[]{0.0, 0.0, 1.0};    // Bonus-chase: pure discount utility
+        } else if (totalBonuses < 6) {
+            return new double[]{0.1, 0.3, 0.6};    // Early: discount + noble progress
         } else if (totalBonuses <= 10 && !anyNearWin) {
-            return new double[]{0.4, 0.4, 0.2};    // Mid
+            return new double[]{0.4, 0.4, 0.2};    // Mid: balanced
         } else {
-            return new double[]{0.7, 0.2, 0.1};    // Late
+            return new double[]{0.7, 0.2, 0.1};    // Late: prestige focused
         }
     }
 
@@ -388,6 +389,34 @@ public class HardAIStrategy implements AIStrategy {
         return blockScore;
     }
 
+    /**
+     * Returns true if reserving this card serves a blocking purpose:
+     * (a) an opponent can afford it and buying it would reach the winning threshold, or
+     * (b) an opponent with >= 10 points needs exactly one more of this card's bonus color
+     *     to claim an available noble.
+     */
+    private boolean isBlockingReserve(Card card, GameState state, Player self) {
+        int threshold = state.getWinningThreshold();
+        for (Player opponent : state.getPlayers()) {
+            if (opponent == self) continue;
+            if (RULES.canAffordCard(opponent, card)
+                    && opponent.getPoints() + card.getPoints() >= threshold) {
+                return true;
+            }
+            if (opponent.getPoints() >= 10) {
+                Map<GemColor, Integer> opBonuses = opponent.calculateBonuses();
+                for (Noble noble : state.getAvailableNobles()) {
+                    int req = noble.getRequirements().getOrDefault(card.getBonus(), 0);
+                    int has = opBonuses.getOrDefault(card.getBonus(), 0);
+                    if (req > 0 && req - has == 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     // =========================================================
     // Gem-take helpers
     // =========================================================
@@ -415,7 +444,7 @@ public class HardAIStrategy implements AIStrategy {
                     GemCollection combo = new GemCollection()
                             .add(NON_GOLD[i], 1).add(NON_GOLD[j], 1).add(NON_GOLD[k], 1);
                     if (!RULES.canTakeThreeDifferentGems(combo, bank)) continue;
-                    double score = scoreGemCombo(combo, topCards, cardScores, self, bank);
+                    double score = scoreGemCombo(combo, topCards, cardScores, self);
                     if (score > bestScore) { bestScore = score; best = combo; }
                 }
             }
@@ -425,32 +454,45 @@ public class HardAIStrategy implements AIStrategy {
         for (GemColor c : NON_GOLD) {
             if (!RULES.canTakeTwoSameGems(c, bank)) continue;
             GemCollection combo = new GemCollection().add(c, 2);
-            double score = scoreGemCombo(combo, topCards, cardScores, self, bank);
+            double score = scoreGemCombo(combo, topCards, cardScores, self);
             if (score > bestScore) { bestScore = score; best = combo; }
         }
 
         return best != null ? best : takeSomeGems(state);
     }
 
-    /** Public-facing gem-take scorer used in decideAction for comparison. */
+    /**
+     * Scores a gem-take for comparison against purchases in decideAction.
+     * Applies a saturation penalty when the player already holds many gems so
+     * that buying (if possible) beats endlessly collecting more gems.
+     *
+     * Saturation factor: max(0.1, 1.0 - max(0, held-5) x 0.15)
+     *   held <= 5: 1.00 (no penalty)
+     *   held  = 7: 0.70
+     *   held  = 9: 0.40
+     *   held  = 10: 0.25
+     */
     private double scoreGemTake(GemCollection gems, GameState state, Player self) {
         List<Card> topCards = getTopCards(state, self, 3);
         Map<Card, Double> cardScores = new LinkedHashMap<>();
         for (Card c : topCards) cardScores.put(c, scoreCard(c, self, state));
-        return scoreGemCombo(gems, topCards, cardScores, self, state.getGemBank());
+        double raw = scoreGemCombo(gems, topCards, cardScores, self);
+        int held = self.getGemCount();
+        double saturation = Math.max(0.1, 1.0 - Math.max(0, held - 5) * 0.15);
+        return raw * saturation;
     }
 
     /**
      * Scores a gem combination: sum of (cardScore x turnsReduced) across top cards.
      * Simulates taking the gems and recalculates turns-to-acquire for each target.
      */
-    private double scoreGemCombo(GemCollection combo, List<Card> topCards, Map<Card, Double> cardScores, Player self, GemCollection bank) {
+    private double scoreGemCombo(GemCollection combo, List<Card> topCards, Map<Card, Double> cardScores, Player self) {
         GemCollection simGems      = self.getGems().add(combo);
         Map<GemColor, Integer> bonuses = self.calculateBonuses();
         double score = 0.0;
         for (Card card : topCards) {
-            int before  = calculateTurnsInternal(card, bonuses, self.getGems(), bank);
-            int after   = calculateTurnsInternal(card, bonuses, simGems, bank);
+            int before  = calculateTurnsInternal(card, bonuses, self.getGems());
+            int after   = calculateTurnsInternal(card, bonuses, simGems);
             int reduced = before - after;
             if (reduced > 0) {
                 score += cardScores.get(card) * reduced;
@@ -484,16 +526,6 @@ public class HardAIStrategy implements AIStrategy {
         return top.isEmpty() ? null : top.get(0);
     }
 
-    /** Counts how many bonus colors are shared in both nobles' requirements. */
-    private int countRequirementOverlap(Noble a, Noble b) {
-        Map<GemColor, Integer> reqA = a.getRequirements();
-        Map<GemColor, Integer> reqB = b.getRequirements();
-        int overlap = 0;
-        for (GemColor c : reqA.keySet()) {
-            if (reqA.get(c) > 0 && reqB.getOrDefault(c, 0) > 0) overlap++;
-        }
-        return overlap;
-    }
 
     /** Wraps a GemCollection in the correct TAKE AIAction type. */
     private AIAction buildGemAction(GemCollection gems) {
