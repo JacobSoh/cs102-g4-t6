@@ -35,11 +35,13 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         public final int          totalPlayers;      // 2–4
         public final List<Player> players;           // index 0 = local player, rest = friends/CPUs
         public final List<Boolean> isHuman;          // true = human, false = CPU
+        public final String       aiDifficulty;      // "EASY" or "HARD" (offline mode only)
 
         public PlayerSetupResult(String localPlayerName,
                                  boolean isOnline,
                                  List<Player> players,
-                                 List<Boolean> isHuman) {
+                                 List<Boolean> isHuman,
+                                 String aiDifficulty) {
             if (players.size() != isHuman.size()) {
                 throw new IllegalArgumentException("players and isHuman size must match");
             }
@@ -48,6 +50,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             this.players         = List.copyOf(players);
             this.totalPlayers    = this.players.size();
             this.isHuman         = List.copyOf(isHuman);
+            this.aiDifficulty    = aiDifficulty;
         }
 
         @Override
@@ -106,9 +109,11 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         players.add(new Player(localName, 0));
         humans.add(true); // local player is always human
 
+        String aiDifficulty = "HARD";
         if (mode == ModeChoice.ONLINE) {
             collectFriendNames(opponentCount, players, humans);
         } else {
+            aiDifficulty = stepChooseDifficulty(localName);
             addCpuPlayers(opponentCount, players, humans);
         }
 
@@ -117,7 +122,8 @@ public class PlayerSetupUI implements ThemeStyleSheet {
                 localName,
                 mode == ModeChoice.ONLINE,
                 players,
-                humans
+                humans,
+                aiDifficulty
         );
         showSummary(result);
         return result;
@@ -226,6 +232,37 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     // -------------------------------------------------------------------------
+    // Step 4 (offline only) — Choose AI difficulty
+    // -------------------------------------------------------------------------
+    private String stepChooseDifficulty(String localName) {
+        while (true) {
+            clearScreen();
+            printHeader("PLAYER SETUP", "Choose AI Difficulty");
+
+            System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD + localName + RESET);
+            System.out.println();
+
+            printOptionBox(new String[]{
+                GREEN + BOLD + "[ E ]" + RESET + WHITE + "  Easy  " + RESET
+                        + DIM + "(simple gem-taking AI)" + RESET,
+                RED   + BOLD + "[ H ]" + RESET + WHITE + "  Hard  " + RESET
+                        + DIM + "(strategic scoring AI)" + RESET
+            });
+
+            System.out.print(GREEN + "  > " + RESET);
+            String input = scanner.nextLine().trim().toLowerCase();
+
+            switch (input) {
+                case "e": return "EASY";
+                case "h": return "HARD";
+                default:
+                    printError("Please press E for Easy or H for Hard.");
+                    sleep(1000);
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Step 4a — Collect friend names (online)
     // -------------------------------------------------------------------------
     private void collectFriendNames(int count, List<Player> players, List<Boolean> humans) {
@@ -291,9 +328,12 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         for (int i = 0; i < result.players.size(); i++) {
             String name    = result.players.get(i).getName();
             boolean human  = result.isHuman.get(i);
+            String diffTag = (!human && !result.isOnline)
+                    ? DIM + " [" + result.aiDifficulty + "]" + RESET
+                    : "";
             String tag     = human
                     ? GREEN + "[Human]" + RESET
-                    : BLUE  + "[CPU]"   + RESET;
+                    : BLUE  + "[CPU]"   + RESET + diffTag;
             String youTag  = (i == 0) ? GOLD + " ← you" + RESET : "";
             System.out.println("    " + CYAN + (i + 1) + ". " + RESET
                     + WHITE + name + RESET + "  " + tag + youTag);
