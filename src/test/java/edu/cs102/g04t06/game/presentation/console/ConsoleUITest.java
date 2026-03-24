@@ -138,7 +138,7 @@ class ConsoleUITest {
 
         private PlayerSetupResult make(String local, boolean online,
                                        List<Player> players, List<Boolean> humans) {
-            return new PlayerSetupResult(local, online, players, humans, "HARD");
+            return new PlayerSetupResult(local, online, players, humans);
         }
 
         @Test
@@ -415,7 +415,7 @@ class ConsoleUITest {
             players.add(new Player("Alice", 0));
             players.add(new Player("CPU-1", 1));
             return new PlayerSetupResult(
-                    "Alice", false, players, List.of(true, false), "HARD");
+                    "Alice", false, players, List.of(true, false));
         }
 
         private GameState init(PlayerSetupResult setup) {
@@ -482,7 +482,7 @@ class ConsoleUITest {
                 humans.add(false);
             }
             PlayerSetupResult setup = new PlayerSetupResult(
-                    "CPU-0", false, players, humans, "HARD");
+                    "CPU-0", false, players, humans);
             assertEquals(5, init(setup).getAvailableNobles().size());
         }
 
