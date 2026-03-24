@@ -171,18 +171,23 @@ public class GameRules{
      */
     public Player getWinner(List<Player> players, int threshold){
         Player winner = null;
+        boolean unresolvedTie = false;
         for(Player player : players){
             if(hasPlayerWon(player, threshold)){
                 if(winner == null || player.getPoints() > winner.getPoints()){
                     winner = player;
+                    unresolvedTie = false;
                 } else if(player.getPoints() == winner.getPoints()){
                 //tie-break : players with fewer cards win
                     if(player.getPurchasedCards().size() < winner.getPurchasedCards().size()){
                         winner = player;
+                        unresolvedTie = false;
+                    } else if (player.getPurchasedCards().size() == winner.getPurchasedCards().size()) {
+                        unresolvedTie = true;
                     }
                 }
             }
         }
-        return winner;
+        return unresolvedTie ? null : winner;
     }
 }

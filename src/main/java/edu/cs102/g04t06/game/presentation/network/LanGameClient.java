@@ -13,12 +13,13 @@ public class LanGameClient {
     private final String playerName;
     private final String hostAddress;
     private final int port;
-    private final LanSessionUI sessionUI = new LanSessionUI();
+    private final LanSessionUI sessionUI;
 
     public LanGameClient(String playerName, String hostAddress, int port) {
         this.playerName = playerName;
         this.hostAddress = hostAddress;
         this.port = port;
+        this.sessionUI = new LanSessionUI(playerName);
     }
 
     public void run() {

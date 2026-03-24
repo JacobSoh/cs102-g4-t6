@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import edu.cs102.g04t06.game.execution.TurnProcessor;
+import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
@@ -75,11 +76,13 @@ public class GameBoardUI implements ThemeStyleSheet {
     private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
     private final TurnProcessor turnProcessor = new TurnProcessor();
+    private final GameRules gameRules = new GameRules();
     private int actionLinesFromBottom = 1;
     private int statusLinesFromBottom = 1;
     private String actionStatus = "";
     private String actionPromptLabel = ACTION_PROMPT;
     private List<String> readOnlyLogEntries = null;
+    private String perspectivePlayerName = null;
 
     private static final class MainAreaRender {
         private final List<String> lines;
@@ -107,6 +110,10 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     GameBoardUI(Scanner scanner) {
         this.scanner = scanner;
+    }
+
+    public void setPerspectivePlayerName(String perspectivePlayerName) {
+        this.perspectivePlayerName = perspectivePlayerName;
     }
 
     // -------------------------------------------------------------------------
@@ -231,11 +238,12 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private void render(GameState state) {
         System.out.print("\u001B[?25l");
-        System.out.print("\u001B[2;1H");
+        System.out.print("\u001B[H");
         boardTop();
         printHeader(state);
-        MainAreaRender mainArea = buildMainArea(state);
-        List<String> sidebar = buildPlayerSidebar(state.getPlayers(), state.getCurrentPlayer());
+        Player perspectivePlayer = resolvePerspectivePlayer(state);
+        MainAreaRender mainArea = buildMainArea(state, perspectivePlayer);
+        List<String> sidebar = buildPlayerSidebar(state.getPlayers(), state.getCurrentPlayer(), perspectivePlayer);
         List<String> combined = combineColumns(mainArea.lines, sidebar, MAIN_WIDTH, SIDEBAR_WIDTH);
         actionLinesFromBottom = combined.size() - mainArea.actionLineIndex;
         statusLinesFromBottom = combined.size() - mainArea.statusLineIndex;
@@ -250,7 +258,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private void showHelpOverlay() {
         clearScreen();
-        System.out.print("\u001B[2;1H");
+        System.out.print("\u001B[H");
         boardTop();
         line(GOLD + BOLD + "SPLENDOR HELP" + RESET
                 + sp(INNER - "SPLENDOR HELP".length() - "Press ? to return".length())
@@ -853,22 +861,22 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param state state to render
      * @return prepared render rows plus prompt row metadata
      */
-    private MainAreaRender buildMainArea(GameState state) {
+    private MainAreaRender buildMainArea(GameState state, Player perspectivePlayer) {
         List<String> lines = new ArrayList<>();
         appendMarketPanel(lines, "NOBLES", "", buildNoblePanelLines(state.getAvailableNobles()));
         appendMarketPanel(lines, "TIER 3", "DECK: " + state.getMarket().getDeckSize(3),
-                buildTierPanelLines(state.getMarket().getVisibleCards(3)));
+                buildTierPanelLines(state.getMarket().getVisibleCards(3), perspectivePlayer));
         appendMarketPanel(lines, "TIER 2", "DECK: " + state.getMarket().getDeckSize(2),
-                buildTierPanelLines(state.getMarket().getVisibleCards(2)));
+                buildTierPanelLines(state.getMarket().getVisibleCards(2), perspectivePlayer));
         appendMarketPanel(lines, "TIER 1", "DECK: " + state.getMarket().getDeckSize(1),
-                buildTierPanelLines(state.getMarket().getVisibleCards(1)));
+                buildTierPanelLines(state.getMarket().getVisibleCards(1), perspectivePlayer));
         appendMarketPanel(lines, "BANK GEMS", "", List.of(formatBankLine(state.getGemBank())));
         appendMarketPanel(lines, "LOG", "", formatLogLines());
 
         List<String> actionBody = List.of(
                 DIM + WHITE + ". take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET,
                 DIM + WHITE + ". take w w    : take 2 same gems    . buy reserve 1: buy reserve card" + RESET,
-                DIM + WHITE + ". reserve t1 slot1 : reserve + gold      . pass         : skip turn" + RESET,
+                DIM + WHITE + ". reserve t1 slot1 : reserve shown card . reserve deck t1 : reserve top card" + RESET,
                 "",
                 GREEN + BOLD + actionPromptLabel + RESET,
                 formatActionStatus()
@@ -886,14 +894,14 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param currentPlayer active player for highlighting
      * @return sidebar rows
      */
-    private List<String> buildPlayerSidebar(List<Player> players, Player currentPlayer) {
+    private List<String> buildPlayerSidebar(List<Player> players, Player currentPlayer, Player perspectivePlayer) {
         List<String> lines = new ArrayList<>();
         lines.add(DIM + WHITE + "PLAYERS" + RESET);
         for (Player player : players) {
             if (!lines.isEmpty()) {
                 lines.add("");
             }
-            appendPlayerCard(lines, player, player == currentPlayer);
+            appendPlayerCard(lines, player, player == currentPlayer, player == perspectivePlayer);
         }
         return lines;
     }
@@ -942,7 +950,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param player player to render
      * @param isCurrentPlayer whether this player is active
      */
-    private void appendPlayerCard(List<String> lines, Player player, boolean isCurrentPlayer) {
+    private void appendPlayerCard(List<String> lines, Player player, boolean isCurrentPlayer, boolean isPerspectivePlayer) {
         String borderColor = isCurrentPlayer ? GREEN : WHITE;
         String nameColor = isCurrentPlayer ? CYAN : playerAccent(player);
         String title = (isCurrentPlayer ? "► " : "") + player.getName() + (isCurrentPlayer ? " (you)" : "");
@@ -961,6 +969,11 @@ public class GameBoardUI implements ThemeStyleSheet {
         }
         lines.add(panelDivider(SIDEBAR_WIDTH, borderColor));
         lines.add(panelBody(SIDEBAR_WIDTH, "Reserved: " + formatReservedTokens(player.getReservedCards()), borderColor));
+        if (isPerspectivePlayer) {
+            for (String row : formatReservedCostLines(player, player.getReservedCards(), SIDEBAR_WIDTH - 2)) {
+                lines.add(panelBody(SIDEBAR_WIDTH, row, borderColor));
+            }
+        }
         lines.add(panelBottom(SIDEBAR_WIDTH, borderColor));
     }
 
@@ -975,27 +988,38 @@ public class GameBoardUI implements ThemeStyleSheet {
             return List.of(DIM + WHITE + "No nobles available." + RESET);
         }
 
-        String[] topRow = new String[nobles.size()];
-        String[] ptRow = new String[nobles.size()];
-        String[] rqRow = new String[nobles.size()];
-        String[] botRow = new String[nobles.size()];
+        List<String> lines = new ArrayList<>();
+        int maxTilesPerRow = 4;
 
-        for (int i = 0; i < nobles.size(); i++) {
-            Noble noble = nobles.get(i);
-            String dash = rep('─', NOBLE_INNER);
-            topRow[i] = WHITE + "┌" + dash + "┐" + RESET;
-            botRow[i] = WHITE + "└" + dash + "┘" + RESET;
-            ptRow[i] = WHITE + "│" + RESET + padTo(" " + GOLD + "★" + noble.getPoints() + RESET, NOBLE_INNER)
-                    + WHITE + "│" + RESET;
-            rqRow[i] = WHITE + "│" + RESET + padTo(" " + formatNobleRequirements(noble.getRequirements()), NOBLE_INNER)
-                    + WHITE + "│" + RESET;
+        for (int start = 0; start < nobles.size(); start += maxTilesPerRow) {
+            List<Noble> rowNobles = nobles.subList(start, Math.min(start + maxTilesPerRow, nobles.size()));
+            String[] topRow = new String[rowNobles.size()];
+            String[] ptRow = new String[rowNobles.size()];
+            String[] rqRow = new String[rowNobles.size()];
+            String[] botRow = new String[rowNobles.size()];
+
+            for (int i = 0; i < rowNobles.size(); i++) {
+                Noble noble = rowNobles.get(i);
+                String dash = rep('─', NOBLE_INNER);
+                topRow[i] = WHITE + "┌" + dash + "┐" + RESET;
+                botRow[i] = WHITE + "└" + dash + "┘" + RESET;
+                ptRow[i] = WHITE + "│" + RESET + padTo(" " + GOLD + "★" + noble.getPoints() + RESET, NOBLE_INNER)
+                        + WHITE + "│" + RESET;
+                rqRow[i] = WHITE + "│" + RESET
+                        + padTo(" " + formatNobleRequirements(noble.getRequirements()), NOBLE_INNER)
+                        + WHITE + "│" + RESET;
+            }
+
+            lines.add(" " + joinTiles(topRow, 1));
+            lines.add(" " + joinTiles(ptRow, 1));
+            lines.add(" " + joinTiles(rqRow, 1));
+            lines.add(" " + joinTiles(botRow, 1));
+
+            if (start + maxTilesPerRow < nobles.size()) {
+                lines.add("");
+            }
         }
-
-        return List.of(
-                " " + joinTiles(topRow, 1),
-                " " + joinTiles(ptRow, 1),
-                " " + joinTiles(rqRow, 1),
-                " " + joinTiles(botRow, 1));
+        return lines;
     }
 
     /**
@@ -1004,7 +1028,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param cards cards to render
      * @return render rows for that tier panel
      */
-    private List<String> buildTierPanelLines(List<Card> cards) {
+    private List<String> buildTierPanelLines(List<Card> cards, Player perspectivePlayer) {
         if (cards == null || cards.isEmpty()) {
             return List.of(DIM + WHITE + "No cards visible." + RESET);
         }
@@ -1019,15 +1043,16 @@ public class GameBoardUI implements ThemeStyleSheet {
             String dash = rep('─', CARD_INNER);
             String gemLabel = GEM_LABEL.getOrDefault(card.getBonus(), "?");
             String gemAnsi = GEM_ANSI.getOrDefault(card.getBonus(), WHITE);
+            String borderColor = canHighlightCard(perspectivePlayer, card) ? GREEN : WHITE;
 
-            topRow[i] = WHITE + "┌" + dash + "┐" + RESET;
-            botRow[i] = WHITE + "└" + dash + "┘" + RESET;
-            labelRow[i] = WHITE + "│" + RESET
+            topRow[i] = borderColor + "┌" + dash + "┐" + RESET;
+            botRow[i] = borderColor + "└" + dash + "┘" + RESET;
+            labelRow[i] = borderColor + "│" + RESET
                     + padTo(" " + gemAnsi + BOLD + gemLabel + RESET + "  " + WHITE + card.getPoints() + RESET, CARD_INNER)
-                    + WHITE + "│" + RESET;
-            costRow[i] = WHITE + "│" + RESET
+                    + borderColor + "│" + RESET;
+            costRow[i] = borderColor + "│" + RESET
                     + padTo(" " + DIM + WHITE + formatCardCost(card) + RESET, CARD_INNER)
-                    + WHITE + "│" + RESET;
+                    + borderColor + "│" + RESET;
         }
 
         return List.of(
@@ -1064,8 +1089,12 @@ public class GameBoardUI implements ThemeStyleSheet {
         if (source == null || source.isEmpty()) {
             return List.of(DIM + WHITE + "No actions yet" + RESET);
         }
-        String latest = source.get(source.size() - 1);
-        return List.of(WHITE + latest + RESET);
+        int start = Math.max(0, source.size() - 5);
+        List<String> lines = new ArrayList<>();
+        for (int i = start; i < source.size(); i++) {
+            lines.add(WHITE + source.get(i) + RESET);
+        }
+        return lines;
     }
 
     /**
@@ -1132,10 +1161,10 @@ public class GameBoardUI implements ThemeStyleSheet {
             if (reservedCards != null && i < reservedCards.size()) {
                 Card card = reservedCards.get(i);
                 sb.append("[")
-                        .append(GEM_ANSI.getOrDefault(card.getBonus(), WHITE))
-                        .append(GEM_LABEL.getOrDefault(card.getBonus(), "?"))
+                        .append(CYAN)
+                        .append("t")
+                        .append(card.getLevel())
                         .append(WHITE)
-                        .append(card.getPoints())
                         .append(RESET)
                         .append("]");
             } else {
@@ -1143,6 +1172,68 @@ public class GameBoardUI implements ThemeStyleSheet {
             }
         }
         return sb.toString();
+    }
+
+    private List<String> formatReservedCostLines(Player player, List<Card> reservedCards, int width) {
+        if (reservedCards == null || reservedCards.isEmpty()) {
+            return List.of(DIM + WHITE + "  none" + RESET);
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < reservedCards.size(); i++) {
+            Card card = reservedCards.get(i);
+            String token = "[" + GEM_ANSI.getOrDefault(card.getBonus(), WHITE)
+                    + GEM_LABEL.getOrDefault(card.getBonus(), "?")
+                    + WHITE
+                    + card.getPoints()
+                    + RESET
+                    + "]";
+            lines.add("  B: " + token + " $: " + formatReservedCost(player, card));
+        }
+        return lines;
+    }
+
+    private String formatReservedCost(Player player, Card card) {
+        if (card == null || card.getCost() == null) {
+            return "-";
+        }
+
+        Map<GemColor, Integer> req = card.getCost().asMap();
+        Map<GemColor, Integer> actualCost = player == null
+                ? req
+                : gameRules.calculateActualCost(player, card).asMap();
+
+        StringBuilder sb = new StringBuilder();
+        for (GemColor color : CARD_ORDER) {
+            int count = actualCost.getOrDefault(color, 0);
+            if (count <= 0) {
+                continue;
+            }
+            if (player != null && player.getGems().getCount(color) >= count) {
+                sb.append(PURPLE).append(BOLD);
+            } else {
+                sb.append(DIM).append(WHITE);
+            }
+            sb.append(gemCodeLower(color)).append(count).append(RESET);
+        }
+        return sb.length() == 0 ? "-" : sb.toString();
+    }
+
+    private Player resolvePerspectivePlayer(GameState state) {
+        if (perspectivePlayerName == null || perspectivePlayerName.isBlank()) {
+            return state.getCurrentPlayer();
+        }
+
+        for (Player player : state.getPlayers()) {
+            if (perspectivePlayerName.equals(player.getName())) {
+                return player;
+            }
+        }
+        return state.getCurrentPlayer();
+    }
+
+    private boolean canHighlightCard(Player perspectivePlayer, Card card) {
+        return perspectivePlayer != null && card != null && gameRules.canAffordCard(perspectivePlayer, card);
     }
 
     /**

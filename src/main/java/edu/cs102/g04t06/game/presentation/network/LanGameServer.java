@@ -35,6 +35,7 @@ public class LanGameServer implements ThemeStyleSheet {
         this.port = port;
         this.totalPlayers = totalPlayers;
         this.hostPlayerName = hostPlayerName;
+        this.boardUI.setPerspectivePlayerName(hostPlayerName);
     }
 
     public void run() {
@@ -168,7 +169,6 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private void handleRemoteTurn(GameState state, ClientConnection connection) throws IOException {
-        renderHostState(state);
         broadcastPassiveState(
                 "Waiting for " + connection.playerName + " to play.",
                 state,
@@ -304,12 +304,13 @@ public class LanGameServer implements ThemeStyleSheet {
             NetworkProtocol.send(client.writer, payload);
         }
 
-        String hostMessage = actingPlayerIndex == 0 ? actorMessage : publicMessage;
-        boardUI.displayReadOnlyState(
-                state,
-                state.isGameOver() ? finalGameMessage
-                        : "Waiting for " + state.getCurrentPlayer().getName() + " to play.",
-                getRecentGlobalLog());
+        if (state.isGameOver() || state.getCurrentPlayerIndex() != 0) {
+            boardUI.displayReadOnlyState(
+                    state,
+                    state.isGameOver() ? finalGameMessage
+                            : "Waiting for " + state.getCurrentPlayer().getName() + " to play.",
+                    getRecentGlobalLog());
+        }
     }
 
     private void broadcastPassiveState(String message, GameState state, int activePlayerIndex) {
@@ -327,6 +328,9 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void renderHostState(GameState state) {
         if (state == null) {
+            return;
+        }
+        if (!state.isGameOver() && state.getCurrentPlayerIndex() == 0) {
             return;
         }
         String statusMessage = state.isGameOver()

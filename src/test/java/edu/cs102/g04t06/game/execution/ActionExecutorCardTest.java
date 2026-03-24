@@ -148,4 +148,16 @@ public class ActionExecutorCardTest {
         assertFalse(result.isSuccess(), "Should fail because player already has 3 reserved cards");
         assertFalse(player.getReservedCards().contains(affordableCard), "4th card should NOT be added");
     }
+
+    @Test
+    public void testExecuteReserveTopCard_ValidAndGetsGold() {
+        int deckSizeBefore = state.getMarket().getDeckSize(1);
+
+        ActionResult result = ActionExecutor.executeReserveTopCard(state, 1);
+
+        assertTrue(result.isSuccess(), "Reserve-top action should succeed");
+        assertEquals(1, player.getReservedCards().size(), "Hidden top card added to reserved list");
+        assertEquals(deckSizeBefore - 1, state.getMarket().getDeckSize(1), "Deck size should shrink by one");
+        assertEquals(1, player.getGems().getCount(GemColor.GOLD), "Player should receive 1 Gold gem");
+    }
 }

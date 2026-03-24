@@ -6,7 +6,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
@@ -248,6 +247,19 @@ public class GameRulesTest {
         Player winner = gameRules.getWinner(List.of(alice, bob), 15);
 
         assertEquals(alice, winner);
+    }
+
+    @Test
+    void testGetWinner_exactTieReturnsNull() {
+        Player alice = new Player("Alice", 1);
+        Player bob = new Player("Bob", 2);
+
+        alice.addCard(new Card(1, 15, GemColor.RED, emptyCost()));
+        bob.addCard(new Card(1, 15, GemColor.BLUE, emptyCost()));
+
+        Player winner = gameRules.getWinner(List.of(alice, bob), 15);
+
+        assertNull(winner);
     }
 
     @Test
@@ -935,9 +947,7 @@ public class GameRulesTest {
     }
 
     @Test
-    void testGetWinner_tieOnPointsAndCards_firstEncounteredWins() {
-        // Both players have exact same points AND same number of cards
-        // getWinner should still return one player without crashing
+    void testGetWinner_tieOnPointsAndCards_returnsNull() {
         Player alice = new Player("Alice", 1);
         Player bob   = new Player("Bob",   2);
 
@@ -945,7 +955,7 @@ public class GameRulesTest {
         bob.addCard(new Card(1,   15, GemColor.BLUE, emptyCost()));
 
         Player winner = gameRules.getWinner(List.of(alice, bob), 15);
-        assertNotNull(winner); // should return someone, not crash
+        assertNull(winner);
     }
 
     @Test
@@ -1021,5 +1031,3 @@ public class GameRulesTest {
         assertTrue(claimable.isEmpty());
     }
 }
-
-

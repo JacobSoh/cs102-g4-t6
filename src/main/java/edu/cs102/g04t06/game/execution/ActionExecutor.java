@@ -154,6 +154,33 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
         return new ActionResult(true, "Card reserved successfully.");
     }
+
+    public static ActionResult executeReserveTopCard(GameState state, int tier) {
+        Player player = state.getCurrentPlayer();
+
+        if (player.getReservedCards().size() >= 3) {
+            return new ActionResult(false, "You already have 3 reserved cards.");
+        }
+
+        if (state.getMarket().getDeckSize(tier) <= 0) {
+            return new ActionResult(false, "That deck is empty.");
+        }
+
+        Card card = state.getMarket().drawCard(tier);
+        player.addReservedCard(card);
+
+        if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
+            GemCollection oneGold = new GemCollection().add(GemColor.GOLD, 1);
+            state.removeGemsFromBank(oneGold);
+            player.addGems(oneGold);
+
+            if (player.getGemCount() > 10) {
+                return new ActionResult(true, "Top card reserved. You got a Gold gem but must return some to stay at 10!");
+            }
+        }
+
+        return new ActionResult(true, "Top card reserved successfully.");
+    }
     public static ActionResult executeClaimNoble(GameState state, Noble noble) {
         Player player = state.getCurrentPlayer();
 
