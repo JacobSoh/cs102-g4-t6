@@ -285,7 +285,7 @@ public class GameBoardUI implements ThemeStyleSheet {
         blank();
         line(DIM + WHITE + "Examples:" + RESET);
         line(DIM + WHITE + "  take w r u   |   take w w   |   buy t2 slot1   |   buy reserve 1" + RESET);
-        line(DIM + WHITE + "  reserve t1 slot3   |   pass   |   q to leave the game board" + RESET);
+        line(DIM + WHITE + "  reserve t1 slot3 (shown)   |   reserve deck t1 (hidden)   |   pass" + RESET);
         blank();
         line(GREEN + BOLD + "Press any key, then Enter, to return to the game board." + RESET);
         boardBottom();
@@ -874,15 +874,22 @@ public class GameBoardUI implements ThemeStyleSheet {
         appendMarketPanel(lines, "LOG", "", formatLogLines());
 
         List<String> actionBody = List.of(
-                DIM + WHITE + ". take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET,
-                DIM + WHITE + ". take w w    : take 2 same gems    . buy reserve 1: buy reserve card" + RESET,
-                DIM + WHITE + ". reserve t1 slot1 : reserve shown card . reserve deck t1 : reserve top card" + RESET,
+                BOLD + WHITE + " Take:" + RESET + WHITE
+                        + " take w r u" + RESET + DIM + WHITE + " (3 different), " + RESET
+                        + WHITE + "take w w" + RESET + DIM + WHITE + " (2 same)" + RESET,
+                BOLD + WHITE + " Buy:" + RESET + WHITE
+                        + " buy t1 slot1" + RESET + DIM + WHITE + " (shown card), " + RESET
+                        + WHITE + "buy reserve 1" + RESET + DIM + WHITE + " (reserved card)" + RESET,
+                BOLD + WHITE + " Reserve:" + RESET + WHITE
+                        + " reserve t1 slot1" + RESET + DIM + WHITE + " (shown), " + RESET
+                        + WHITE + "reserve deck t1" + RESET + DIM + WHITE + " (hidden top card)" + RESET,
+                BOLD + WHITE + " Other:" + RESET + WHITE + " pass" + RESET + DIM + WHITE + " (skip turn)" + RESET,
                 "",
                 GREEN + BOLD + actionPromptLabel + RESET,
                 formatActionStatus()
         );
-        int actionLineIndex = lines.size() + 2 + 4;
-        int statusLineIndex = lines.size() + 2 + 5;
+        int actionLineIndex = lines.size() + 2 + 5;
+        int statusLineIndex = lines.size() + 2 + 6;
         appendMarketPanel(lines, "ACTIONS", "", actionBody);
         return new MainAreaRender(lines, actionLineIndex, statusLineIndex);
     }

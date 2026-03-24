@@ -9,6 +9,7 @@ import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
  */
 public class LanSetupUI implements ThemeStyleSheet {
     private final Scanner scanner = new Scanner(System.in);
+    private static final int BOX_WIDTH = 50;
 
     public static final class HostSetup {
         public final String hostPlayerName;
@@ -36,7 +37,9 @@ public class LanSetupUI implements ThemeStyleSheet {
 
     public HostSetup promptHostSetup() {
         clearScreen();
-        printHeader("HOST LAN GAME");
+        printHeader("LAN SETUP", "Host Game");
+        System.out.println(WHITE + "  Mode: " + RESET + BLUE + "Online (Host)" + RESET);
+        System.out.println();
         String name = promptNonBlank("Host player name");
         int port = promptInt("Port", 1024, 65535);
         int totalPlayers = promptInt("Total players (2-4)", 2, 4);
@@ -45,7 +48,9 @@ public class LanSetupUI implements ThemeStyleSheet {
 
     public JoinSetup promptJoinSetup() {
         clearScreen();
-        printHeader("JOIN LAN GAME");
+        printHeader("LAN SETUP", "Join Game");
+        System.out.println(WHITE + "  Mode: " + RESET + BLUE + "Online (Client)" + RESET);
+        System.out.println();
         String name = promptNonBlank("Player name");
         String hostAddress = promptNonBlank("Host IP / hostname");
         int port = promptInt("Port", 1024, 65535);
@@ -61,10 +66,11 @@ public class LanSetupUI implements ThemeStyleSheet {
         System.out.flush();
     }
 
-    private void printHeader(String title) {
+    private void printHeader(String title, String subtitle) {
         System.out.println();
         System.out.println(GOLD + BOLD + "  " + title + RESET);
-        System.out.println(DIM + WHITE + "  " + "─".repeat(48) + RESET);
+        System.out.println(DIM + WHITE + "  " + subtitle + RESET);
+        System.out.println(DIM + WHITE + "  " + "─".repeat(BOX_WIDTH) + RESET);
         System.out.println();
     }
 

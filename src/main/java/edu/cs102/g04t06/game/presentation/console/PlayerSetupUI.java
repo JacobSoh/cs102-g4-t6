@@ -76,8 +76,14 @@ public class PlayerSetupUI implements ThemeStyleSheet {
      * Runs the offline player setup flow and returns a populated PlayerSetupResult.
      */
     public PlayerSetupResult show() {
-        String localName = stepGetLocalName();
-        int opponentCount = stepChooseOpponentCount(localName);
+        clearScreen();
+        printHeader("PLAYER SETUP", "Offline Game");
+        System.out.println(WHITE + "  Mode: " + RESET
+                + BLUE + "Offline (vs CPU)" + RESET);
+        System.out.println();
+
+        String localName = promptLocalName();
+        int opponentCount = promptOpponentCount(localName);
         List<Player> players = new ArrayList<>();
         List<Boolean> humans = new ArrayList<>();
 
@@ -96,15 +102,11 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     }
 
     // -------------------------------------------------------------------------
-    // Step 1 — Get local player name
+    // Inputs
     // -------------------------------------------------------------------------
-    private String stepGetLocalName() {
+    private String promptLocalName() {
         while (true) {
-            clearScreen();
-            printHeader("PLAYER SETUP", "Step 1 of 2 — Your Name");
-
-            System.out.println(WHITE + "  Enter your name: " + RESET);
-            System.out.print(GREEN + "  > " + RESET);
+            System.out.print(WHITE + "  Your name: " + RESET);
 
             String name = scanner.nextLine().trim();
 
@@ -122,39 +124,26 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Step 2 — Number of CPU opponents
-    // -------------------------------------------------------------------------
-    private int stepChooseOpponentCount(String localName) {
+    private int promptOpponentCount(String localName) {
         while (true) {
-            clearScreen();
-            printHeader("PLAYER SETUP", "Step 2 of 2 — Number of Opponents");
-
             System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD
                     + localName + RESET);
-            System.out.println(WHITE + "  Mode: " + RESET
-                    + BLUE  + "Offline (vs CPU)" + RESET);
             System.out.println();
-            System.out.println(WHITE + "  How many CPU opponents"
-                    + " would you like? " + DIM + "(1–3)" + RESET);
+            System.out.println(WHITE + "  How many players total?"
+                    + " " + DIM + "(2–4)" + RESET);
             System.out.println();
-
-            printOptionBox(new String[]{
-                GREEN + "[ 1 ]" + RESET + WHITE + "  2 players total" + RESET,
-                GREEN + "[ 2 ]" + RESET + WHITE + "  3 players total" + RESET,
-                GREEN + "[ 3 ]" + RESET + WHITE + "  4 players total" + RESET
-            });
-
-            System.out.print(GREEN + "  > " + RESET);
+            System.out.print(WHITE + "  Total players (2-4): " + RESET);
             String input = scanner.nextLine().trim();
 
-            switch (input) {
-                case "1": return 1;
-                case "2": return 2;
-                case "3": return 3;
-                default:
-                    printError("Please enter 1, 2, or 3.");
-                    sleep(1000);
+            try {
+                int totalPlayers = Integer.parseInt(input);
+                if (totalPlayers < 2 || totalPlayers > 4) {
+                    throw new NumberFormatException();
+                }
+                return totalPlayers - 1;
+            } catch (NumberFormatException e) {
+                printError("Please enter a number between 2 and 4.");
+                sleep(1000);
             }
         }
     }

@@ -107,6 +107,7 @@ public class ConsoleUI implements ThemeStyleSheet {
         if (setup == null) {
             return Route.MAIN_MENU;
         }
+        this.gameBoardUI.setPerspectivePlayerName(setup.localPlayerName);
         this.gameState = createInitialGameState(setup);
         return Route.GAME_BOARD;
     }
