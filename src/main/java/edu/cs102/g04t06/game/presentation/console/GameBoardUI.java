@@ -3,11 +3,16 @@ package edu.cs102.g04t06.game.presentation.console;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 import edu.cs102.g04t06.game.execution.TurnProcessor;
+import edu.cs102.g04t06.game.exception.NobleNotAvailableException;
+import edu.cs102.g04t06.game.execution.ai.AIAction;
+import edu.cs102.g04t06.game.execution.ai.AIPlayer;
+import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
@@ -73,6 +78,7 @@ public class GameBoardUI implements ThemeStyleSheet {
     // Scanner + UI-local session state
     // -------------------------------------------------------------------------
     private final Scanner scanner;
+    private Map<Player, AIPlayer> aiPlayers = new HashMap<>();
     private final List<String> actionLog = new ArrayList<>();
     private final TurnProcessor turnProcessor = new TurnProcessor();
     private int actionLinesFromBottom = 1;
@@ -109,6 +115,15 @@ public class GameBoardUI implements ThemeStyleSheet {
         this.scanner = scanner;
     }
 
+    /**
+     * Registers AI players so the game loop can execute their turns automatically.
+     *
+     * @param aiPlayers map from Player to the AIPlayer controlling that player
+     */
+    public void registerAIPlayers(Map<Player, AIPlayer> aiPlayers) {
+        this.aiPlayers = aiPlayers;
+    }
+
     // -------------------------------------------------------------------------
     // Public entry points
     // -------------------------------------------------------------------------
@@ -129,6 +144,10 @@ public class GameBoardUI implements ThemeStyleSheet {
             render(state);
             if (state.isGameOver()) {
                 break;
+            }
+            if (aiPlayers.containsKey(state.getCurrentPlayer())) {
+                executeAITurn(state);
+                continue;
             }
             String input = promptAction();
             if (input.equals("?")) {
@@ -624,6 +643,163 @@ public class GameBoardUI implements ThemeStyleSheet {
         if (result.isAwaitingReturn()) {
             ok(result.getMessage());
             handleReturnExcessGems(state);
+        player.addReservedCard(card);
+        state.getMarket().removeCard(card);
+
+        // Gain a gold gem if available
+        if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
+            GemCollection gold = new GemCollection().add(GemColor.GOLD, 1);
+            state.removeGemsFromBank(gold);
+            player.addGems(gold);
+        }
+
+        actionLog.add(player.getName() + " reserved t" + tier + " slot" + (slotIndex + 1));
+        ok("Reserved t" + tier + " slot" + (slotIndex + 1));
+
+        if (rules.mustReturnGems(player)) {
+            handleReturnExcessGems(state, player);
+        }
+
+        handleEndOfTurnNobleClaim(state, player);
+        advanceTurn(state);
+        handleGameEnd(state);
+        sleep(800);
+    }
+
+    /**
+     * Ends the current turn without another game action.
+     *
+     * @param state game state to advance
+     */
+    private void handlePass(GameState state) {
+        Player player = state.getCurrentPlayer();
+        String current = player.getName();
+        handleEndOfTurnNobleClaim(state, player);
+        advanceTurn(state);
+        handleGameEnd(state);
+        actionLog.add(current + " passed. Current: " + state.getCurrentPlayer().getName());
+        ok("Turn passed.");
+        sleep(600);
+    }
+
+    // -------------------------------------------------------------------------
+    // AI turn execution
+    // -------------------------------------------------------------------------
+
+    /**
+     * Executes a full AI turn: decides an action, applies it, then handles
+     * noble claiming, gem return, win check, and turn advancement.
+     *
+     * @param state game state to mutate
+     */
+    private void executeAITurn(GameState state) {
+        Player player = state.getCurrentPlayer();
+        AIPlayer aiPlayer = aiPlayers.get(player);
+
+        // Show "thinking" indicator before deciding
+        ok(player.getName() + " (AI) is thinking...");
+        clearScreen();
+        render(state);
+        sleep(700);
+
+        AIAction action = aiPlayer.decideAction(state);
+
+        actionLog.add(player.getName() + " (AI): " + action.getDescription());
+        ok(player.getName() + " (AI): " + action.getDescription());
+
+        executeAIAction(state, player, action);
+
+        // Noble claim
+        List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
+        if (!claimable.isEmpty()) {
+            Noble chosen = aiPlayer.chooseNoble(claimable, state);
+            try {
+                Noble claimed = state.removeNoble(chosen);
+                player.claimNoble(claimed);
+                actionLog.add(player.getName() + " (AI) claimed noble " + claimed.getName());
+            } catch (NobleNotAvailableException e) {
+                // Noble was already taken; nothing to do
+            }
+        }
+
+        // Gem return
+        if (rules.mustReturnGems(player)) {
+            int excess = player.getGemCount() - 10;
+            GemCollection toReturn = aiPlayer.chooseGemsToReturn(excess, state);
+            player.deductGems(toReturn);
+            state.addGemsToBank(toReturn);
+            actionLog.add(player.getName() + " (AI) returned " + formatGemShort(toReturn));
+        }
+
+        handleWinCheck(state, player);
+        advanceTurn(state);
+        handleGameEnd(state);
+        sleep(1000);
+    }
+
+    /**
+     * Applies the core state mutation for an AI action (no noble/gem follow-up).
+     *
+     * @param state  game state to mutate
+     * @param player acting player
+     * @param action AI action to apply
+     */
+    private void executeAIAction(GameState state, Player player, AIAction action) {
+        switch (action.getActionType()) {
+            case PURCHASE_CARD -> {
+                Card card = action.getTargetCard();
+                GemCollection payment = buildPayment(player, rules.calculateActualCost(player, card));
+                player.deductGems(payment);
+                state.addGemsToBank(payment);
+                player.addCard(card);
+                if (!action.isFromReserved()) {
+                    state.getMarket().removeCard(card);
+                }
+            }
+            case RESERVE_CARD -> {
+                Card card = action.getTargetCard();
+                player.addReservedCard(card);
+                state.getMarket().removeCard(card);
+                if (state.getGemBank().getCount(GemColor.GOLD) > 0) {
+                    GemCollection gold = new GemCollection().add(GemColor.GOLD, 1);
+                    state.removeGemsFromBank(gold);
+                    player.addGems(gold);
+                }
+            }
+            case TAKE_THREE_DIFFERENT, TAKE_TWO_SAME -> {
+                GemCollection requested = action.getGemSelection();
+                state.removeGemsFromBank(requested);
+                player.addGems(requested);
+            }
+        }
+    }
+
+    /**
+     * Checks whether the supplied command token targets reserved-card buying.
+     *
+     * @param token command token to inspect
+     * @return true if the token refers to reserved cards
+     */
+    private boolean isReservedBuyToken(String token) {
+        return "reserved".equalsIgnoreCase(token)
+                || "reserve".equalsIgnoreCase(token)
+                || "r".equalsIgnoreCase(token);
+    }
+
+    /**
+     * Applies a validated gem-taking action and advances turn flow.
+     *
+     * @param state game state to mutate
+     * @param player acting player
+     * @param requested gems to move from bank to player
+     * @param verb status verb shown after success
+     */
+    private void applyTake(GameState state, Player player, GemCollection requested, String verb) {
+        try {
+            state.removeGemsFromBank(requested);
+            player.addGems(requested);
+        } catch (IllegalArgumentException e) {
+            err(e.getMessage());
             return;
         }
 

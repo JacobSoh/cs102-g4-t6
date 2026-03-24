@@ -33,11 +33,13 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         public final int          totalPlayers;      // 2–4
         public final List<Player> players;           // index 0 = local player, rest = friends/CPUs
         public final List<Boolean> isHuman;          // true = human, false = CPU
+        public final String       aiDifficulty;      // "EASY" or "HARD" (offline mode only)
 
         public PlayerSetupResult(String localPlayerName,
                                  boolean isOnline,
                                  List<Player> players,
-                                 List<Boolean> isHuman) {
+                                 List<Boolean> isHuman,
+                                 String aiDifficulty) {
             if (players.size() != isHuman.size()) {
                 throw new IllegalArgumentException("players and isHuman size must match");
             }
@@ -46,6 +48,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             this.players         = List.copyOf(players);
             this.totalPlayers    = this.players.size();
             this.isHuman         = List.copyOf(isHuman);
+            this.aiDifficulty    = aiDifficulty;
         }
 
         @Override
@@ -85,11 +88,21 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         humans.add(true);
         addCpuPlayers(opponentCount, players, humans);
 
+        String aiDifficulty = "HARD";
+        if (mode == ModeChoice.ONLINE) {
+            collectFriendNames(opponentCount, players, humans);
+        } else {
+            aiDifficulty = stepChooseDifficulty(localName);
+            addCpuPlayers(opponentCount, players, humans);
+        }
+
+        // Summary screen
         PlayerSetupResult result = new PlayerSetupResult(
                 localName,
                 false,
                 players,
-                humans
+                humans,
+                aiDifficulty
         );
         showSummary(result);
         return result;
@@ -161,6 +174,75 @@ public class PlayerSetupUI implements ThemeStyleSheet {
 
     // -------------------------------------------------------------------------
     // Step 3 — Auto-generate CPU players
+    // Step 4 (offline only) — Choose AI difficulty
+    // -------------------------------------------------------------------------
+    private String stepChooseDifficulty(String localName) {
+        while (true) {
+            clearScreen();
+            printHeader("PLAYER SETUP", "Choose AI Difficulty");
+
+            System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD + localName + RESET);
+            System.out.println();
+
+            printOptionBox(new String[]{
+                GREEN + BOLD + "[ E ]" + RESET + WHITE + "  Easy  " + RESET
+                        + DIM + "(simple gem-taking AI)" + RESET,
+                RED   + BOLD + "[ H ]" + RESET + WHITE + "  Hard  " + RESET
+                        + DIM + "(strategic scoring AI)" + RESET
+            });
+
+            System.out.print(GREEN + "  > " + RESET);
+            String input = scanner.nextLine().trim().toLowerCase();
+
+            switch (input) {
+                case "e": return "EASY";
+                case "h": return "HARD";
+                default:
+                    printError("Please press E for Easy or H for Hard.");
+                    sleep(1000);
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 4a — Collect friend names (online)
+    // -------------------------------------------------------------------------
+    private void collectFriendNames(int count, List<Player> players, List<Boolean> humans) {
+        for (int i = 1; i <= count; i++) {
+            while (true) {
+                clearScreen();
+                printHeader("PLAYER SETUP", "Online — Friend " + i + " of " + count);
+
+                System.out.println(WHITE + "  Enter name for Friend " + i + ":" + RESET);
+                System.out.print(GREEN + "  > " + RESET);
+
+                String name = scanner.nextLine().trim();
+
+                if (name.isEmpty()) {
+                    printError("Name cannot be empty.");
+                    sleep(1000);
+                    continue;
+                }
+                if (name.length() > 20) {
+                    printError("Name must be 20 characters or fewer.");
+                    sleep(1000);
+                    continue;
+                }
+                if (nameExistsIgnoreCase(players, name)) {
+                    printError("That name is already taken. Choose a different name.");
+                    sleep(1000);
+                    continue;
+                }
+
+                players.add(new Player(name, players.size()));
+                humans.add(true);
+                break;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 4b — Auto-generate CPU players (offline)
     // -------------------------------------------------------------------------
     private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
@@ -188,9 +270,12 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         for (int i = 0; i < result.players.size(); i++) {
             String name    = result.players.get(i).getName();
             boolean human  = result.isHuman.get(i);
+            String diffTag = (!human && !result.isOnline)
+                    ? DIM + " [" + result.aiDifficulty + "]" + RESET
+                    : "";
             String tag     = human
                     ? GREEN + "[Human]" + RESET
-                    : BLUE  + "[CPU]"   + RESET;
+                    : BLUE  + "[CPU]"   + RESET + diffTag;
             String youTag  = (i == 0) ? GOLD + " ← you" + RESET : "";
             System.out.println("    " + CYAN + (i + 1) + ". " + RESET
                     + WHITE + name + RESET + "  " + tag + youTag);

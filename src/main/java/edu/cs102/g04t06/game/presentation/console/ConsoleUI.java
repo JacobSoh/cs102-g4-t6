@@ -2,8 +2,16 @@ package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
+import edu.cs102.g04t06.game.execution.GameEngine;
+import edu.cs102.g04t06.game.execution.ai.AIPlayer;
+import edu.cs102.g04t06.game.execution.ai.AIStrategy;
+import edu.cs102.g04t06.game.execution.ai.EasyAIStrategy;
+import edu.cs102.g04t06.game.execution.ai.HardAIStrategy;
+import edu.cs102.g04t06.game.infrastructure.config.ConfigLoader;
+import edu.cs102.g04t06.game.infrastructure.config.ExcelDataLoader;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 import edu.cs102.g04t06.game.presentation.network.LanGameClient;
@@ -108,6 +116,21 @@ public class ConsoleUI implements ThemeStyleSheet {
             return Route.MAIN_MENU;
         }
         this.gameState = createInitialGameState(setup);
+
+        // Register AI players for CPU slots
+        List<Player> gamePlayers = this.gameState.getPlayers();
+        Map<Player, AIPlayer> aiPlayerMap = new HashMap<>();
+        AIStrategy strategy = setup.aiDifficulty.equals("EASY")
+                ? new EasyAIStrategy()
+                : new HardAIStrategy();
+        for (int i = 0; i < gamePlayers.size(); i++) {
+            if (i < setup.isHuman.size() && !setup.isHuman.get(i)) {
+                Player p = gamePlayers.get(i);
+                aiPlayerMap.put(p, new AIPlayer(p, strategy));
+            }
+        }
+        gameBoardUI.registerAIPlayers(aiPlayerMap);
+
         return Route.GAME_BOARD;
     }
 
