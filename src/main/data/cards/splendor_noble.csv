@@ -1,11 +1,11 @@
-PV,Black,Blue,Green,Red,White
-3,3,0,0,3,3,
-0,3,3,3,0,3,
-3,0,0,3,3,3,
-0,0,4,4,0,3,
-0,4,4,0,0,3,
-0,0,0,4,4,3,
-4,0,0,0,4,3,
-3,3,3,0,0,3,
-0,0,3,3,3,3,
-4,4,0,0,0,3,
+ID,Name,Black,Blue,Green,Red,White
+1,"Anne of Brittany, Queen of France",0,3,3,0,3
+2,"Catherine de’ Medici, Queen of France",0,3,3,3,0
+3,"Charles V, Holy Roman Emperor",3,0,0,3,3
+4,"Elisabeth of Austria, Queen of France",3,3,0,0,3
+5,"Francis I, King of France",3,0,3,3,0
+6,"Henry VII, King of England",4,0,0,4,0
+7,"Isabella I, Queen of Castile and Leon",4,0,0,0,4
+8,"Mary, Queen of Scots",0,0,4,4,0
+9,"Niccolo Machiavelli, Diplomat",0,4,0,0,4
+10,"Suleiman the Magnificent, Sultan of there Ottoman Empire",0,4,4,0,0
