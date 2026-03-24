@@ -2,15 +2,27 @@ package edu.cs102.g04t06.game.presentation.network;
 
 import edu.cs102.g04t06.game.presentation.console.GameBoardUI;
 import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
+import edu.cs102.g04t06.game.rules.GameState;
 
 /**
  * Console UI controller for a LAN client session.
  */
 public class LanSessionUI implements ThemeStyleSheet {
     private final GameBoardUI boardUI = new GameBoardUI();
+    private final String localPlayerName;
     private String inlineError = "";
 
+    public LanSessionUI(String localPlayerName) {
+        this.localPlayerName = localPlayerName;
+        boardUI.setPerspectivePlayerName(localPlayerName);
+    }
+
     public NetworkMessage handle(NetworkMessage message) {
+        if (message.type == MessageType.ERROR && message.state != null) {
+            inlineError = safeMessage(message);
+            return null;
+        }
+
         return switch (message.type) {
             case JOIN_ACCEPTED, LOBBY_STATE, START_GAME, GAME_STATE, INFO, ERROR, PLAYER_DISCONNECTED, GAME_OVER -> {
                 render(message);
@@ -35,9 +47,7 @@ public class LanSessionUI implements ThemeStyleSheet {
             String statusMessage = inlineError;
             String statusColor = RED + BOLD;
             if (statusMessage == null || statusMessage.isBlank()) {
-                statusMessage = (message.message != null && !message.message.isBlank())
-                        ? message.message
-                        : "Waiting for turn...";
+                statusMessage = defaultStatusMessage(message);
                 statusColor = CYAN;
             }
             boardUI.displayNetworkState(message.state, statusMessage, statusColor, message.logEntries);
@@ -98,5 +108,20 @@ public class LanSessionUI implements ThemeStyleSheet {
 
     private String safeMessage(NetworkMessage message) {
         return message.message == null ? "" : message.message;
+    }
+
+    private String defaultStatusMessage(NetworkMessage message) {
+        if (message == null || message.state == null) {
+            return "Waiting for turn...";
+        }
+        if (message.type == MessageType.GAME_OVER) {
+            return safeMessage(message);
+        }
+        GameState state = message.state;
+        String currentPlayerName = state.getCurrentPlayer().getName();
+        if (currentPlayerName.equals(localPlayerName)) {
+            return "Your turn.";
+        }
+        return "Waiting for " + currentPlayerName + " to play.";
     }
 }

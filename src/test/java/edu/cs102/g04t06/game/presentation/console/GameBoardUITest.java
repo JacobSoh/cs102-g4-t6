@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -160,6 +161,7 @@ class GameBoardUITest {
         String out = plainOutput();
 
         assertTrue(out.contains("buy reserve 1"), "Actions guide should show the reserve slot syntax");
+        assertTrue(out.contains("reserve deck t1"), "Actions guide should show the hidden deck reserve syntax");
     }
 
     @Test
@@ -200,9 +202,71 @@ class GameBoardUITest {
 
         assertTrue(out.contains("PLAYERS"), "Sidebar should include the player lineup heading");
         assertTrue(out.contains("Bonus"), "Sidebar should render bonus details");
-        assertTrue(out.contains("Reserved: [R1]"), "Sidebar should show reserved cards with their owner panel");
+        assertTrue(out.contains("Reserved: [t2]"), "Sidebar should show reserved cards with their owner panel");
         assertTrue(out.contains("W:1"), "Sidebar should include full gem or bonus tokens, not only totals");
         assertTrue(out.contains("G:2"), "Sidebar should include all gem colors for other players");
+    }
+
+    @Test
+    void displayGameState_highlightsAffordableCardsOnlyForPerspectivePlayer() {
+        GameState state = makeGameState();
+        Player alice = state.getPlayers().get(0);
+        Player bob = state.getPlayers().get(1);
+        alice.addGems(new GemCollection().add(GemColor.RED, 2).add(GemColor.BLUE, 1));
+        bob.deductGems(bob.getGems());
+
+        boardUI.setPerspectivePlayerName("Alice");
+        boardUI.displayGameState(state);
+        String aliceView = capture.toString();
+
+        capture.reset();
+
+        boardUI.setPerspectivePlayerName("Bob");
+        boardUI.displayGameState(state);
+        String bobView = capture.toString();
+
+        assertTrue(aliceView.contains("\u001B[32m┌────────────┐\u001B[0m"),
+                "Affordable market cards should be highlighted for the viewing player");
+        assertFalse(bobView.contains("\u001B[32m┌────────────┐\u001B[0m"),
+                "Opponents should not see another player's affordable-card highlight");
+    }
+
+    @Test
+    void displayGameState_showsReservedCardCostsOnlyForPerspectivePlayer() {
+        GameState state = makeGameState();
+        Player alice = state.getPlayers().get(0);
+        alice.addReservedCard(makeCard(1, 1, GemColor.RED, Map.of(GemColor.WHITE, 2, GemColor.BLUE, 1)));
+
+        boardUI.setPerspectivePlayerName("Alice");
+        boardUI.displayGameState(state);
+        String ownerView = plainOutput();
+
+        capture.reset();
+
+        boardUI.setPerspectivePlayerName("Bob");
+        boardUI.displayGameState(state);
+        String opponentView = plainOutput();
+
+        assertTrue(ownerView.contains("R1"), "Owner view should list reserved card slots with costs");
+        assertTrue(ownerView.contains("w2u1"), "Owner view should show reserved card costs");
+        assertFalse(opponentView.contains("w2u1"), "Opponent view should not reveal reserved card costs");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void buildNoblePanelLines_wrapsFiveNoblesAcrossMultipleRows() throws Exception {
+        List<Noble> nobles = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Map<GemColor, Integer> req = new EnumMap<>(GemColor.class);
+            req.put(GemColor.RED, 3);
+            nobles.add(new Noble(i + 1, "Noble" + (i + 1), req));
+        }
+
+        Method method = GameBoardUI.class.getDeclaredMethod("buildNoblePanelLines", List.class);
+        method.setAccessible(true);
+        List<String> rows = (List<String>) method.invoke(boardUI, nobles);
+
+        assertTrue(rows.size() > 4, "Five nobles should wrap into more than one visual row block");
     }
 
 }

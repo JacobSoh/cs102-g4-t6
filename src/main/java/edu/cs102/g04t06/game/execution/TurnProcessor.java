@@ -146,10 +146,14 @@ public class TurnProcessor {
     private ActionResult handleReserve(GameState state, String s) {
         String[] p = s.split("\\s+");
         if (p.length < 3) {
-            return new ActionResult(false, "Usage: reserve <tier> <slot>");
+            return new ActionResult(false, "Usage: reserve <tier> <slot> or reserve deck <tier>");
         }
 
         try {
+            if (isDeckReserveToken(p[1])) {
+                int tier = inputHandler.parseTierToken(p[2]);
+                return ActionExecutor.executeReserveTopCard(state, tier);
+            }
             int tier = inputHandler.parseTierToken(p[1]);
             int slotIndex = inputHandler.parseSlotToken(p[2]);
             Card card = state.getMarket().getVisibleCard(tier, slotIndex);
@@ -163,6 +167,12 @@ public class TurnProcessor {
         return "reserved".equalsIgnoreCase(token)
                 || "reserve".equalsIgnoreCase(token)
                 || "r".equalsIgnoreCase(token);
+    }
+
+    private boolean isDeckReserveToken(String token) {
+        return "deck".equalsIgnoreCase(token)
+                || "top".equalsIgnoreCase(token)
+                || "hidden".equalsIgnoreCase(token);
     }
 
     private TurnResult finalizeTurn(GameState state, Player player, String baseMessage) {
@@ -193,7 +203,7 @@ public class TurnProcessor {
                         .append(winner.getPoints())
                         .append(" points.");
             } else {
-                message.append(" Game over.");
+                message.append(" Game over. No winner: final scores remain tied after tiebreaks.");
             }
         }
 
