@@ -3,11 +3,17 @@ package edu.cs102.g04t06.game.presentation.console;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import edu.cs102.g04t06.game.execution.ActionExecutor;
+import edu.cs102.g04t06.game.execution.ActionResult;
 import edu.cs102.g04t06.game.execution.TurnProcessor;
+import edu.cs102.g04t06.game.execution.ai.AIAction;
+import edu.cs102.g04t06.game.execution.ai.AIPlayer;
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
@@ -40,14 +46,14 @@ public class GameBoardUI implements ThemeStyleSheet {
         GEM_ANSI.put(GemColor.GOLD,  GOLD);
     }
 
-    // Short label per gem colour  (W R U G K *)
+    // Short label per gem colour  (W R B G D *)
     private static final Map<GemColor, String> GEM_LABEL = new EnumMap<>(GemColor.class);
     static {
         GEM_LABEL.put(GemColor.WHITE, "W");
-        GEM_LABEL.put(GemColor.BLUE,  "U");
+        GEM_LABEL.put(GemColor.BLUE,  "B");
         GEM_LABEL.put(GemColor.GREEN, "G");
         GEM_LABEL.put(GemColor.RED,   "R");
-        GEM_LABEL.put(GemColor.BLACK, "K");
+        GEM_LABEL.put(GemColor.BLACK, "D");
         GEM_LABEL.put(GemColor.GOLD,  "*");
     }
 
@@ -83,6 +89,8 @@ public class GameBoardUI implements ThemeStyleSheet {
     private String actionPromptLabel = ACTION_PROMPT;
     private List<String> readOnlyLogEntries = null;
     private String perspectivePlayerName = null;
+    private final Map<Player, AIPlayer> aiPlayers = new HashMap<>();
+    private final Map<String, List<String>> playerActionLog = new LinkedHashMap<>();
 
     private static final class MainAreaRender {
         private final List<String> lines;
@@ -116,6 +124,13 @@ public class GameBoardUI implements ThemeStyleSheet {
         this.perspectivePlayerName = perspectivePlayerName;
     }
 
+    public void setAIPlayers(List<AIPlayer> players) {
+        aiPlayers.clear();
+        for (AIPlayer ai : players) {
+            aiPlayers.put(ai.getPlayer(), ai);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Public entry points
     // -------------------------------------------------------------------------
@@ -135,8 +150,21 @@ public class GameBoardUI implements ThemeStyleSheet {
             clearScreen();
             render(state);
             if (state.isGameOver()) {
+                showGameOverScreen(state);
                 break;
             }
+
+            Player currentPlayer = state.getCurrentPlayer();
+            AIPlayer aiPlayer = aiPlayers.get(currentPlayer);
+            if (aiPlayer != null) {
+                sleep(1000);
+                TurnProcessor.TurnResult result = executeAITurn(state, aiPlayer);
+                logPlayerAction(currentPlayer.getName(), result.getMessage());
+                ok(result.getMessage());
+                sleep(800);
+                continue;
+            }
+
             String input = promptAction();
             if (input.equals("?")) {
                 showHelpOverlay();
@@ -279,12 +307,12 @@ public class GameBoardUI implements ThemeStyleSheet {
                 + " - first to 15 points triggers the final round; most points wins.");
         blank();
         line(BOLD + WHITE + "Card Costs" + RESET
-                + " - shorthand like " + DIM + "w2r3k1" + RESET + " means 2 white, 3 red, 1 black.");
+                + " - shorthand like " + DIM + "w2r3d1" + RESET + " means 2 white, 3 red, 1 black.");
         line(BOLD + WHITE + "Gold Wildcard" + RESET
                 + " - gold (*) can substitute for any gem color when buying.");
         blank();
         line(DIM + WHITE + "Examples:" + RESET);
-        line(DIM + WHITE + "  take w r u   |   take w w   |   buy t2 slot1   |   buy reserve 1" + RESET);
+        line(DIM + WHITE + "  take w r b   |   take w w   |   buy t2 slot1   |   buy reserve 1" + RESET);
         line(DIM + WHITE + "  reserve t1 slot3 (shown)   |   reserve deck t1 (hidden)   |   pass" + RESET);
         blank();
         line(GREEN + BOLD + "Press any key, then Enter, to return to the game board." + RESET);
@@ -594,7 +622,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private void printActionLine() {
         line(DIM + WHITE + "  ┌ Available Actions ────────────────────────────────────────────────┐" + RESET);
-        line(DIM + WHITE + "  . take w r u  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET);
+        line(DIM + WHITE + "  . take w r b  : take 3 diff gems    . buy t1 slot1 : buy visible card" + RESET);
         line(DIM + WHITE + "  . take w w    : take 2 same gems    . buy reserve  : buy reserve card" + RESET);
         line(DIM + WHITE + "  . reserve t1 slot1 : reserve + gold      . pass         : skip turn" + RESET);
         line(DIM + WHITE + "  └───────────────────────────────────────────────────────────────────┘" + RESET);
@@ -623,6 +651,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param input raw player input
      */
     private void handleAction(GameState state, String input) {
+        String actingPlayer = state.getCurrentPlayer().getName();
         TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
         if (!result.isSuccess()) {
             err(result.getMessage());
@@ -631,11 +660,11 @@ public class GameBoardUI implements ThemeStyleSheet {
 
         if (result.isAwaitingReturn()) {
             ok(result.getMessage());
-            handleReturnExcessGems(state);
+            handleReturnExcessGems(state, actingPlayer);
             return;
         }
 
-        actionLog.add(result.getMessage());
+        logPlayerAction(actingPlayer, result.getMessage());
         ok(result.getMessage());
         sleep(800);
     }
@@ -645,7 +674,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      *
      * @param state game state to mutate
      */
-    private void handleReturnExcessGems(GameState state) {
+    private void handleReturnExcessGems(GameState state, String actingPlayer) {
         Player player = state.getCurrentPlayer();
         int excess = player.getGemCount() - 10;
         String promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
@@ -658,13 +687,95 @@ public class GameBoardUI implements ThemeStyleSheet {
                 continue;
             }
 
-            actionLog.add(result.getMessage());
+            logPlayerAction(actingPlayer, result.getMessage());
             ok(result.getMessage());
             excess = player.getGemCount() - 10;
             promptMessage = "Return " + excess + " gem(s) [e.g. wr, uu]: ";
         }
         actionStatus = "";
         sleep(800);
+    }
+
+    private void logPlayerAction(String playerName, String message) {
+        actionLog.add(playerName + ": " + message);
+        playerActionLog.computeIfAbsent(playerName, k -> new ArrayList<>()).add(message);
+    }
+
+    // -------------------------------------------------------------------------
+    // AI turn handling
+    // -------------------------------------------------------------------------
+
+    private TurnProcessor.TurnResult executeAITurn(GameState state, AIPlayer aiPlayer) {
+        Player player = state.getCurrentPlayer();
+        AIAction action = aiPlayer.decideAction(state);
+
+        ActionResult actionResult = executeAIAction(state, action);
+        if (!actionResult.isSuccess()) {
+            state.advanceToNextPlayer();
+            return TurnProcessor.TurnResult.success(player.getName() + " passed (AI could not act).");
+        }
+
+        // Handle gem return if AI exceeded 10 gems
+        int excess = player.getGemCount() - 10;
+        if (excess > 0) {
+            GemCollection toReturn = aiPlayer.chooseGemsToReturn(excess, state);
+            ActionExecutor.executeReturnGems(state, toReturn);
+        }
+
+        // Noble claiming
+        StringBuilder message = new StringBuilder(actionResult.getMessage());
+        List<Noble> claimable = gameRules.getClaimableNobles(player, state.getAvailableNobles());
+        if (!claimable.isEmpty()) {
+            Noble chosen = aiPlayer.chooseNoble(claimable, state);
+            ActionResult nobleResult = ActionExecutor.executeClaimNoble(state, chosen);
+            if (nobleResult.isSuccess()) {
+                message.append(" ").append(nobleResult.getMessage());
+            }
+        }
+
+        // Win check
+        if (!state.isFinalRoundTriggered() && gameRules.hasPlayerWon(player, state.getWinningThreshold())) {
+            state.triggerFinalRound();
+            message.append(" Final round triggered.");
+        }
+
+        state.advanceToNextPlayer();
+
+        if (state.isGameOver()) {
+            Player winner = gameRules.getWinner(state.getPlayers(), state.getWinningThreshold());
+            if (winner != null) {
+                message.append(" Game over. Winner: ").append(winner.getName())
+                       .append(" with ").append(winner.getPoints()).append(" points.");
+            } else {
+                message.append(" Game over. No winner: final scores remain tied after tiebreaks.");
+            }
+        }
+
+        return TurnProcessor.TurnResult.success(message.toString());
+    }
+
+    private ActionResult executeAIAction(GameState state, AIAction action) {
+        return switch (action.getActionType()) {
+            case TAKE_THREE_DIFFERENT ->
+                ActionExecutor.executeTakeThreeDifferentGems(state, action.getGemSelection());
+            case TAKE_TWO_SAME -> {
+                GemColor color = null;
+                for (Map.Entry<GemColor, Integer> e : action.getGemSelection().asMap().entrySet()) {
+                    if (e.getValue() > 0 && e.getKey() != GemColor.GOLD) {
+                        color = e.getKey();
+                        break;
+                    }
+                }
+                if (color == null) {
+                    yield new ActionResult(false, "AI error: no color for TAKE_TWO_SAME");
+                }
+                yield ActionExecutor.executeTakeTwoSameGems(state, color);
+            }
+            case PURCHASE_CARD ->
+                ActionExecutor.executePurchaseCard(state, action.getTargetCard(), action.isFromReserved());
+            case RESERVE_CARD ->
+                ActionExecutor.executeReserveCard(state, action.getTargetCard());
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -794,9 +905,9 @@ public class GameBoardUI implements ThemeStyleSheet {
         return switch (color) {
             case WHITE -> 'w';
             case RED -> 'r';
-            case BLUE -> 'u';
+            case BLUE -> 'b';
             case GREEN -> 'g';
-            case BLACK -> 'k';
+            case BLACK -> 'd';
             case GOLD -> '*';
         };
     }
@@ -870,12 +981,12 @@ public class GameBoardUI implements ThemeStyleSheet {
                 buildTierPanelLines(state.getMarket().getVisibleCards(2), perspectivePlayer));
         appendMarketPanel(lines, "TIER 1", "DECK: " + state.getMarket().getDeckSize(1),
                 buildTierPanelLines(state.getMarket().getVisibleCards(1), perspectivePlayer));
-        appendMarketPanel(lines, "BANK GEMS", "", List.of(formatBankLine(state.getGemBank())));
+        appendMarketPanel(lines, "BANK GEMS", "", List.of(formatBankLine(state.getGemBank()), buildGemLegendLine()));
         appendMarketPanel(lines, "LOG", "", formatLogLines());
 
         List<String> actionBody = List.of(
                 BOLD + WHITE + " Take:" + RESET + WHITE
-                        + " take w r u" + RESET + DIM + WHITE + " (3 different), " + RESET
+                        + " take w r b" + RESET + DIM + WHITE + " (3 different), " + RESET
                         + WHITE + "take w w" + RESET + DIM + WHITE + " (2 same)" + RESET,
                 BOLD + WHITE + " Buy:" + RESET + WHITE
                         + " buy t1 slot1" + RESET + DIM + WHITE + " (shown card), " + RESET
@@ -960,7 +1071,8 @@ public class GameBoardUI implements ThemeStyleSheet {
     private void appendPlayerCard(List<String> lines, Player player, boolean isCurrentPlayer, boolean isPerspectivePlayer) {
         String borderColor = isCurrentPlayer ? GREEN : WHITE;
         String nameColor = isCurrentPlayer ? CYAN : playerAccent(player);
-        String title = (isCurrentPlayer ? "► " : "") + player.getName() + (isCurrentPlayer ? " (you)" : "");
+        String turnTag = isCurrentPlayer ? "'s turn" : "";
+        String title = (isCurrentPlayer ? "► " : "") + player.getName() + turnTag;
         String points = player.getPoints() + "pts";
 
         lines.add(panelTop(SIDEBAR_WIDTH, borderColor));
@@ -1075,6 +1187,10 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param bank bank to display
      * @return formatted bank row
      */
+    private String buildGemLegendLine() {
+        return DIM + WHITE + "W=White  R=Red  B=Blue  G=Green  D=Black  *=Gold" + RESET;
+    }
+
     private String formatBankLine(GemCollection bank) {
         StringBuilder sb = new StringBuilder();
         for (GemColor color : BANK_ORDER) {
@@ -1092,14 +1208,27 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @return formatted log row
      */
     private List<String> formatLogLines() {
-        List<String> source = readOnlyLogEntries != null ? readOnlyLogEntries : actionLog;
-        if (source == null || source.isEmpty()) {
+        // Network read-only mode: flat list
+        if (readOnlyLogEntries != null) {
+            if (readOnlyLogEntries.isEmpty()) {
+                return List.of(DIM + WHITE + "No actions yet" + RESET);
+            }
+            int start = Math.max(0, readOnlyLogEntries.size() - 5);
+            List<String> lines = new ArrayList<>();
+            for (int i = start; i < readOnlyLogEntries.size(); i++) {
+                lines.add(WHITE + readOnlyLogEntries.get(i) + RESET);
+            }
+            return lines;
+        }
+
+        // Local play: last 3 actions overall
+        if (actionLog.isEmpty()) {
             return List.of(DIM + WHITE + "No actions yet" + RESET);
         }
-        int start = Math.max(0, source.size() - 5);
         List<String> lines = new ArrayList<>();
-        for (int i = start; i < source.size(); i++) {
-            lines.add(WHITE + source.get(i) + RESET);
+        int start = Math.max(0, actionLog.size() - 3);
+        for (int i = start; i < actionLog.size(); i++) {
+            lines.add(WHITE + actionLog.get(i) + RESET);
         }
         return lines;
     }
@@ -1466,6 +1595,172 @@ public class GameBoardUI implements ThemeStyleSheet {
     private void clearScreen() {
         System.out.print(CLEAR_SCREEN);
         System.out.flush();
+    }
+
+    // -------------------------------------------------------------------------
+    // Game over screen
+    // -------------------------------------------------------------------------
+
+    private void showGameOverScreen(GameState state) {
+        clearScreen();
+        System.out.print("\u001B[H");
+        System.out.print("\u001B[?25l");
+
+        List<Player> players = state.getPlayers();
+        int threshold = state.getWinningThreshold();
+
+        // Collect qualifying players (reached threshold)
+        List<Player> qualifying = new ArrayList<>();
+        for (Player p : players) {
+            if (gameRules.hasPlayerWon(p, threshold)) {
+                qualifying.add(p);
+            }
+        }
+
+        // Fallback: if somehow no one qualified, treat all as qualifying
+        if (qualifying.isEmpty()) {
+            qualifying.addAll(players);
+        }
+
+        // Find max points among qualifying
+        int maxPts = 0;
+        for (Player p : qualifying) {
+            if (p.getPoints() > maxPts) maxPts = p.getPoints();
+        }
+
+        // Players with max points
+        List<Player> topPoints = new ArrayList<>();
+        for (Player p : qualifying) {
+            if (p.getPoints() == maxPts) topPoints.add(p);
+        }
+
+        // Find fewest cards among topPoints
+        int minCards = Integer.MAX_VALUE;
+        for (Player p : topPoints) {
+            if (p.getPurchasedCards().size() < minCards) minCards = p.getPurchasedCards().size();
+        }
+
+        // Final winner(s): top points + fewest cards
+        List<Player> winners = new ArrayList<>();
+        for (Player p : topPoints) {
+            if (p.getPurchasedCards().size() == minCards) winners.add(p);
+        }
+
+        // Determine scenario
+        // 1 = clear winner by points, 2 = tiebreak by fewest cards, 3 = shared victory
+        int scenario;
+        if (winners.size() > 1) {
+            scenario = 3;
+        } else if (topPoints.size() > 1) {
+            scenario = 2;
+        } else {
+            scenario = 1;
+        }
+
+        // Build standings: sort by points desc, then cards asc (insertion sort)
+        List<Player> standings = new ArrayList<>(players);
+        for (int i = 1; i < standings.size(); i++) {
+            Player key = standings.get(i);
+            int j = i - 1;
+            while (j >= 0 && compareByScore(standings.get(j), key) > 0) {
+                standings.set(j + 1, standings.get(j));
+                j--;
+            }
+            standings.set(j + 1, key);
+        }
+
+        // ── Render ───────────────────────────────────────────────────────────
+        boardTop();
+
+        String hLeft  = GOLD + BOLD + "SPLENDOR" + RESET;
+        String hRight = DIM + WHITE + "Game Over" + RESET;
+        line(hLeft + sp(Math.max(1, INNER - vlen(hLeft) - vlen(hRight))) + hRight);
+        divider();
+        blank();
+
+        // Stars banner
+        String starBar = GOLD + BOLD + "★  ★  ★  ★  ★   G A M E   O V E R   ★  ★  ★  ★  ★" + RESET;
+        line(sp(Math.max(0, (INNER - vlen(starBar)) / 2)) + starBar);
+        blank();
+
+        // Winner / tie announcement
+        if (scenario == 3) {
+            String tieLabel = CYAN + BOLD + "- - -   S H A R E D   V I C T O R Y   - - -" + RESET;
+            line(sp(Math.max(0, (INNER - vlen(tieLabel)) / 2)) + tieLabel);
+            blank();
+            StringBuilder namesSB = new StringBuilder();
+            for (int i = 0; i < winners.size(); i++) {
+                if (i > 0) namesSB.append("   &   ");
+                namesSB.append(CYAN + BOLD + winners.get(i).getName() + RESET);
+            }
+            String namesStr = namesSB.toString();
+            line(sp(Math.max(0, (INNER - vlen(namesStr)) / 2)) + namesStr);
+            blank();
+            String detail = WHITE + maxPts + " pts  ·  " + minCards + " cards purchased" + RESET;
+            line(sp(Math.max(0, (INNER - vlen(detail)) / 2)) + detail);
+        } else {
+            Player winner = winners.get(0);
+            String trophy = GOLD + BOLD + "★  ★   W I N N E R :   " + winner.getName() + "   ★  ★" + RESET;
+            line(sp(Math.max(0, (INNER - vlen(trophy)) / 2)) + trophy);
+            blank();
+            String detail = WHITE + winner.getPoints() + " pts  ·  "
+                    + winner.getPurchasedCards().size() + " cards purchased" + RESET;
+            line(sp(Math.max(0, (INNER - vlen(detail)) / 2)) + detail);
+        }
+
+        blank();
+        divider();
+        blank();
+
+        // How the game was won
+        line(BOLD + WHITE + "HOW THE GAME WAS WON" + RESET);
+        blank();
+        if (scenario == 1) {
+            line("  " + WHITE + winners.get(0).getName() + " triggered the final round by reaching "
+                    + threshold + "+ points," + RESET);
+            line("  " + WHITE + "then finished with the highest score of all players." + RESET);
+        } else if (scenario == 2) {
+            line("  " + WHITE + "Multiple players tied on " + maxPts + " pts after the final round." + RESET);
+            line("  " + WHITE + winners.get(0).getName() + " won the tie-break by purchasing the fewest cards ("
+                    + minCards + ")." + RESET);
+        } else {
+            line("  " + WHITE + "All tied players finished on " + maxPts + " pts and "
+                    + minCards + " cards purchased." + RESET);
+            line("  " + WHITE + "Under the rules, the victory is shared — it is a draw!" + RESET);
+        }
+
+        blank();
+        divider();
+        blank();
+
+        // Final standings
+        line(BOLD + WHITE + "FINAL STANDINGS" + RESET);
+        blank();
+        for (int i = 0; i < standings.size(); i++) {
+            Player p = standings.get(i);
+            boolean isWinner = winners.contains(p);
+            String rankStr  = (i + 1) + ".";
+            String medal    = isWinner ? GOLD + BOLD + " ★" + RESET : "  ";
+            String nameStr  = isWinner ? GOLD + BOLD + p.getName() + RESET : WHITE + p.getName() + RESET;
+            String ptsStr   = WHITE + p.getPoints() + " pts" + RESET;
+            String cardsStr = DIM + WHITE + p.getPurchasedCards().size() + " cards" + RESET;
+            String namePad  = sp(Math.max(1, 18 - vlen(nameStr)));
+            String ptsPad   = sp(Math.max(1, 10 - vlen(ptsStr)));
+            line("  " + rankStr + medal + " " + nameStr + namePad + ptsStr + ptsPad + cardsStr);
+        }
+
+        blank();
+        divider();
+        line(GREEN + BOLD + "  Press ENTER to return to the main menu." + RESET);
+        boardBottom();
+        System.out.print("\u001B[1A\r\u001B[4C\u001B[?25h");
+        scanner.nextLine();
+    }
+
+    /** Comparator for standings: higher points first, then fewer cards first. */
+    private int compareByScore(Player a, Player b) {
+        if (b.getPoints() != a.getPoints()) return b.getPoints() - a.getPoints();
+        return a.getPurchasedCards().size() - b.getPurchasedCards().size();
     }
 
     /**

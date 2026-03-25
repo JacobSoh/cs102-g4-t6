@@ -72,8 +72,9 @@ class HardAIStrategyTest {
     @Test
     @DisplayName("decideAction: returns PURCHASE_CARD fromReserved=true when only reserved card is affordable")
     void decideAction_purchaseFromReservedWhenOnlyReservedIsAffordable() {
-        // Visible cards are all very expensive; reserved card has zero cost
-        Card freeReserved = buildFreeCard(2, 3, GemColor.RED);
+        // Visible cards are all very expensive; reserved card has zero cost.
+        // Use WHITE bonus so discount utility is non-zero (expensive cards cost WHITE).
+        Card freeReserved = buildFreeCard(2, 3, GemColor.WHITE);
         player.addReservedCard(freeReserved);
         GameState state = buildStateWithExpensiveCards(player);
 
