@@ -341,7 +341,7 @@ public class LanGameServer implements ThemeStyleSheet {
             NetworkProtocol.send(client.writer, payload);
         }
 
-        if (state.isGameOver() || state.getCurrentPlayerIndex() != 0) {
+        if (state.isGameOver() || !hostPlayerName.equals(state.getCurrentPlayer().getName())) {
             boardUI.displayReadOnlyState(
                     state,
                     state.isGameOver() ? finalGameMessage
@@ -367,7 +367,7 @@ public class LanGameServer implements ThemeStyleSheet {
         if (state == null) {
             return;
         }
-        if (!state.isGameOver() && state.getCurrentPlayerIndex() == 0) {
+        if (!state.isGameOver() && hostPlayerName.equals(state.getCurrentPlayer().getName())) {
             return;
         }
         String statusMessage = state.isGameOver()
