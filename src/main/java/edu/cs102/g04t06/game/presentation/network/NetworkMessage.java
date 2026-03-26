@@ -13,6 +13,7 @@ public class NetworkMessage {
     public String logMessage;
     public List<String> logEntries;
     public String playerName;
+    public Integer playerAge;
     public String command;
     public Integer playerIndex;
     public Integer expectedPlayers;

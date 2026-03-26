@@ -4,6 +4,7 @@ package edu.cs102.g04t06.game.presentation.network;
  * Message types used by the LAN multiplayer JSON line protocol.
  */
 public enum MessageType {
+    CHECK_NAME,
     JOIN_REQUEST,
     JOIN_ACCEPTED,
     LOBBY_STATE,

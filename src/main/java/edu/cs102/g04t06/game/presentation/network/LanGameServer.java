@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
@@ -22,6 +23,7 @@ public class LanGameServer implements ThemeStyleSheet {
     private final int port;
     private final int totalPlayers;
     private final String hostPlayerName;
+    private final int hostPlayerAge;
     private final GameBoardUI boardUI = new GameBoardUI();
     private final TurnProcessor turnProcessor = new TurnProcessor();
     private final GameStateFactory gameStateFactory = new GameStateFactory();
@@ -31,10 +33,11 @@ public class LanGameServer implements ThemeStyleSheet {
     private String finalGameMessage = "Match complete.";
     private String hostInlineError = "";
 
-    public LanGameServer(int port, int totalPlayers, String hostPlayerName) {
+    public LanGameServer(int port, int totalPlayers, String hostPlayerName, int hostPlayerAge) {
         this.port = port;
         this.totalPlayers = totalPlayers;
         this.hostPlayerName = hostPlayerName;
+        this.hostPlayerAge = hostPlayerAge;
         this.boardUI.setPerspectivePlayerName(hostPlayerName);
     }
 
@@ -70,12 +73,41 @@ public class LanGameServer implements ThemeStyleSheet {
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
         NetworkMessage join = NetworkProtocol.read(reader);
-        if (join == null || join.type != MessageType.JOIN_REQUEST || join.playerName == null || join.playerName.isBlank()) {
+        if (join == null || join.playerName == null || join.playerName.isBlank()) {
             socket.close();
             return null;
         }
 
-        ClientConnection connection = new ClientConnection(socket, reader, writer, join.playerName.trim(), playerIndex);
+        String requestedName = join.playerName.trim();
+        if (join.type == MessageType.CHECK_NAME) {
+            if (isDuplicatePlayerName(requestedName)) {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.ERROR,
+                        "Player name already exists. Choose a different name."));
+            } else {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.INFO,
+                        "Player name is available."));
+            }
+            socket.close();
+            return null;
+        }
+
+        if (join.type != MessageType.JOIN_REQUEST || join.playerAge == null) {
+            socket.close();
+            return null;
+        }
+
+        if (isDuplicatePlayerName(requestedName)) {
+            NetworkProtocol.send(writer, NetworkMessage.of(
+                    MessageType.ERROR,
+                    "Player name already exists. Choose a different name."));
+            socket.close();
+            return null;
+        }
+
+        ClientConnection connection = new ClientConnection(
+                socket, reader, writer, requestedName, join.playerAge, playerIndex);
         NetworkMessage accepted = NetworkMessage.of(MessageType.JOIN_ACCEPTED, "Joined lobby as " + connection.playerName + ".");
         accepted.playerIndex = playerIndex;
         accepted.expectedPlayers = totalPlayers;
@@ -97,11 +129,17 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void runGameLoop(GameState state) {
         while (!state.isGameOver()) {
-            int currentPlayerIndex = state.getCurrentPlayerIndex();
-            if (currentPlayerIndex == 0) {
+            String currentPlayerName = state.getCurrentPlayer().getName();
+            if (hostPlayerName.equals(currentPlayerName)) {
                 handleHostTurn(state);
             } else {
-                ClientConnection activeClient = clients.get(currentPlayerIndex - 1);
+                ClientConnection activeClient = findClientByName(currentPlayerName);
+                if (activeClient == null) {
+                    state.setGameOver(true);
+                    finalGameMessage = "Game ended: missing client connection for " + currentPlayerName + ".";
+                    appendGlobalLog(finalGameMessage);
+                    break;
+                }
                 try {
                     handleRemoteTurn(state, activeClient);
                 } catch (IOException e) {
@@ -139,7 +177,7 @@ public class LanGameServer implements ThemeStyleSheet {
                     continue;
                 }
             } else {
-                broadcastTurnOutcome(state, 0, result.getMessage());
+                broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             }
             break;
         }
@@ -163,7 +201,7 @@ public class LanGameServer implements ThemeStyleSheet {
                 hostInlineError = result.getMessage();
                 continue;
             }
-            broadcastTurnOutcome(state, 0, result.getMessage());
+            broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             return true;
         }
     }
@@ -172,7 +210,7 @@ public class LanGameServer implements ThemeStyleSheet {
         broadcastPassiveState(
                 "Waiting for " + connection.playerName + " to play.",
                 state,
-                connection.playerIndex);
+                connection.playerName);
 
         while (!state.isGameOver()) {
             NetworkMessage request = NetworkMessage.of(MessageType.REQUEST_COMMAND, "Your turn.");
@@ -201,7 +239,7 @@ public class LanGameServer implements ThemeStyleSheet {
                     continue;
                 }
             } else {
-                broadcastTurnOutcome(state, connection.playerIndex, result.getMessage());
+                broadcastTurnOutcome(state, connection.playerName, result.getMessage());
             }
             break;
         }
@@ -230,7 +268,7 @@ public class LanGameServer implements ThemeStyleSheet {
                 continue;
             }
 
-            broadcastTurnOutcome(state, connection.playerIndex, result.getMessage());
+            broadcastTurnOutcome(state, connection.playerName, result.getMessage());
             return true;
         }
     }
@@ -284,20 +322,19 @@ public class LanGameServer implements ThemeStyleSheet {
         renderHostState(state);
     }
 
-    private void broadcastTurnOutcome(GameState state, int actingPlayerIndex, String actorMessage) {
-        String actorName = state.getPlayers().get(actingPlayerIndex).getName();
+    private void broadcastTurnOutcome(GameState state, String actorName, String actorMessage) {
         String publicMessage = actorName + ": " + actorMessage;
         lastActionMessage = publicMessage;
         appendGlobalLog(publicMessage);
-        int nextPlayerIndex = state.isGameOver() ? -1 : state.getCurrentPlayerIndex();
+        String nextPlayerName = state.isGameOver() ? null : state.getCurrentPlayer().getName();
 
         for (ClientConnection client : clients) {
-            if (client.playerIndex == nextPlayerIndex) {
+            if (nextPlayerName != null && client.playerName.equals(nextPlayerName)) {
                 continue;
             }
             NetworkMessage payload = NetworkMessage.of(
                     MessageType.GAME_STATE,
-                    client.playerIndex == actingPlayerIndex ? actorMessage : publicMessage);
+                    client.playerName.equals(actorName) ? actorMessage : publicMessage);
             payload.logMessage = publicMessage;
             payload.logEntries = getRecentGlobalLog();
             payload.state = state;
@@ -313,9 +350,9 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
-    private void broadcastPassiveState(String message, GameState state, int activePlayerIndex) {
+    private void broadcastPassiveState(String message, GameState state, String activePlayerName) {
         for (ClientConnection client : clients) {
-            if (client.playerIndex == activePlayerIndex) {
+            if (client.playerName.equals(activePlayerName)) {
                 continue;
             }
             NetworkMessage payload = NetworkMessage.of(MessageType.GAME_STATE, message);
@@ -360,16 +397,45 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private List<String> buildPlayerNames() {
-        List<String> names = new ArrayList<>();
-        names.add(hostPlayerName);
+        List<PlayerSlot> slots = new ArrayList<>();
+        slots.add(new PlayerSlot(hostPlayerName, hostPlayerAge, 0));
         for (ClientConnection client : clients) {
-            names.add(client.playerName);
+            slots.add(new PlayerSlot(client.playerName, client.playerAge, client.playerIndex));
+        }
+        slots.sort(Comparator
+                .comparingInt(PlayerSlot::age)
+                .thenComparingInt(PlayerSlot::joinOrder));
+
+        List<String> names = new ArrayList<>();
+        for (PlayerSlot slot : slots) {
+            names.add(slot.name());
         }
         return names;
     }
 
     private GameState createInitialGameState(List<String> playerNames) {
         return gameStateFactory.createInitialGameState(totalPlayers, playerNames);
+    }
+
+    private boolean isDuplicatePlayerName(String candidateName) {
+        if (hostPlayerName.equalsIgnoreCase(candidateName)) {
+            return true;
+        }
+        for (ClientConnection client : clients) {
+            if (client.playerName.equalsIgnoreCase(candidateName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ClientConnection findClientByName(String playerName) {
+        for (ClientConnection client : clients) {
+            if (client.playerName.equals(playerName)) {
+                return client;
+            }
+        }
+        return null;
     }
 
     private void closeClients() {
@@ -398,15 +464,19 @@ public class LanGameServer implements ThemeStyleSheet {
         private final BufferedReader reader;
         private final PrintWriter writer;
         private final String playerName;
+        private final int playerAge;
         private final int playerIndex;
 
         private ClientConnection(Socket socket, BufferedReader reader, PrintWriter writer,
-                String playerName, int playerIndex) {
+                String playerName, int playerAge, int playerIndex) {
             this.socket = socket;
             this.reader = reader;
             this.writer = writer;
             this.playerName = playerName;
+            this.playerAge = playerAge;
             this.playerIndex = playerIndex;
         }
     }
+
+    private record PlayerSlot(String name, int age, int joinOrder) {}
 }

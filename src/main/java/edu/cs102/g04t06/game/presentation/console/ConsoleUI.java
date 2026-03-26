@@ -123,13 +123,13 @@ public class ConsoleUI implements ThemeStyleSheet {
 
     private Route handleHostLanSetup() {
         LanSetupUI.HostSetup setup = lanSetupUI.promptHostSetup();
-        new LanGameServer(setup.port, setup.totalPlayers, setup.hostPlayerName).run();
+        new LanGameServer(setup.port, setup.totalPlayers, setup.hostPlayerName, setup.hostPlayerAge).run();
         return Route.MAIN_MENU;
     }
 
     private Route handleJoinLanSetup() {
         LanSetupUI.JoinSetup setup = lanSetupUI.promptJoinSetup();
-        new LanGameClient(setup.playerName, setup.hostAddress, setup.port).run();
+        new LanGameClient(setup.playerName, setup.playerAge, setup.hostAddress, setup.port).run();
         return Route.MAIN_MENU;
     }
 
