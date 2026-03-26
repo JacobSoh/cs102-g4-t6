@@ -277,7 +277,7 @@ public class EasyAIStrategy implements AIStrategy {
         for(GemColor color : colorsWithDeficit){
             if(rules.canTakeTwoSameGems(color, bank)){
                 GemCollection request = new GemCollection().add(color, 2);
-                return new AIAction(ActionType.TAKE_THREE_DIFFERENT, null, false, request, 
+                return new AIAction(ActionType.TAKE_TWO_SAME, null, false, request,
                 String.format("Take 2 %s gems", color));
             }
         }
