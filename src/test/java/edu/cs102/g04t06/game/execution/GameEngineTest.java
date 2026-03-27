@@ -758,14 +758,14 @@ public class GameEngineTest {
     }
 
     @Test
-    void testAdvanceTurn_winningThresholdOf0_immediateWin() {
+    void testAdvanceTurn_winningThresholdOf0_tiedPlayersReturnNull() {
         List<String> names = List.of("Alice", "Bob");
-        // Winning threshold of 0 means everyone has already won at start
+        // Winning threshold of 0 means everyone qualifies, but identical scores
+        // and identical card counts produce an unresolved tie → null
         GameState state = gameEngine.initializeGame(2, names, config, level1Cards, level2Cards, level3Cards, allNobles);
 
         Player winner = gameEngine.checkWinCondition(state, 0);
-        // All players have 0 points, so technically first encountered wins
-        assertNotNull(winner);
+        assertNull(winner, "Unresolved tie (same points, same cards) should return null");
     }
 
 }

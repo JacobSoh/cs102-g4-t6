@@ -1,6 +1,7 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -33,19 +34,22 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         public final int          totalPlayers;      // 2–4
         public final List<Player> players;           // index 0 = local player, rest = friends/CPUs
         public final List<Boolean> isHuman;          // true = human, false = CPU
+        public final List<String> aiDifficulties;   // "EASY" or "HARD" per player (null for humans)
 
         public PlayerSetupResult(String localPlayerName,
                                  boolean isOnline,
                                  List<Player> players,
-                                 List<Boolean> isHuman) {
-            if (players.size() != isHuman.size()) {
-                throw new IllegalArgumentException("players and isHuman size must match");
+                                 List<Boolean> isHuman,
+                                 List<String> aiDifficulties) {
+            if (players.size() != isHuman.size() || players.size() != aiDifficulties.size()) {
+                throw new IllegalArgumentException("players, isHuman, and aiDifficulties size must match");
             }
-            this.localPlayerName = localPlayerName;
-            this.isOnline        = isOnline;
-            this.players         = List.copyOf(players);
-            this.totalPlayers    = this.players.size();
-            this.isHuman         = List.copyOf(isHuman);
+            this.localPlayerName  = localPlayerName;
+            this.isOnline         = isOnline;
+            this.players          = List.copyOf(players);
+            this.totalPlayers     = this.players.size();
+            this.isHuman          = List.copyOf(isHuman);
+            this.aiDifficulties   = Collections.unmodifiableList(new ArrayList<>(aiDifficulties));
         }
 
         @Override
@@ -56,7 +60,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             for (int i = 0; i < players.size(); i++) {
                 sb.append("  ").append(i + 1).append(". ")
                   .append(players.get(i).getName())
-                  .append(isHuman.get(i) ? " [Human]" : " [CPU]")
+                  .append(isHuman.get(i) ? " [Human]" : " [CPU - " + aiDifficulties.get(i) + "]")
                   .append("\n");
             }
             return sb.toString();
@@ -86,16 +90,19 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         int opponentCount = promptOpponentCount(localName);
         List<Player> players = new ArrayList<>();
         List<Boolean> humans = new ArrayList<>();
+        List<String> difficulties = new ArrayList<>();
 
         players.add(new Player(localName, 0));
         humans.add(true);
-        addCpuPlayers(opponentCount, players, humans);
+        difficulties.add(null);
+        addCpuPlayers(opponentCount, players, humans, difficulties);
 
         PlayerSetupResult result = new PlayerSetupResult(
                 localName,
                 false,
                 players,
-                humans
+                humans,
+                difficulties
         );
         showSummary(result);
         return result;
@@ -151,11 +158,30 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Step 3 — Auto-generate CPU players
     // -------------------------------------------------------------------------
-    private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans) {
+    private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans, List<String> difficulties) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
+            String difficulty = promptDifficulty(cpuNames[i]);
             players.add(new Player(cpuNames[i], players.size()));
             humans.add(false);
+            difficulties.add(difficulty);
+        }
+    }
+
+    private String promptDifficulty(String cpuName) {
+        while (true) {
+            System.out.println(WHITE + "  Select difficulty for " + CYAN + cpuName + RESET + ":");
+            System.out.println("    " + GREEN + "1" + RESET + "  Easy");
+            System.out.println("    " + RED   + "2" + RESET + "  Hard");
+            System.out.print(WHITE + "  Choice (1-2): " + RESET);
+            String input = scanner.nextLine().trim();
+            switch (input) {
+                case "1": return "EASY";
+                case "2": return "HARD";
+                default:
+                    printError("Please enter 1 or 2.");
+                    sleep(800);
+            }
         }
     }
 
@@ -177,9 +203,10 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         for (int i = 0; i < result.players.size(); i++) {
             String name    = result.players.get(i).getName();
             boolean human  = result.isHuman.get(i);
+            String diff    = result.aiDifficulties.get(i);
             String tag     = human
                     ? GREEN + "[Human]" + RESET
-                    : BLUE  + "[CPU]"   + RESET;
+                    : BLUE  + "[CPU - " + diff + "]" + RESET;
             String youTag  = (i == 0) ? GOLD + " ← you" + RESET : "";
             System.out.println("    " + CYAN + (i + 1) + ". " + RESET
                     + WHITE + name + RESET + "  " + tag + youTag);
