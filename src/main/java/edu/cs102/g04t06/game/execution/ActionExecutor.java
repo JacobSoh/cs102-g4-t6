@@ -1,5 +1,6 @@
 package edu.cs102.g04t06.game.execution;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +58,13 @@ public class ActionExecutor {
         return new ActionResult(true, "Gems taken, but you must now return excess to stay at 10!");
     }
 
-    return new ActionResult(true, "Successfully took three different gems.");
+    List<String> colorNames = new ArrayList<>();
+    for (Map.Entry<GemColor, Integer> e : selection.asMap().entrySet()) {
+        if (e.getValue() > 0) {
+            colorNames.add(e.getKey().name());
+        }
+    }
+    return new ActionResult(true, "Successfully took " + String.join(", ", colorNames) + ".");
 }
 
 public static ActionResult executeReturnGems(GameState state, GemCollection toReturn) {
