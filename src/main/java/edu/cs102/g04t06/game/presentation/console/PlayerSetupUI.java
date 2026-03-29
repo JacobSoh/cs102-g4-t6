@@ -2,9 +2,11 @@ package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
 
+import edu.cs102.g04t06.game.presentation.shared.PlayerIdentityPrompts;
 import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
@@ -12,7 +14,8 @@ import edu.cs102.g04t06.game.rules.entities.Player;
  *
  * Collects the local offline player configuration before the game starts:
  *   1. The local player's name
- *   2. Number of CPU opponents (1-3, so total players 2-4)
+ *   2. The local player's birthday
+ *   3. Number of opponents (1-3, so total players 2-4)
  *
  * Returns a PlayerSetupResult containing everything the game needs.
  */
@@ -71,6 +74,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     // Scanner (shared across steps)
     // -------------------------------------------------------------------------
     private final Scanner scanner = new Scanner(System.in);
+    private final PlayerIdentityPrompts identityPrompts = new PlayerIdentityPrompts(scanner);
 
     // -------------------------------------------------------------------------
     // Public entry point
@@ -86,16 +90,26 @@ public class PlayerSetupUI implements ThemeStyleSheet {
                 + BLUE + "Offline (vs CPU)" + RESET);
         System.out.println();
 
-        String localName = promptLocalName();
-        int opponentCount = promptOpponentCount(localName);
+        String localName = identityPrompts.promptName("Your name");
+        int localAge = identityPrompts.promptBirthdayAsAge(localName);
+        int totalPlayers = promptTotalPlayers(localName);
+        int opponentCount = totalPlayers - 1;
+        List<PlayerSeed> playerSeeds = new ArrayList<>();
+
+        playerSeeds.add(new PlayerSeed(localName, localAge, true));
+        addCpuPlayers(opponentCount, localAge, playerSeeds);
+
+        playerSeeds.sort(Comparator.comparingInt(PlayerSeed::age));
+
         List<Player> players = new ArrayList<>();
         List<Boolean> humans = new ArrayList<>();
         List<String> difficulties = new ArrayList<>();
-
-        players.add(new Player(localName, 0));
-        humans.add(true);
-        difficulties.add(null);
-        addCpuPlayers(opponentCount, players, humans, difficulties);
+        for (int i = 0; i < playerSeeds.size(); i++) {
+            PlayerSeed seed = playerSeeds.get(i);
+            players.add(new Player(seed.name(), i));
+            humans.add(seed.isHuman());
+            difficulties.add(seed.isHuman() ? null : promptDifficulty(seed.name()));
+        }
 
         PlayerSetupResult result = new PlayerSetupResult(
                 localName,
@@ -111,60 +125,23 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Inputs
     // -------------------------------------------------------------------------
-    private String promptLocalName() {
-        while (true) {
-            System.out.print(WHITE + "  Your name: " + RESET);
-
-            String name = scanner.nextLine().trim();
-
-            if (name.isEmpty()) {
-                printError("Name cannot be empty. Please try again.");
-                sleep(1000);
-                continue;
-            }
-            if (name.length() > 20) {
-                printError("Name must be 20 characters or fewer.");
-                sleep(1000);
-                continue;
-            }
-            return name;
-        }
-    }
-
-    private int promptOpponentCount(String localName) {
-        while (true) {
-            System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD
-                    + localName + RESET);
-            System.out.println();
-            System.out.println(WHITE + "  How many players total?"
-                    + " " + DIM + "(2–4)" + RESET);
-            System.out.println();
-            System.out.print(WHITE + "  Total players (2-4): " + RESET);
-            String input = scanner.nextLine().trim();
-
-            try {
-                int totalPlayers = Integer.parseInt(input);
-                if (totalPlayers < 2 || totalPlayers > 4) {
-                    throw new NumberFormatException();
-                }
-                return totalPlayers - 1;
-            } catch (NumberFormatException e) {
-                printError("Please enter a number between 2 and 4.");
-                sleep(1000);
-            }
-        }
+    private int promptTotalPlayers(String localName) {
+        System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD
+                + localName + RESET);
+        System.out.println();
+        return identityPrompts.promptTotalPlayers();
     }
 
     // -------------------------------------------------------------------------
     // Step 3 — Auto-generate CPU players
     // -------------------------------------------------------------------------
-    private void addCpuPlayers(int count, List<Player> players, List<Boolean> humans, List<String> difficulties) {
+
+    private void addCpuPlayers(int count, int referenceAge, List<PlayerSeed> playerSeeds) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
-            String difficulty = promptDifficulty(cpuNames[i]);
-            players.add(new Player(cpuNames[i], players.size()));
-            humans.add(false);
-            difficulties.add(difficulty);
+            String cpuName = cpuNames[i];
+            int cpuAge = randomNearbyAge(referenceAge);
+            playerSeeds.add(new PlayerSeed(cpuName, cpuAge, false));
         }
     }
 
@@ -183,6 +160,12 @@ public class PlayerSetupUI implements ThemeStyleSheet {
                     sleep(800);
             }
         }
+    }
+
+    private int randomNearbyAge(int referenceAge) {
+        int minAge = Math.max(1, referenceAge - 5);
+        int maxAge = Math.min(120, referenceAge + 5);
+        return java.util.concurrent.ThreadLocalRandom.current().nextInt(minAge, maxAge + 1);
     }
 
     // -------------------------------------------------------------------------
@@ -287,5 +270,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         }
         return false;
     }
+
+    private record PlayerSeed(String name, int age, boolean isHuman) {}
 
 }
