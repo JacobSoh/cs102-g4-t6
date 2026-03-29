@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
+import edu.cs102.g04t06.game.execution.ai.AIPlayer;
+import edu.cs102.g04t06.game.execution.ai.AIStrategy;
+import edu.cs102.g04t06.game.execution.ai.EasyAIStrategy;
+import edu.cs102.g04t06.game.execution.ai.HardAIStrategy;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 import edu.cs102.g04t06.game.presentation.network.LanGameClient;
@@ -109,6 +113,19 @@ public class ConsoleUI implements ThemeStyleSheet {
         }
         this.gameBoardUI.setPerspectivePlayerName(setup.localPlayerName);
         this.gameState = createInitialGameState(setup);
+
+        List<AIPlayer> aiPlayerList = new ArrayList<>();
+        List<Player> statePlayers = this.gameState.getPlayers();
+        for (int i = 0; i < setup.isHuman.size(); i++) {
+            if (!setup.isHuman.get(i)) {
+                AIStrategy strategy = "HARD".equals(setup.aiDifficulties.get(i))
+                        ? new HardAIStrategy()
+                        : new EasyAIStrategy();
+                aiPlayerList.add(new AIPlayer(statePlayers.get(i), strategy));
+            }
+        }
+        this.gameBoardUI.setAIPlayers(aiPlayerList);
+
         return Route.GAME_BOARD;
     }
 

@@ -17,6 +17,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -138,7 +139,9 @@ class ConsoleUITest {
 
         private PlayerSetupResult make(String local, boolean online,
                                        List<Player> players, List<Boolean> humans) {
-            return new PlayerSetupResult(local, online, players, humans);
+            List<String> diffs = new ArrayList<>();
+            for (Boolean h : humans) diffs.add(h ? null : "EASY");
+            return new PlayerSetupResult(local, online, players, humans, diffs);
         }
 
         @Test
@@ -249,7 +252,7 @@ class ConsoleUITest {
             var r = make("Alice", false,
                     List.of(new Player("Alice", 0), new Player("CPU-1", 1)),
                     List.of(true, false));
-            assertTrue(r.toString().contains("[CPU]"));
+            assertTrue(r.toString().contains("[CPU"), "toString should mark CPU players");
         }
 
         @Test
@@ -313,9 +316,9 @@ class ConsoleUITest {
         }
 
         @Test
-        @DisplayName("'n' input returns PLAYER_SETUP")
+        @DisplayName("'o' input returns PLAYER_SETUP")
         void newGameInputReturnsPlayerSetup() {
-            ConsoleUI ui = uiWithInput("n");
+            ConsoleUI ui = uiWithInput("o");
             assertEquals("PLAYER_SETUP", invokePrivate(ui, "handleMainMenu").toString());
         }
 
@@ -367,12 +370,12 @@ class ConsoleUITest {
     class HandlePlayerSetupTests {
 
         @Test
-        @DisplayName("'b' (back) from mode selection returns MAIN_MENU and leaves gameState null")
-        void backFromSetupReturnsMainMenu() {
-            // PlayerSetupUI.show() sequence: name → mode ('b' = back) → returns null
-            ConsoleUI ui = uiWithInput("Alice", "b");
+        @DisplayName("completing setup returns GAME_BOARD")
+        void completedSetupReturnsGameBoard() {
+            // PlayerSetupUI.show() sequence: name → total players → difficulty → Enter to continue
+            ConsoleUI ui = uiWithInput("Alice", "2", "1", "");
             Object result = invokePrivate(ui, "handlePlayerSetup");
-            assertEquals("MAIN_MENU", result.toString());
+            assertEquals("GAME_BOARD", result.toString());
         }
     }
 
@@ -415,7 +418,7 @@ class ConsoleUITest {
             players.add(new Player("Alice", 0));
             players.add(new Player("CPU-1", 1));
             return new PlayerSetupResult(
-                    "Alice", false, players, List.of(true, false));
+                    "Alice", false, players, List.of(true, false), Arrays.asList(null, "EASY"));
         }
 
         private GameState init(PlayerSetupResult setup) {
@@ -481,8 +484,10 @@ class ConsoleUITest {
                 players.add(new Player("CPU-" + i, i));
                 humans.add(false);
             }
+            List<String> diffs = new ArrayList<>();
+            for (int i = 0; i < players.size(); i++) diffs.add("EASY");
             PlayerSetupResult setup = new PlayerSetupResult(
-                    "CPU-0", false, players, humans);
+                    "CPU-0", false, players, humans, diffs);
             assertEquals(5, init(setup).getAvailableNobles().size());
         }
 

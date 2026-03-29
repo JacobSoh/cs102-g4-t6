@@ -139,13 +139,43 @@ class InputHandlerTest {
     }
 
     @Test
-    @DisplayName("parseGemSequence parses compact and spaced gem input")
-    void parseGemSequenceParsesCompactAndSpacedInput() {
-        List<GemColor> compact = handler.parseGemSequence("wru");
-        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), compact);
+    @DisplayName("parseGemSequence parses compact gem input using new codes (b=Blue, d=Black)")
+    void parseGemSequenceParsesCompactInput() {
+        List<GemColor> result = handler.parseGemSequence("wrb");
+        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), result);
+    }
 
-        List<GemColor> spaced = handler.parseGemSequence("w r u");
-        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), spaced);
+    @Test
+    @DisplayName("parseGemSequence parses spaced gem input using new codes")
+    void parseGemSequenceParsesSpacedInput() {
+        List<GemColor> result = handler.parseGemSequence("w r b");
+        assertEquals(List.of(GemColor.WHITE, GemColor.RED, GemColor.BLUE), result);
+    }
+
+    @Test
+    @DisplayName("parseGemSequence parses d as BLACK")
+    void parseGemSequenceParsesD_asBlack() {
+        List<GemColor> result = handler.parseGemSequence("d");
+        assertEquals(List.of(GemColor.BLACK), result);
+    }
+
+    @Test
+    @DisplayName("parseGemSequence parses b as BLUE")
+    void parseGemSequenceParsesB_asBlue() {
+        List<GemColor> result = handler.parseGemSequence("b");
+        assertEquals(List.of(GemColor.BLUE), result);
+    }
+
+    @Test
+    @DisplayName("parseGemSequence throws on old blue code 'u' (retired)")
+    void parseGemSequenceThrowsOnOldBlueCode() {
+        assertThrows(IllegalArgumentException.class, () -> handler.parseGemSequence("u"));
+    }
+
+    @Test
+    @DisplayName("parseGemSequence throws on old black code 'k' (retired)")
+    void parseGemSequenceThrowsOnOldBlackCode() {
+        assertThrows(IllegalArgumentException.class, () -> handler.parseGemSequence("k"));
     }
 
     @Test

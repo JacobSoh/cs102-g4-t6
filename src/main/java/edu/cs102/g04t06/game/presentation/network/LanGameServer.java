@@ -54,6 +54,11 @@ public class LanGameServer implements ThemeStyleSheet {
             closeClients();
         } catch (IOException e) {
             System.out.println(RED + "Failed to host LAN game: " + e.getMessage() + RESET);
+            System.out.println("Press Enter to return to the main menu...");
+            try {
+                System.in.read();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -387,7 +392,8 @@ public class LanGameServer implements ThemeStyleSheet {
         if (globalLog.isEmpty()) {
             return List.of();
         }
-        return List.of(globalLog.get(globalLog.size() - 1));
+        int start = Math.max(0, globalLog.size() - 3);
+        return new ArrayList<>(globalLog.subList(start, globalLog.size()));
     }
 
     private void broadcast(NetworkMessage message) {
