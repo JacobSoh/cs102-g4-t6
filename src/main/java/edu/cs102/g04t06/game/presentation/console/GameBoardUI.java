@@ -484,8 +484,7 @@ public class GameBoardUI implements ThemeStyleSheet {
             topRow[i] = border + "┌" + dash + "┐" + RESET;
             botRow[i] = border + "└" + dash + "┘" + RESET;
 
-            String lContent = " " + gemAnsi + BOLD + gemLabel + RESET
-                    + "  " + WHITE + c.getPoints() + RESET;
+            String lContent = " " + formatMarketBonusBadge(c);
             labelRow[i] = WHITE + "│" + RESET
                     + padTo(lContent, CARD_INNER)
                     + WHITE + "│" + RESET;
@@ -818,16 +817,7 @@ public class GameBoardUI implements ThemeStyleSheet {
             return "-";
         }
 
-        Map<GemColor, Integer> req = card.getCost().asMap();
-        StringBuilder sb = new StringBuilder();
-        for (GemColor color : CARD_ORDER) {
-            int count = req.getOrDefault(color, 0);
-            if (count <= 0) {
-                continue;
-            }
-            sb.append(gemCodeLower(color)).append(count);
-        }
-        return sb.length() == 0 ? "-" : sb.toString();
+        return formatColoredCost(card.getCost().asMap(), null);
     }
 
     /**
@@ -1167,10 +1157,10 @@ public class GameBoardUI implements ThemeStyleSheet {
             topRow[i] = borderColor + "┌" + dash + "┐" + RESET;
             botRow[i] = borderColor + "└" + dash + "┘" + RESET;
             labelRow[i] = borderColor + "│" + RESET
-                    + padTo(" " + gemAnsi + BOLD + gemLabel + RESET + "  " + WHITE + card.getPoints() + RESET, CARD_INNER)
+                    + padTo(" " + formatMarketBonusBadge(card), CARD_INNER)
                     + borderColor + "│" + RESET;
             costRow[i] = borderColor + "│" + RESET
-                    + padTo(" " + DIM + WHITE + formatCardCost(card) + RESET, CARD_INNER)
+                    + padTo(" " + formatCardCost(card), CARD_INNER)
                     + borderColor + "│" + RESET;
         }
 
@@ -1318,15 +1308,30 @@ public class GameBoardUI implements ThemeStyleSheet {
         List<String> lines = new ArrayList<>();
         for (int i = 0; i < reservedCards.size(); i++) {
             Card card = reservedCards.get(i);
-            String token = "[" + GEM_ANSI.getOrDefault(card.getBonus(), WHITE)
-                    + GEM_LABEL.getOrDefault(card.getBonus(), "?")
-                    + WHITE
-                    + card.getPoints()
-                    + RESET
-                    + "]";
+            String token = "[" + formatBonusBadge(card) + "]";
             lines.add("  B: " + token + " $: " + formatReservedCost(player, card));
         }
         return lines;
+    }
+
+    private String formatBonusBadge(Card card) {
+        if (card == null) {
+            return "?";
+        }
+
+        String gemAnsi = GEM_ANSI.getOrDefault(card.getBonus(), WHITE);
+        String gemLabel = GEM_LABEL.getOrDefault(card.getBonus(), "?");
+        return gemAnsi + BOLD + gemLabel + card.getPoints() + RESET;
+    }
+
+    private String formatMarketBonusBadge(Card card) {
+        if (card == null) {
+            return "?";
+        }
+
+        String gemAnsi = GEM_ANSI.getOrDefault(card.getBonus(), WHITE);
+        String gemLabel = GEM_LABEL.getOrDefault(card.getBonus(), "?");
+        return gemAnsi + BOLD + gemLabel + ":" + card.getPoints() + RESET;
     }
 
     private String formatReservedCost(Player player, Card card) {
@@ -1339,18 +1344,30 @@ public class GameBoardUI implements ThemeStyleSheet {
                 ? req
                 : gameRules.calculateActualCost(player, card).asMap();
 
+        return formatColoredCost(actualCost, player);
+    }
+
+    private String formatColoredCost(Map<GemColor, Integer> cost, Player player) {
+        if (cost == null || cost.isEmpty()) {
+            return "-";
+        }
+
         StringBuilder sb = new StringBuilder();
         for (GemColor color : CARD_ORDER) {
-            int count = actualCost.getOrDefault(color, 0);
+            int count = cost.getOrDefault(color, 0);
             if (count <= 0) {
                 continue;
             }
+
+            String prefix = GEM_ANSI.getOrDefault(color, WHITE);
             if (player != null && player.getGems().getCount(color) >= count) {
-                sb.append(PURPLE).append(BOLD);
-            } else {
-                sb.append(DIM).append(WHITE);
+                prefix += BOLD;
             }
-            sb.append(gemCodeLower(color)).append(count).append(RESET);
+
+            sb.append(prefix)
+                    .append(gemCodeLower(color))
+                    .append(count)
+                    .append(RESET);
         }
         return sb.length() == 0 ? "-" : sb.toString();
     }

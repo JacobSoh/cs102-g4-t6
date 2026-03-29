@@ -1,5 +1,6 @@
 package edu.cs102.g04t06.game.execution;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import edu.cs102.g04t06.game.rules.GameRules;
@@ -81,6 +82,32 @@ public class TurnProcessor {
         } catch (IllegalArgumentException e) {
             return TurnResult.failure(e.getMessage());
         }
+    }
+
+    public TurnResult processAutomaticPass(GameState state) {
+        if (state == null) {
+            return TurnResult.failure("Game state is unavailable.");
+        }
+        return finalizeTurn(state, state.getCurrentPlayer(), "Turn auto-passed after disconnect.");
+    }
+
+    public TurnResult processAutomaticReturnGems(GameState state) {
+        if (state == null) {
+            return TurnResult.failure("Game state is unavailable.");
+        }
+
+        Player player = state.getCurrentPlayer();
+        int excess = Math.max(0, player.getGemCount() - 10);
+        if (excess <= 0) {
+            return finalizeTurn(state, player, "Disconnected turn resolved automatically.");
+        }
+
+        GemCollection toReturn = chooseAutomaticReturnGems(player, excess);
+        ActionResult result = ActionExecutor.executeReturnGems(state, toReturn);
+        if (!result.isSuccess()) {
+            return TurnResult.failure(result.getMessage());
+        }
+        return finalizeTurn(state, player, "Excess gems were auto-returned after disconnect.");
     }
 
     private ActionResult handleTake(GameState state, String s) {
@@ -173,6 +200,40 @@ public class TurnProcessor {
         return "deck".equalsIgnoreCase(token)
                 || "top".equalsIgnoreCase(token)
                 || "hidden".equalsIgnoreCase(token);
+    }
+
+    private GemCollection chooseAutomaticReturnGems(Player player, int excessCount) {
+        List<GemColor> priority = new ArrayList<>(List.of(GemColor.values()));
+        priority.sort((left, right) -> {
+            int countDiff = Integer.compare(
+                    player.getGems().getCount(right),
+                    player.getGems().getCount(left));
+            if (countDiff != 0) {
+                return countDiff;
+            }
+            return Integer.compare(left.ordinal(), right.ordinal());
+        });
+
+        GemCollection toReturn = new GemCollection();
+        int remaining = excessCount;
+        for (GemColor color : priority) {
+            if (remaining <= 0) {
+                break;
+            }
+            int available = player.getGems().getCount(color);
+            if (available <= 0) {
+                continue;
+            }
+            int amount = Math.min(available, remaining);
+            toReturn = toReturn.add(color, amount);
+            remaining -= amount;
+        }
+
+        if (remaining > 0) {
+            throw new IllegalStateException("Unable to determine automatic gem return for disconnected player.");
+        }
+
+        return toReturn;
     }
 
     private TurnResult finalizeTurn(GameState state, Player player, String baseMessage) {

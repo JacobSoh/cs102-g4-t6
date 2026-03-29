@@ -98,10 +98,6 @@ public class ConsoleUI implements ThemeStyleSheet {
             case OFFLINE_PLAY -> Route.PLAYER_SETUP;
             case HOST_LAN -> Route.HOST_LAN_SETUP;
             case JOIN_LAN -> Route.JOIN_LAN_SETUP;
-            case LOAD_GAME -> {
-                printLoadGameStub();
-                yield Route.MAIN_MENU;
-            }
             case QUIT -> Route.EXIT;
         };
     }

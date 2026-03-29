@@ -323,13 +323,13 @@ class ConsoleUITest {
         }
 
         @Test
-        @DisplayName("'l' input prints stub and returns MAIN_MENU")
-        void loadGameInputPrintsStubAndLoopsBack() {
-            ConsoleUI ui = uiWithInput("l");
+        @DisplayName("'l' input is now invalid and the menu continues until a valid choice")
+        void removedLoadGameInputIsRejected() {
+            ConsoleUI ui = uiWithInput("l", "q");
             Object result = invokePrivate(ui, "handleMainMenu");
-            assertEquals("MAIN_MENU", result.toString());
-            assertTrue(out().contains("not implemented"),
-                    "Load-game stub message should be printed");
+            assertEquals("EXIT", result.toString());
+            assertTrue(out().contains("Invalid choice"),
+                    "Removed load-game key should now be treated as invalid input");
         }
     }
 

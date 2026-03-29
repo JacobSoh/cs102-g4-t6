@@ -58,4 +58,49 @@ class TurnProcessorTest {
         assertEquals(deckSizeBefore - 1, state.getMarket().getDeckSize(1));
         assertEquals(1, player.getGems().getCount(GemColor.GOLD));
     }
+
+    @Test
+    void processAutomaticPass_advancesToNextPlayer() {
+        Player secondPlayer = new Player("Bob", 1);
+        state = new GameState(
+                List.of(player, secondPlayer),
+                state.getMarket(),
+                state.getGemBank(),
+                new ArrayList<>(),
+                15);
+
+        TurnProcessor.TurnResult result = turnProcessor.processAutomaticPass(state);
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, state.getCurrentPlayerIndex());
+        assertTrue(result.getMessage().contains("auto-passed"));
+    }
+
+    @Test
+    void processAutomaticReturnGems_returnsExcessAndAdvancesTurn() {
+        Player secondPlayer = new Player("Bob", 1);
+        state = new GameState(
+                List.of(player, secondPlayer),
+                state.getMarket(),
+                new GemCollection()
+                        .add(GemColor.WHITE, 4)
+                        .add(GemColor.BLUE, 4)
+                        .add(GemColor.GREEN, 4)
+                        .add(GemColor.RED, 4)
+                        .add(GemColor.BLACK, 4)
+                        .add(GemColor.GOLD, 5),
+                new ArrayList<>(),
+                15);
+        player.addGems(new GemCollection()
+                .add(GemColor.WHITE, 4)
+                .add(GemColor.BLUE, 4)
+                .add(GemColor.GREEN, 4));
+
+        TurnProcessor.TurnResult result = turnProcessor.processAutomaticReturnGems(state);
+
+        assertTrue(result.isSuccess());
+        assertEquals(10, player.getGemCount());
+        assertEquals(1, state.getCurrentPlayerIndex());
+        assertTrue(result.getMessage().contains("auto-returned"));
+    }
 }
