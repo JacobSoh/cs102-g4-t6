@@ -258,6 +258,35 @@ class GameBoardUITest {
         assertFalse(opponentView.contains("w2b1"), "Opponent view should not reveal reserved card costs");
     }
 
+    @Test
+    void displayGameState_colorCodesCardRequirementsByGemColor() {
+        Card marketCard = makeCard(1, 1, GemColor.WHITE, Map.of(GemColor.RED, 2, GemColor.BLUE, 1));
+        Player alice = makePlayer("Alice", 0);
+        alice.addGems(new GemCollection().add(GemColor.BLUE, 1));
+        Card reservedCard = makeCard(1, 1, GemColor.RED, Map.of(GemColor.WHITE, 2, GemColor.BLUE, 1));
+
+        try {
+            Method marketCostMethod = GameBoardUI.class.getDeclaredMethod("formatCardCost", Card.class);
+            marketCostMethod.setAccessible(true);
+            String marketCost = (String) marketCostMethod.invoke(boardUI, marketCard);
+
+            Method reservedCostMethod = GameBoardUI.class.getDeclaredMethod("formatReservedCost", Player.class, Card.class);
+            reservedCostMethod.setAccessible(true);
+            String reservedCost = (String) reservedCostMethod.invoke(boardUI, alice, reservedCard);
+
+            assertTrue(marketCost.contains("\u001B[31mr2\u001B[0m"),
+                    "Market card requirements should color red gem costs red");
+            assertTrue(marketCost.contains("\u001B[34mb1\u001B[0m"),
+                    "Market card requirements should color blue gem costs blue");
+            assertTrue(reservedCost.contains("\u001B[37mw2\u001B[0m"),
+                    "Reserved card requirements should color white gem costs white");
+            assertTrue(reservedCost.contains("\u001B[34m\u001B[1mb1\u001B[0m"),
+                    "Affordable reserved requirements should keep their gem color and add emphasis");
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke GameBoardUI cost formatters", e);
+        }
+    }
+
     // ==================== 8b: Gem Acronym Rename ====================
 
     @Test

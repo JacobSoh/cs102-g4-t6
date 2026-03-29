@@ -35,7 +35,6 @@ public class MainMenuUI implements ThemeStyleSheet {
         OFFLINE_PLAY,
         HOST_LAN,
         JOIN_LAN,
-        LOAD_GAME,
         QUIT
     }
 
@@ -61,7 +60,6 @@ public class MainMenuUI implements ThemeStyleSheet {
                 case 'o': return MenuChoice.OFFLINE_PLAY;
                 case 'h': return MenuChoice.HOST_LAN;
                 case 'j': return MenuChoice.JOIN_LAN;
-                case 'l': return MenuChoice.LOAD_GAME;
                 case 'q': return MenuChoice.QUIT;
                 default:
                     // Invalid key — just re-render the menu
@@ -89,9 +87,9 @@ public class MainMenuUI implements ThemeStyleSheet {
     }
 
     /**
-     * Renders the bordered menu box with all three options.
+     * Renders the bordered menu box with the available options.
      * Each option is colour-coded to match the screenshot aesthetic:
-     *   N → green, L → blue, Q → white/dim
+     *   O → green, H/J → LAN, Q → white/dim
      */
     private void printMenu() {
         String top    = "  ┌" + "─".repeat(BOX_WIDTH) + "┐";
@@ -102,7 +100,6 @@ public class MainMenuUI implements ThemeStyleSheet {
         String offlinePlay = menuLine(GREEN,  "O", "Offline Play", BOX_WIDTH);
         String hostLan   = menuLine(CYAN,   "H", "Host LAN",   BOX_WIDTH);
         String joinLan   = menuLine(PURPLE, "J", "Join LAN",   BOX_WIDTH);
-        String loadGame  = menuLine(BLUE,   "L", "Load Game",  BOX_WIDTH);
         String quit      = menuLine(WHITE,  "Q", "Quit",       BOX_WIDTH);
 
         System.out.println(WHITE + top    + RESET);
@@ -111,7 +108,6 @@ public class MainMenuUI implements ThemeStyleSheet {
         System.out.println(WHITE + "  │" + offlinePlay + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + hostLan  + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + joinLan  + WHITE + "│" + RESET);
-        System.out.println(WHITE + "  │" + loadGame + WHITE + "│" + RESET);
         System.out.println(WHITE + "  │" + quit     + WHITE + "│" + RESET);
         System.out.println(WHITE + bottom + RESET);
         System.out.println();
@@ -124,7 +120,7 @@ public class MainMenuUI implements ThemeStyleSheet {
     }
 
     private void printInvalidKey() {
-        System.out.println(RED + "  Invalid choice. Enter O, H, J, L, or Q then press Enter." + RESET);
+        System.out.println(RED + "  Invalid choice. Enter O, H, J, or Q then press Enter." + RESET);
         sleep(1000);
     }
 

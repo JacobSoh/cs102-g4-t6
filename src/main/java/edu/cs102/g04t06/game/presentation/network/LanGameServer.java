@@ -145,10 +145,15 @@ public class LanGameServer implements ThemeStyleSheet {
                     appendGlobalLog(finalGameMessage);
                     break;
                 }
+                if (activeClient.disconnected) {
+                    autoResolveDisconnectedTurn(state, currentPlayerName);
+                    continue;
+                }
                 try {
                     handleRemoteTurn(state, activeClient);
                 } catch (IOException e) {
                     handleDisconnect(state, activeClient, e.getMessage());
+                    autoResolveDisconnectedTurn(state, currentPlayerName);
                 }
             }
         }
@@ -279,40 +284,33 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private void sendError(ClientConnection connection, GameState state, String message) {
+        if (connection.disconnected) {
+            return;
+        }
         NetworkMessage error = NetworkMessage.of(MessageType.ERROR, message);
         error.state = state;
         NetworkProtocol.send(connection.writer, error);
     }
 
     private void handleDisconnect(GameState state, ClientConnection connection, String reason) {
-        clients.remove(connection);
+        if (connection.disconnected) {
+            return;
+        }
+        connection.disconnected = true;
         closeClient(connection);
 
         String message = connection.playerName + " disconnected.";
         if (reason != null && !reason.isBlank()) {
             message += " " + reason;
         }
+        message += " Future turns will auto-pass.";
 
         NetworkMessage disconnected = NetworkMessage.of(MessageType.PLAYER_DISCONNECTED, message);
         disconnected.state = state;
-        disconnected.logMessage = "Player disconnected, ending game.";
+        disconnected.logMessage = message;
         appendGlobalLog(message);
         disconnected.logEntries = getRecentGlobalLog();
         broadcast(disconnected);
-
-        state.setGameOver(true);
-
-        String endMessage = "Game ended: insufficient players after " + connection.playerName + " disconnected.";
-        finalGameMessage = endMessage;
-        appendGlobalLog(endMessage);
-        NetworkMessage gameOver = NetworkMessage.of(MessageType.GAME_OVER, endMessage);
-        gameOver.state = state;
-        gameOver.logEntries = getRecentGlobalLog();
-        broadcast(gameOver);
-
-        boardUI.displayReadOnlyState(state, endMessage, getRecentGlobalLog());
-        System.out.println();
-        System.out.println(RED + endMessage + RESET);
     }
 
     private void broadcastState(MessageType type, String message, GameState state) {
@@ -334,6 +332,9 @@ public class LanGameServer implements ThemeStyleSheet {
         String nextPlayerName = state.isGameOver() ? null : state.getCurrentPlayer().getName();
 
         for (ClientConnection client : clients) {
+            if (client.disconnected) {
+                continue;
+            }
             if (nextPlayerName != null && client.playerName.equals(nextPlayerName)) {
                 continue;
             }
@@ -357,6 +358,9 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void broadcastPassiveState(String message, GameState state, String activePlayerName) {
         for (ClientConnection client : clients) {
+            if (client.disconnected) {
+                continue;
+            }
             if (client.playerName.equals(activePlayerName)) {
                 continue;
             }
@@ -398,8 +402,42 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void broadcast(NetworkMessage message) {
         for (ClientConnection client : clients) {
+            if (client.disconnected) {
+                continue;
+            }
             NetworkProtocol.send(client.writer, message);
         }
+    }
+
+    private void autoResolveDisconnectedTurn(GameState state, String playerName) {
+        if (state == null || state.isGameOver() || !playerName.equals(state.getCurrentPlayer().getName())) {
+            return;
+        }
+
+        TurnProcessor.TurnResult result;
+        if (state.getCurrentPlayer().getGemCount() > 10) {
+            result = turnProcessor.processAutomaticReturnGems(state);
+        } else {
+            result = turnProcessor.processAutomaticPass(state);
+        }
+
+        if (!result.isSuccess()) {
+            String failureMessage = "Failed to auto-resolve " + playerName + "'s disconnected turn: "
+                    + result.getMessage();
+            finalGameMessage = failureMessage;
+            appendGlobalLog(failureMessage);
+            state.setGameOver(true);
+            NetworkMessage gameOver = NetworkMessage.of(MessageType.GAME_OVER, failureMessage);
+            gameOver.state = state;
+            gameOver.logEntries = getRecentGlobalLog();
+            broadcast(gameOver);
+            boardUI.displayReadOnlyState(state, failureMessage, getRecentGlobalLog());
+            System.out.println();
+            System.out.println(RED + failureMessage + RESET);
+            return;
+        }
+
+        broadcastTurnOutcome(state, playerName, result.getMessage());
     }
 
     private List<String> buildPlayerNames() {
@@ -472,6 +510,7 @@ public class LanGameServer implements ThemeStyleSheet {
         private final String playerName;
         private final int playerAge;
         private final int playerIndex;
+        private boolean disconnected;
 
         private ClientConnection(Socket socket, BufferedReader reader, PrintWriter writer,
                 String playerName, int playerAge, int playerIndex) {
@@ -481,6 +520,7 @@ public class LanGameServer implements ThemeStyleSheet {
             this.playerName = playerName;
             this.playerAge = playerAge;
             this.playerIndex = playerIndex;
+            this.disconnected = false;
         }
     }
 
