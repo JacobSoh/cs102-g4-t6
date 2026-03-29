@@ -372,8 +372,8 @@ class ConsoleUITest {
         @Test
         @DisplayName("completing setup returns GAME_BOARD")
         void completedSetupReturnsGameBoard() {
-            // PlayerSetupUI.show() sequence: name → total players → difficulty → Enter to continue
-            ConsoleUI ui = uiWithInput("Alice", "2", "1", "");
+            // PlayerSetupUI.show() sequence: name → birthday → total players → difficulty → Enter to continue
+            ConsoleUI ui = uiWithInput("Alice", "2000-01-01", "2", "1", "");
             Object result = invokePrivate(ui, "handlePlayerSetup");
             assertEquals("GAME_BOARD", result.toString());
         }

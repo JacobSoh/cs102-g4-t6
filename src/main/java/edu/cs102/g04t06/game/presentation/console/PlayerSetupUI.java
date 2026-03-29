@@ -1,8 +1,8 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -103,10 +103,12 @@ public class PlayerSetupUI implements ThemeStyleSheet {
 
         List<Player> players = new ArrayList<>();
         List<Boolean> humans = new ArrayList<>();
+        List<String> difficulties = new ArrayList<>();
         for (int i = 0; i < playerSeeds.size(); i++) {
             PlayerSeed seed = playerSeeds.get(i);
             players.add(new Player(seed.name(), i));
             humans.add(seed.isHuman());
+            difficulties.add(seed.isHuman() ? null : promptDifficulty(seed.name()));
         }
 
         PlayerSetupResult result = new PlayerSetupResult(
@@ -134,12 +136,14 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     // Step 3 — Auto-generate CPU players
     // -------------------------------------------------------------------------
 
-   private void addCpuPlayers(int count, int referenceAge, List<PlayerSeed> playerSeeds) {
+    private void addCpuPlayers(int count, int referenceAge, List<PlayerSeed> playerSeeds) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
             String cpuName = cpuNames[i];
             int cpuAge = randomNearbyAge(referenceAge);
             playerSeeds.add(new PlayerSeed(cpuName, cpuAge, false));
+        }
+    }
 
     private String promptDifficulty(String cpuName) {
         while (true) {
