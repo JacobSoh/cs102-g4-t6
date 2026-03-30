@@ -14,10 +14,21 @@ public class PlayerIdentityPrompts implements ThemeStyleSheet {
 
     private final Scanner scanner;
 
+    /**
+     * Creates a prompt helper backed by the provided scanner.
+     *
+     * @param scanner the scanner used to read user input
+     */
     public PlayerIdentityPrompts(Scanner scanner) {
         this.scanner = scanner;
     }
 
+    /**
+     * Prompts for a non-empty player name.
+     *
+     * @param label the field label to display
+     * @return the validated player name
+     */
     public String promptName(String label) {
         while (true) {
             System.out.print(WHITE + "  " + label + ": " + RESET);
@@ -35,6 +46,12 @@ public class PlayerIdentityPrompts implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Prompts for a birthday and converts it into an age in years.
+     *
+     * @param playerName the player whose birthday is being entered
+     * @return the validated age in years
+     */
     public int promptBirthdayAsAge(String playerName) {
         while (true) {
             System.out.print(WHITE + "  Birthday for " + playerName
@@ -64,6 +81,11 @@ public class PlayerIdentityPrompts implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Prompts for the total number of players in the match.
+     *
+     * @return the validated player count
+     */
     public int promptTotalPlayers() {
         while (true) {
             System.out.println(WHITE + "  How many players total?"

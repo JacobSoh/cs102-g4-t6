@@ -13,6 +13,9 @@ public class LanSetupUI implements ThemeStyleSheet {
     private final PlayerIdentityPrompts identityPrompts = new PlayerIdentityPrompts(scanner);
     private static final int BOX_WIDTH = 50;
 
+    /**
+     * Collected host-side setup values for a LAN session.
+     */
     public static final class HostSetup {
         public final String hostPlayerName;
         public final int hostPlayerAge;
@@ -27,6 +30,9 @@ public class LanSetupUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Collected client-side setup values for joining a LAN session.
+     */
     public static final class JoinSetup {
         public final String playerName;
         public final int playerAge;
@@ -41,6 +47,11 @@ public class LanSetupUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Prompts for the settings required to host a LAN game.
+     *
+     * @return the chosen host setup values
+     */
     public HostSetup promptHostSetup() {
         clearScreen();
         printHeader("LAN SETUP", "Host Game");
@@ -53,6 +64,11 @@ public class LanSetupUI implements ThemeStyleSheet {
         return new HostSetup(name, age, port, totalPlayers);
     }
 
+    /**
+     * Prompts for the settings required to join a LAN game.
+     *
+     * @return the chosen join setup values
+     */
     public JoinSetup promptJoinSetup() {
         clearScreen();
         printHeader("LAN SETUP", "Join Game");
@@ -66,6 +82,11 @@ public class LanSetupUI implements ThemeStyleSheet {
         return new JoinSetup(name, age, hostAddress, port);
     }
 
+    /**
+     * Prints a lobby status update to the console.
+     *
+     * @param message the status message to show
+     */
     public void showLobbyStatus(String message) {
         System.out.println(CYAN + message + RESET);
     }

@@ -14,7 +14,9 @@ import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-
+/**
+ * Baseline AI strategy that favors straightforward card scoring and gem collection.
+ */
 public class EasyAIStrategy implements AIStrategy {
 
     private final GameRules rules = new GameRules();

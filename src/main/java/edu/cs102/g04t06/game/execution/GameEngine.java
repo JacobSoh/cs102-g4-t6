@@ -16,6 +16,9 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
+/**
+ * Creates and advances core game state for a Splendor match.
+ */
 public class GameEngine{
 
     private final GameRules gameRules;
@@ -113,20 +116,20 @@ public class GameEngine{
     }
 
 
-    //moves the game to next player turn
+    /**
+     * Advances the game to the next player's turn and auto-claims a noble when one is available.
+     *
+     * @param state the active game state
+     * @return the nobles that were claimable before the turn advanced
+     */
     public List<Noble> advanceTurn(GameState state){
         Player currentPlayer = state.getCurrentPlayer();
 
-        //find claimable nobles for current player
         List<Noble> claimableNobles = gameRules.getClaimableNobles(
             currentPlayer,
             state.getAvailableNobles()
         );
 
-        //claim the nobles 
-        //potential bug, if there is more than one claimable nobles 
-        //player can choose in real game but needs to prompt UI
-        //enforce player to claim the first noble for now
         if(claimableNobles.size() >= 1){
             Noble noble = claimableNobles.get(0);
             currentPlayer.claimNoble(noble);
@@ -134,7 +137,6 @@ public class GameEngine{
             claimableNobles.clear();
         }
 
-        //wrap around if last player in a round
         boolean isLastPlayer = (state.getCurrentPlayerIndex() == state.getPlayers().size() - 1);
         if(isLastPlayer){
             Player winner = checkWinCondition(state, state.getWinningThreshold());

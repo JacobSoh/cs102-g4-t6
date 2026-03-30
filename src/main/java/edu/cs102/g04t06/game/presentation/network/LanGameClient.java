@@ -24,6 +24,9 @@ public class LanGameClient {
         this.sessionUI = new LanSessionUI(playerName);
     }
 
+    /**
+     * Connects to the host, joins the lobby, and runs the client-side session loop.
+     */
     public void run() {
         try (Socket socket = new Socket(hostAddress, port);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -60,6 +63,14 @@ public class LanGameClient {
         }
     }
 
+    /**
+     * Asks the host whether a player name is currently available.
+     *
+     * @param hostAddress the host address to contact
+     * @param port the host port
+     * @param playerName the proposed player name
+     * @return null when the name is available, otherwise an error message
+     */
     public static String validatePlayerName(String hostAddress, int port, String playerName) {
         try (Socket socket = new Socket(hostAddress, port);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));

@@ -13,9 +13,18 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-
+/**
+ * Executes validated game actions by mutating the shared {@link GameState}.
+ */
 public class ActionExecutor {
 
+    /**
+     * Executes the action of taking two gems of the same color.
+     *
+     * @param state the active game state
+     * @param color the color to take twice
+     * @return the outcome of the action
+     */
     public static ActionResult executeTakeTwoSameGems(GameState state, GemColor color) {
         // 1. Validate the rule (Bank must have >= 4)
         GameRules rules = new GameRules();
@@ -41,52 +50,68 @@ public class ActionExecutor {
         return new ActionResult(true, "Successfully took 2 " + color.name() + " gems.");
     }
 
+    /**
+     * Executes the action of taking three different gems.
+     *
+     * @param state the active game state
+     * @param selection the gems being requested
+     * @return the outcome of the action
+     */
     public static ActionResult executeTakeThreeDifferentGems(GameState state, GemCollection selection) {
-    // 1. Ask GameRules if the bank has these 3 gems
-    GameRules rules = new GameRules();
-    if (!rules.canTakeThreeDifferentGems(selection, state.getGemBank())) {
-        return new ActionResult(false, "Illegal move: The bank does not have the requested gems.");
-    }
-
-    // 2. Perform the movement
-    Player currentPlayer = state.getCurrentPlayer();
-    state.removeGemsFromBank(selection);
-    currentPlayer.addGems(selection);
-
-    // 3. Check the 10-gem limit (Standard check for all gem actions)
-    if (currentPlayer.getGemCount() > 10) {
-        return new ActionResult(true, "Gems taken, but you must now return excess to stay at 10!");
-    }
-
-    List<String> colorNames = new ArrayList<>();
-    for (Map.Entry<GemColor, Integer> e : selection.asMap().entrySet()) {
-        if (e.getValue() > 0) {
-            colorNames.add(e.getKey().name());
+        GameRules rules = new GameRules();
+        if (!rules.canTakeThreeDifferentGems(selection, state.getGemBank())) {
+            return new ActionResult(false, "Illegal move: The bank does not have the requested gems.");
         }
-    }
-    return new ActionResult(true, "Successfully took " + String.join(", ", colorNames) + ".");
-}
 
-public static ActionResult executeReturnGems(GameState state, GemCollection toReturn) {
-    Player currentPlayer = state.getCurrentPlayer();
+        Player currentPlayer = state.getCurrentPlayer();
+        state.removeGemsFromBank(selection);
+        currentPlayer.addGems(selection);
 
-    // 1. Safety Check: Does the player actually have these gems?
-    if (!currentPlayer.getGems().contains(toReturn)) {
-        return new ActionResult(false, "Error: You cannot return gems you do not own.");
-    }
+        if (currentPlayer.getGemCount() > 10) {
+            return new ActionResult(true, "Gems taken, but you must now return excess to stay at 10!");
+        }
 
-    // 2. Move gems from Player back to Bank
-    currentPlayer.deductGems(toReturn);
-    state.addGemsToBank(toReturn);
-
-    // 3. Final Verification: Did they return enough?
-    if (currentPlayer.getGemCount() > 10) {
-        return new ActionResult(false, "Invalid return: You still have " + currentPlayer.getGemCount() + " gems. Must be 10 or fewer.");
+        List<String> colorNames = new ArrayList<>();
+        for (Map.Entry<GemColor, Integer> e : selection.asMap().entrySet()) {
+            if (e.getValue() > 0) {
+                colorNames.add(e.getKey().name());
+            }
+        }
+        return new ActionResult(true, "Successfully took " + String.join(", ", colorNames) + ".");
     }
 
-    return new ActionResult(true, "Successfully returned excess gems.");
-}
+    /**
+     * Executes a gem return action after a player exceeds the hand limit.
+     *
+     * @param state the active game state
+     * @param toReturn the gems to return to the bank
+     * @return the outcome of the action
+     */
+    public static ActionResult executeReturnGems(GameState state, GemCollection toReturn) {
+        Player currentPlayer = state.getCurrentPlayer();
 
+        if (!currentPlayer.getGems().contains(toReturn)) {
+            return new ActionResult(false, "Error: You cannot return gems you do not own.");
+        }
+
+        currentPlayer.deductGems(toReturn);
+        state.addGemsToBank(toReturn);
+
+        if (currentPlayer.getGemCount() > 10) {
+            return new ActionResult(false, "Invalid return: You still have " + currentPlayer.getGemCount() + " gems. Must be 10 or fewer.");
+        }
+
+        return new ActionResult(true, "Successfully returned excess gems.");
+    }
+
+    /**
+     * Executes the purchase of a visible or reserved card.
+     *
+     * @param state the active game state
+     * @param card the card being purchased
+     * @param fromReserved whether the card comes from the player's reserved hand
+     * @return the outcome of the action
+     */
     public static ActionResult executePurchaseCard(GameState state, Card card, boolean fromReserved) {
         Player player = state.getCurrentPlayer();
 
@@ -134,6 +159,14 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
         return new ActionResult(true, "Successfully purchased " + card.getBonus() + " card.");
     }
+
+    /**
+     * Reserves a visible market card for the current player.
+     *
+     * @param state the active game state
+     * @param card the card to reserve
+     * @return the outcome of the action
+     */
     public static ActionResult executeReserveCard(GameState state, Card card) {
         Player player = state.getCurrentPlayer();
 
@@ -162,6 +195,13 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
         return new ActionResult(true, "Card reserved successfully.");
     }
 
+    /**
+     * Reserves the top card from the requested deck tier.
+     *
+     * @param state the active game state
+     * @param tier the deck tier to reserve from
+     * @return the outcome of the action
+     */
     public static ActionResult executeReserveTopCard(GameState state, int tier) {
         Player player = state.getCurrentPlayer();
 
@@ -188,11 +228,17 @@ public static ActionResult executeReturnGems(GameState state, GemCollection toRe
 
         return new ActionResult(true, "Top card reserved successfully.");
     }
+
+    /**
+     * Claims a noble for the current player when its requirements are satisfied.
+     *
+     * @param state the active game state
+     * @param noble the noble to claim
+     * @return the outcome of the action
+     */
     public static ActionResult executeClaimNoble(GameState state, Noble noble) {
         Player player = state.getCurrentPlayer();
 
-        // 1. Check if the player is actually eligible for this Noble
-        // We use the GameRules stub we created earlier
         GameRules rules = new GameRules();
         List<Noble> claimable = rules.getClaimableNobles(player, state.getAvailableNobles());
         

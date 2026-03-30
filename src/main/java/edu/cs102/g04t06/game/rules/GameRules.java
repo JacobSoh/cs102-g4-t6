@@ -11,8 +11,9 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-
-
+/**
+ * Validates core Splendor rules such as affordability, gem-taking, and victory checks.
+ */
 public class GameRules{
 
     //constants 
@@ -29,9 +30,6 @@ public class GameRules{
      * @param card the card to be bought
      * @return true if the player can afford the card
      */
-    //faced issue of gold gems not covering the cost of a card
-    //added logic here but adding in GemCollection.contains may be better
-
     public boolean canAffordCard(Player player, Card card){
         GemCollection actualcost = calculateActualCost(player, card);
         GemCollection playerGems = player.getGems();
@@ -82,13 +80,10 @@ public class GameRules{
             for (Map.Entry<GemColor, Integer> entry : requested.asMap().entrySet()){
                 int count = entry.getValue();
 
-                // Ignore colors the player didn't ask for!
                 if (count == 0) continue; 
 
-                // If they asked for 2 or more of the SAME color, illegal!
                 if (count > 1) return false; 
 
-                // If the bank doesn't have at least 1, illegal!
                 if (bank.getCount(entry.getKey()) < 1) return false; 
             }
             return true;
@@ -178,7 +173,6 @@ public class GameRules{
                     winner = player;
                     unresolvedTie = false;
                 } else if(player.getPoints() == winner.getPoints()){
-                //tie-break : players with fewer cards win
                     if(player.getPurchasedCards().size() < winner.getPurchasedCards().size()){
                         winner = player;
                         unresolvedTie = false;

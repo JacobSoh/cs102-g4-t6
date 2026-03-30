@@ -14,6 +14,9 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
+/**
+ * Utility methods for evaluating card affordability and strategic value for AI players.
+ */
 public class CardEvaluator{
 
     /**

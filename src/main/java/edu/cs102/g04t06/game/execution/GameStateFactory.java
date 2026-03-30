@@ -14,6 +14,13 @@ import edu.cs102.g04t06.game.rules.entities.Noble;
  */
 public class GameStateFactory {
 
+    /**
+     * Loads configured card and noble data and creates the initial game state.
+     *
+     * @param totalPlayers total number of players in the match
+     * @param playerNames player names in turn order
+     * @return a fully initialised game state
+     */
     public GameState createInitialGameState(int totalPlayers, List<String> playerNames) {
         ConfigLoader config = new ConfigLoader("config.properties");
         HashMap<String, String> paths = config.getDataFilePath();

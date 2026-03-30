@@ -41,6 +41,9 @@ public class LanGameServer implements ThemeStyleSheet {
         this.boardUI.setPerspectivePlayerName(hostPlayerName);
     }
 
+    /**
+     * Starts the host-side server, accepts clients, and runs the authoritative game loop.
+     */
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println(GREEN + "Hosting LAN game on port " + port + RESET);

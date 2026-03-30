@@ -21,6 +21,13 @@ public class NetworkMessage {
     public List<String> players;
     public GameState state;
 
+    /**
+     * Creates a message with the given type and human-readable message text.
+     *
+     * @param type the message type
+     * @param message the message text
+     * @return a new network message envelope
+     */
     public static NetworkMessage of(MessageType type, String message) {
         NetworkMessage payload = new NetworkMessage();
         payload.type = type;

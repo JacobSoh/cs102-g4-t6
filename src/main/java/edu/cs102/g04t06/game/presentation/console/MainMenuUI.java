@@ -31,6 +31,9 @@ public class MainMenuUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     // Menu choice — returned to the caller after the user picks an option
     // -------------------------------------------------------------------------
+    /**
+     * Available top-level menu actions.
+     */
     public enum MenuChoice {
         OFFLINE_PLAY,
         HOST_LAN,

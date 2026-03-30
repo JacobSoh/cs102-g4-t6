@@ -55,6 +55,11 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             this.aiDifficulties   = Collections.unmodifiableList(new ArrayList<>(aiDifficulties));
         }
 
+        /**
+         * Returns a readable summary of the configured player setup.
+         *
+         * @return a multiline summary string
+         */
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -216,24 +221,6 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         System.out.println();
     }
 
-    private void printOptionBox(String[] options) {
-        int contentWidth = BOX_WIDTH;
-        for (String option : options) {
-            contentWidth = Math.max(contentWidth, stripAnsi(option).length() + 1);
-        }
-
-        System.out.println(WHITE + "  ┌" + "─".repeat(contentWidth) + "┐" + RESET);
-        for (String option : options) {
-            int visibleLen = stripAnsi(option).length();
-            int padding = contentWidth - visibleLen - 1;
-            if (padding < 0) padding = 0;
-            System.out.println(WHITE + "  │ " + RESET + option
-                    + " ".repeat(padding) + WHITE + "│" + RESET);
-        }
-        System.out.println(WHITE + "  └" + "─".repeat(contentWidth) + "┘" + RESET);
-        System.out.println();
-    }
-
     private void printError(String msg) {
         System.out.println();
         System.out.println(RED + "  ✖  " + msg + RESET);
@@ -260,15 +247,6 @@ public class PlayerSetupUI implements ThemeStyleSheet {
 
     private String stripAnsi(String s) {
         return s.replaceAll(ANSI_REGEX, "");
-    }
-
-    private boolean nameExistsIgnoreCase(List<Player> players, String candidateName) {
-        for (Player player : players) {
-            if (player.getName().equalsIgnoreCase(candidateName)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private record PlayerSeed(String name, int age, boolean isHuman) {}
