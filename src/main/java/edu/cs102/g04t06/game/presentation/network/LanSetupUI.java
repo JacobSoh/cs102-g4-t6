@@ -74,10 +74,24 @@ public class LanSetupUI implements ThemeStyleSheet {
         printHeader("LAN SETUP", "Join Game");
         System.out.println(WHITE + "  Mode: " + RESET + BLUE + "Online (Client)" + RESET);
         System.out.println();
-        String name = identityPrompts.promptName("Player name");
         String hostAddress = promptNonBlank("Host IP / hostname");
         int port = promptInt("Port", 1024, 65535);
-        name = validateJoinPlayerName(hostAddress, port, name);
+        String name = identityPrompts.promptName("Player name");
+        while (true) {
+            LanGameClient.JoinValidationResult result =
+                    LanGameClient.validateJoinRequest(hostAddress, port, name);
+            if (result.status() == LanGameClient.JoinValidationStatus.OK) {
+                break;
+            }
+
+            System.out.println(RED + "  ✖  " + result.message() + RESET);
+            if (result.status() == LanGameClient.JoinValidationStatus.INVALID_HOST) {
+                hostAddress = promptNonBlank("Host IP / hostname");
+                port = promptInt("Port", 1024, 65535);
+                continue;
+            }
+            name = identityPrompts.promptName("Player name");
+        }
         int age = identityPrompts.promptBirthdayAsAge(name);
         return new JoinSetup(name, age, hostAddress, port);
     }
@@ -129,17 +143,6 @@ public class LanSetupUI implements ThemeStyleSheet {
                 System.out.println(RED + "  Enter a number between "
                         + min + " and " + max + "." + RESET);
             }
-        }
-    }
-
-    private String validateJoinPlayerName(String hostAddress, int port, String name) {
-        while (true) {
-            String validationError = LanGameClient.validatePlayerName(hostAddress, port, name);
-            if (validationError == null) {
-                return name;
-            }
-            System.out.println(RED + "  ✖  " + validationError + RESET);
-            name = identityPrompts.promptName("Player name");
         }
     }
 }

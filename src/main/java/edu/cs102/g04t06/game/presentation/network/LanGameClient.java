@@ -10,6 +10,30 @@ import java.net.Socket;
  * Joiner-side LAN client.
  */
 public class LanGameClient {
+    public enum JoinValidationStatus {
+        OK,
+        INVALID_HOST,
+        INVALID_NAME
+    }
+
+    public static final class JoinValidationResult {
+        private final JoinValidationStatus status;
+        private final String message;
+
+        public JoinValidationResult(JoinValidationStatus status, String message) {
+            this.status = status;
+            this.message = message;
+        }
+
+        public JoinValidationStatus status() {
+            return status;
+        }
+
+        public String message() {
+            return message;
+        }
+    }
+
     private final String playerName;
     private final int playerAge;
     private final String hostAddress;
@@ -72,6 +96,19 @@ public class LanGameClient {
      * @return null when the name is available, otherwise an error message
      */
     public static String validatePlayerName(String hostAddress, int port, String playerName) {
+        JoinValidationResult result = validateJoinRequest(hostAddress, port, playerName);
+        return result.status() == JoinValidationStatus.OK ? null : result.message();
+    }
+
+    /**
+     * Validates that the host is reachable and the proposed player name is accepted.
+     *
+     * @param hostAddress the host address to contact
+     * @param port the host port
+     * @param playerName the proposed player name
+     * @return a structured validation result
+     */
+    public static JoinValidationResult validateJoinRequest(String hostAddress, int port, String playerName) {
         try (Socket socket = new Socket(hostAddress, port);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
@@ -82,14 +119,17 @@ public class LanGameClient {
 
             NetworkMessage response = NetworkProtocol.read(reader);
             if (response == null) {
-                return "Host closed the connection while validating the player name.";
+                return new JoinValidationResult(JoinValidationStatus.INVALID_HOST,
+                        "Host closed the connection while validating the player name.");
             }
             if (response.type == MessageType.ERROR) {
-                return response.message == null ? "Player name validation failed." : response.message;
+                return new JoinValidationResult(JoinValidationStatus.INVALID_NAME,
+                        response.message == null ? "Player name validation failed." : response.message);
             }
-            return null;
+            return new JoinValidationResult(JoinValidationStatus.OK, null);
         } catch (IOException e) {
-            return "Failed to contact host: " + e.getMessage();
+            return new JoinValidationResult(JoinValidationStatus.INVALID_HOST,
+                    "Failed to contact host: " + e.getMessage());
         }
     }
 }
