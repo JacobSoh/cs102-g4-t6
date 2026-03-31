@@ -1,5 +1,7 @@
 package edu.cs102.g04t06.game.presentation.network;
 
+// Edited by GPT-5 (Codex)
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
+import edu.cs102.g04t06.game.execution.GameEngine;
 import edu.cs102.g04t06.game.execution.TurnProcessor;
 import edu.cs102.g04t06.game.presentation.console.GameBoardUI;
 import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
@@ -25,7 +28,7 @@ public class LanGameServer implements ThemeStyleSheet {
     private final String hostPlayerName;
     private final int hostPlayerAge;
     private final GameBoardUI boardUI = new GameBoardUI();
-    private final TurnProcessor turnProcessor = new TurnProcessor();
+    private final GameEngine gameEngine = new GameEngine();
     private final GameStateFactory gameStateFactory = new GameStateFactory();
     private final List<ClientConnection> clients = new ArrayList<>();
     private final List<String> globalLog = new ArrayList<>();
@@ -179,7 +182,7 @@ public class LanGameServer implements ThemeStyleSheet {
                     getRecentGlobalLog());
             hostInlineError = "";
 
-            TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
+            TurnProcessor.TurnResult result = gameEngine.processPlayerCommand(state, input);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
                 continue;
@@ -209,7 +212,7 @@ public class LanGameServer implements ThemeStyleSheet {
                     statusColor,
                     getRecentGlobalLog());
             hostInlineError = "";
-            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, input);
+            TurnProcessor.TurnResult result = gameEngine.processGemReturn(state, input);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
                 continue;
@@ -241,7 +244,7 @@ public class LanGameServer implements ThemeStyleSheet {
                 continue;
             }
 
-            TurnProcessor.TurnResult result = turnProcessor.processCommand(state, reply.command);
+            TurnProcessor.TurnResult result = gameEngine.processPlayerCommand(state, reply.command);
             if (!result.isSuccess()) {
                 sendError(connection, state, result.getMessage());
                 continue;
@@ -275,7 +278,7 @@ public class LanGameServer implements ThemeStyleSheet {
                 continue;
             }
 
-            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, reply.command);
+            TurnProcessor.TurnResult result = gameEngine.processGemReturn(state, reply.command);
             if (!result.isSuccess()) {
                 sendError(connection, state, result.getMessage());
                 continue;
@@ -419,9 +422,9 @@ public class LanGameServer implements ThemeStyleSheet {
 
         TurnProcessor.TurnResult result;
         if (state.getCurrentPlayer().getGemCount() > 10) {
-            result = turnProcessor.processAutomaticReturnGems(state);
+            result = gameEngine.processAutomaticReturnGems(state);
         } else {
-            result = turnProcessor.processAutomaticPass(state);
+            result = gameEngine.processAutomaticPass(state);
         }
 
         if (!result.isSuccess()) {

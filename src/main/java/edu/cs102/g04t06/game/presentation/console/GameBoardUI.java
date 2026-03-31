@@ -1,5 +1,7 @@
 package edu.cs102.g04t06.game.presentation.console;
 
+// Edited by GPT-5 (Codex)
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -9,10 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import edu.cs102.g04t06.game.execution.ActionExecutor;
-import edu.cs102.g04t06.game.execution.ActionResult;
+import edu.cs102.g04t06.game.execution.GameEngine;
 import edu.cs102.g04t06.game.execution.TurnProcessor;
-import edu.cs102.g04t06.game.execution.ai.AIAction;
 import edu.cs102.g04t06.game.execution.ai.AIPlayer;
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
@@ -81,7 +81,7 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
     private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
-    private final TurnProcessor turnProcessor = new TurnProcessor();
+    private final GameEngine gameEngine;
     private final GameRules gameRules = new GameRules();
     private int actionLinesFromBottom = 1;
     private int statusLinesFromBottom = 1;
@@ -118,6 +118,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     GameBoardUI(Scanner scanner) {
         this.scanner = scanner;
+        this.gameEngine = new GameEngine();
     }
 
     public void setPerspectivePlayerName(String perspectivePlayerName) {
@@ -651,7 +652,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      */
     private void handleAction(GameState state, String input) {
         String actingPlayer = state.getCurrentPlayer().getName();
-        TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
+        TurnProcessor.TurnResult result = gameEngine.processPlayerCommand(state, input);
         if (!result.isSuccess()) {
             err(result.getMessage());
             return;
@@ -680,7 +681,7 @@ public class GameBoardUI implements ThemeStyleSheet {
         while (excess > 0) {
             String input = promptActionStatus(state, promptMessage);
 
-            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, input);
+            TurnProcessor.TurnResult result = gameEngine.processGemReturn(state, input);
             if (!result.isSuccess()) {
                 promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
                 continue;
@@ -705,76 +706,7 @@ public class GameBoardUI implements ThemeStyleSheet {
     // -------------------------------------------------------------------------
 
     private TurnProcessor.TurnResult executeAITurn(GameState state, AIPlayer aiPlayer) {
-        Player player = state.getCurrentPlayer();
-        AIAction action = aiPlayer.decideAction(state);
-
-        ActionResult actionResult = executeAIAction(state, action);
-        if (!actionResult.isSuccess()) {
-            state.advanceToNextPlayer();
-            return TurnProcessor.TurnResult.success(player.getName() + " passed (AI could not act).");
-        }
-
-        // Handle gem return if AI exceeded 10 gems
-        int excess = player.getGemCount() - 10;
-        if (excess > 0) {
-            GemCollection toReturn = aiPlayer.chooseGemsToReturn(excess, state);
-            ActionExecutor.executeReturnGems(state, toReturn);
-        }
-
-        // Noble claiming
-        StringBuilder message = new StringBuilder(actionResult.getMessage());
-        List<Noble> claimable = gameRules.getClaimableNobles(player, state.getAvailableNobles());
-        if (!claimable.isEmpty()) {
-            Noble chosen = aiPlayer.chooseNoble(claimable, state);
-            ActionResult nobleResult = ActionExecutor.executeClaimNoble(state, chosen);
-            if (nobleResult.isSuccess()) {
-                message.append(" ").append(nobleResult.getMessage());
-            }
-        }
-
-        // Win check
-        if (!state.isFinalRoundTriggered() && gameRules.hasPlayerWon(player, state.getWinningThreshold())) {
-            state.triggerFinalRound();
-            message.append(" Final round triggered.");
-        }
-
-        state.advanceToNextPlayer();
-
-        if (state.isGameOver()) {
-            Player winner = gameRules.getWinner(state.getPlayers(), state.getWinningThreshold());
-            if (winner != null) {
-                message.append(" Game over. Winner: ").append(winner.getName())
-                       .append(" with ").append(winner.getPoints()).append(" points.");
-            } else {
-                message.append(" Game over. No winner: final scores remain tied after tiebreaks.");
-            }
-        }
-
-        return TurnProcessor.TurnResult.success(message.toString());
-    }
-
-    private ActionResult executeAIAction(GameState state, AIAction action) {
-        return switch (action.getActionType()) {
-            case TAKE_THREE_DIFFERENT ->
-                ActionExecutor.executeTakeThreeDifferentGems(state, action.getGemSelection());
-            case TAKE_TWO_SAME -> {
-                GemColor color = null;
-                for (Map.Entry<GemColor, Integer> e : action.getGemSelection().asMap().entrySet()) {
-                    if (e.getValue() > 0 && e.getKey() != GemColor.GOLD) {
-                        color = e.getKey();
-                        break;
-                    }
-                }
-                if (color == null) {
-                    yield new ActionResult(false, "AI error: no color for TAKE_TWO_SAME");
-                }
-                yield ActionExecutor.executeTakeTwoSameGems(state, color);
-            }
-            case PURCHASE_CARD ->
-                ActionExecutor.executePurchaseCard(state, action.getTargetCard(), action.isFromReserved());
-            case RESERVE_CARD ->
-                ActionExecutor.executeReserveCard(state, action.getTargetCard());
-        };
+        return gameEngine.processAITurn(state, aiPlayer);
     }
 
     // -------------------------------------------------------------------------
