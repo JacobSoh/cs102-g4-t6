@@ -305,6 +305,17 @@ public class LanGameServer implements ThemeStyleSheet {
         connection.disconnected = true;
         closeClient(connection);
 
+        if (totalPlayers == 2) {
+            String message = connection.playerName + " disconnected. Ending the 2-player game.";
+            if (reason != null && !reason.isBlank()) {
+                message += " " + reason;
+            }
+            finalGameMessage = message;
+            appendGlobalLog(message);
+            state.setGameOver(true);
+            return;
+        }
+
         String message = connection.playerName + " disconnected.";
         if (reason != null && !reason.isBlank()) {
             message += " " + reason;
