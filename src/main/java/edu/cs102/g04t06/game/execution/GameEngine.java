@@ -1,5 +1,7 @@
 package edu.cs102.g04t06.game.execution;
 
+// Edited by GPT-5 (Codex)
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -83,8 +85,7 @@ public class GameEngine {
             players,
             market,
             initialGems,
-            new ArrayList<>(gameNobles),
-            config.getWinningPoints()
+            new ArrayList<>(gameNobles)
         );
     }
 

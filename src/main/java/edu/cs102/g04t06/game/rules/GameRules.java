@@ -1,5 +1,7 @@
 package edu.cs102.g04t06.game.rules;
 
+// Edited by GPT-5 (Codex)
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,10 +18,47 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  */
 public class GameRules{
 
-    //constants 
+    // Universal Splendor rule constants.
+    private static final int WINNING_POINTS = 15;
     private static final int MAX_GEMS_IN_HAND = 10;
     private static final int MAX_RESERVED_CARDS = 3;
     private static final int MIN_GEMS_IN_BANK_FOR_DOUBLE = 4;
+
+    /**
+     * Returns the fixed victory threshold for the game.
+     *
+     * @return points required to trigger the final round
+     */
+    public static int getWinningPoints() {
+        return WINNING_POINTS;
+    }
+
+    /**
+     * Returns the fixed reserved-card limit for the game.
+     *
+     * @return maximum reserved cards allowed per player
+     */
+    public static int getMaxReservedCards() {
+        return MAX_RESERVED_CARDS;
+    }
+
+    /**
+     * Returns the fixed gem-hand limit for the game.
+     *
+     * @return maximum gems allowed in hand
+     */
+    public static int getMaxGemsPerPlayer() {
+        return MAX_GEMS_IN_HAND;
+    }
+
+    /**
+     * Returns the fixed bank threshold required to take two of the same gem color.
+     *
+     * @return minimum gems needed in bank for a double take
+     */
+    public static int getMinGemsInBankForDouble() {
+        return MIN_GEMS_IN_BANK_FOR_DOUBLE;
+    }
 
     /**
      * checks if player fella can afford the card

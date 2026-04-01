@@ -1,5 +1,7 @@
 package edu.cs102.g04t06.game.rules;
 
+// Edited by GPT-5 (Codex)
+
 import java.util.List;
 
 import edu.cs102.g04t06.game.exception.NobleNotAvailableException;
@@ -24,20 +26,35 @@ public class GameState {
     private final int winningThreshold;
 
     /**
-     * constructs a game state with players, shared resources, and victory settings.
+     * constructs a game state with players and shared resources using
+     * the fixed universal rule constants.
      * @param players the players participating in the game
      * @param market the current card market
      * @param gemBank the current gems available in the bank
      * @param availableNobles the nobles currently available to be claimed
-     * @param winningThreshold the score required to trigger game end
      */
-    public GameState(List<Player> players, CardMarket market, GemCollection gemBank, List<Noble> availableNobles, int winningThreshold) {
+    public GameState(List<Player> players, CardMarket market, GemCollection gemBank, List<Noble> availableNobles) {
         this.players = players;
         this.roundNumber = 1;
         this.market = market;
         this.gemBank = gemBank;
         this.availableNobles = availableNobles;
-        this.winningThreshold = winningThreshold;
+        this.winningThreshold = GameRules.getWinningPoints();
+    }
+
+    /**
+     * compatibility constructor that preserves older call sites.
+     * the supplied threshold is ignored because winning points are now a
+     * universal rule constant owned by {@link GameRules}.
+     * @param players the players participating in the game
+     * @param market the current card market
+     * @param gemBank the current gems available in the bank
+     * @param availableNobles the nobles currently available to be claimed
+     * @param winningThreshold ignored compatibility parameter
+     */
+    public GameState(List<Player> players, CardMarket market, GemCollection gemBank,
+            List<Noble> availableNobles, int winningThreshold) {
+        this(players, market, gemBank, availableNobles);
     }
 
     /**

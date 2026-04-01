@@ -470,7 +470,7 @@ class ConsoleUITest {
         }
 
         @Test
-        @DisplayName("winning threshold is 15 (from config.properties)")
+        @DisplayName("winning threshold is 15 (from GameRules)")
         void winningThresholdIsFromConfig() {
             assertEquals(15, init(twoPlayerOffline()).getWinningThreshold());
         }

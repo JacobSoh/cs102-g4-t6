@@ -34,13 +34,6 @@ public class ConfigLoaderTest {
     void loadsBaseConfig() {
         ConfigLoader loader = new ConfigLoader("config-test.properties");
 
-        // Testing the base rules
-        assertEquals(15, loader.getWinningPoints());
-        assertEquals(3, loader.getMaxReservedCards());
-        assertEquals(10, loader.getMaxGemsPerPlayer());
-        assertEquals(3, loader.getMaxReservedCards());
-        assertEquals(10, loader.getMaxGemsPerPlayer());
-
         HashMap<String, String> dataPaths = loader.getDataFilePath();
         assertEquals("data/splendor_card.xlsx", dataPaths.get("card"));
         assertEquals("data/splendor_noble.xlsx", dataPaths.get("noblePath"));
