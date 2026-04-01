@@ -75,7 +75,42 @@ public class LanGameServer implements ThemeStyleSheet {
             return null;
         }
 
-        ClientConnection connection = new ClientConnection(socket, reader, writer, join.playerName.trim(), playerIndex);
+        String requestedName = join.playerName.trim();
+        if (join.type == MessageType.CHECK_NAME) {
+            if (isDuplicatePlayerName(requestedName)) {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.ERROR,
+                        "Player name already exists. Choose a different name."));
+            } else {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.INFO,
+                        "Player name is available."));
+            }
+            writer.flush();
+            try {
+                socket.shutdownOutput();
+            } catch (IOException ignored) {
+                // Some platforms may not support half-close cleanly.
+            }
+            socket.close();
+            return null;
+        }
+
+        if (join.type != MessageType.JOIN_REQUEST || join.playerAge == null) {
+            socket.close();
+            return null;
+        }
+
+        if (isDuplicatePlayerName(requestedName)) {
+            NetworkProtocol.send(writer, NetworkMessage.of(
+                    MessageType.ERROR,
+                    "Player name already exists. Choose a different name."));
+            socket.close();
+            return null;
+        }
+
+        ClientConnection connection = new ClientConnection(
+                socket, reader, writer, requestedName, join.playerAge, playerIndex);
         NetworkMessage accepted = NetworkMessage.of(MessageType.JOIN_ACCEPTED, "Joined lobby as " + connection.playerName + ".");
         accepted.playerIndex = playerIndex;
         accepted.expectedPlayers = totalPlayers;
