@@ -10,18 +10,47 @@ import java.net.Socket;
  * Joiner-side LAN client.
  */
 public class LanGameClient {
+    public enum JoinValidationStatus {
+        OK,
+        INVALID_HOST,
+        INVALID_NAME
+    }
+
+    public static final class JoinValidationResult {
+        private final JoinValidationStatus status;
+        private final String message;
+
+        public JoinValidationResult(JoinValidationStatus status, String message) {
+            this.status = status;
+            this.message = message;
+        }
+
+        public JoinValidationStatus status() {
+            return status;
+        }
+
+        public String message() {
+            return message;
+        }
+    }
+
     private final String playerName;
+    private final int playerAge;
     private final String hostAddress;
     private final int port;
     private final LanSessionUI sessionUI;
 
-    public LanGameClient(String playerName, String hostAddress, int port) {
+    public LanGameClient(String playerName, int playerAge, String hostAddress, int port) {
         this.playerName = playerName;
+        this.playerAge = playerAge;
         this.hostAddress = hostAddress;
         this.port = port;
         this.sessionUI = new LanSessionUI(playerName);
     }
 
+    /**
+     * Connects to the host, joins the lobby, and runs the client-side session loop.
+     */
     public void run() {
         try (Socket socket = new Socket(hostAddress, port);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -29,20 +58,28 @@ public class LanGameClient {
 
             NetworkMessage join = NetworkMessage.of(MessageType.JOIN_REQUEST, null);
             join.playerName = playerName;
+            join.playerAge = playerAge;
             NetworkProtocol.send(writer, join);
 
             NetworkMessage message;
+            boolean joinedLobby = false;
             while ((message = NetworkProtocol.read(reader)) != null) {
+                if (message.type == MessageType.JOIN_ACCEPTED) {
+                    joinedLobby = true;
+                }
                 NetworkMessage response = sessionUI.handle(message);
                 if (response != null) {
                     NetworkProtocol.send(writer, response);
+                }
+                if (message.type == MessageType.ERROR && !joinedLobby) {
+                    return;
                 }
                 if (message.type == MessageType.GAME_OVER) {
                     break;
                 }
             }
 
-            if (message == null) {
+            if (message == null && joinedLobby) {
                 sessionUI.showConnectionClosed();
             }
         } catch (IOException e) {

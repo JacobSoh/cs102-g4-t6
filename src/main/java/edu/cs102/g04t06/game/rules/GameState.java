@@ -104,6 +104,11 @@ public class GameState {
         return this.gameOver;
     }
 
+    /**
+     * Returns whether the final round has already been triggered.
+     *
+     * @return true when the final round is active
+     */
     public boolean isFinalRoundTriggered() {
         return this.finalRoundTriggered;
     }
@@ -137,6 +142,9 @@ public class GameState {
         this.gameOver = gameOver;
     }
 
+    /**
+     * Marks the final round as triggered so the game ends after the current round.
+     */
     public void triggerFinalRound() {
         this.finalRoundTriggered = true;
     }

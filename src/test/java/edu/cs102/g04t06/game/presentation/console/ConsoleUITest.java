@@ -17,6 +17,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -138,7 +139,9 @@ class ConsoleUITest {
 
         private PlayerSetupResult make(String local, boolean online,
                                        List<Player> players, List<Boolean> humans) {
-            return new PlayerSetupResult(local, online, players, humans);
+            List<String> diffs = new ArrayList<>();
+            for (Boolean h : humans) diffs.add(h ? null : "EASY");
+            return new PlayerSetupResult(local, online, players, humans, diffs);
         }
 
         @Test
@@ -249,7 +252,7 @@ class ConsoleUITest {
             var r = make("Alice", false,
                     List.of(new Player("Alice", 0), new Player("CPU-1", 1)),
                     List.of(true, false));
-            assertTrue(r.toString().contains("[CPU]"));
+            assertTrue(r.toString().contains("[CPU"), "toString should mark CPU players");
         }
 
         @Test
@@ -313,20 +316,20 @@ class ConsoleUITest {
         }
 
         @Test
-        @DisplayName("'n' input returns PLAYER_SETUP")
+        @DisplayName("'o' input returns PLAYER_SETUP")
         void newGameInputReturnsPlayerSetup() {
-            ConsoleUI ui = uiWithInput("n");
+            ConsoleUI ui = uiWithInput("o");
             assertEquals("PLAYER_SETUP", invokePrivate(ui, "handleMainMenu").toString());
         }
 
         @Test
-        @DisplayName("'l' input prints stub and returns MAIN_MENU")
-        void loadGameInputPrintsStubAndLoopsBack() {
-            ConsoleUI ui = uiWithInput("l");
+        @DisplayName("'l' input is now invalid and the menu continues until a valid choice")
+        void removedLoadGameInputIsRejected() {
+            ConsoleUI ui = uiWithInput("l", "q");
             Object result = invokePrivate(ui, "handleMainMenu");
-            assertEquals("MAIN_MENU", result.toString());
-            assertTrue(out().contains("not implemented"),
-                    "Load-game stub message should be printed");
+            assertEquals("EXIT", result.toString());
+            assertTrue(out().contains("Invalid choice"),
+                    "Removed load-game key should now be treated as invalid input");
         }
     }
 
@@ -367,12 +370,44 @@ class ConsoleUITest {
     class HandlePlayerSetupTests {
 
         @Test
-        @DisplayName("'b' (back) from mode selection returns MAIN_MENU and leaves gameState null")
-        void backFromSetupReturnsMainMenu() {
-            // PlayerSetupUI.show() sequence: name → mode ('b' = back) → returns null
-            ConsoleUI ui = uiWithInput("Alice", "b");
+        @DisplayName("completing setup returns GAME_BOARD")
+        void completedSetupReturnsGameBoard() {
+            // PlayerSetupUI.show() sequence: name → birthday → total players → difficulty → Enter to continue
+            ConsoleUI ui = uiWithInput("Alice", "2000-01-01", "2", "1", "");
             Object result = invokePrivate(ui, "handlePlayerSetup");
-            assertEquals("MAIN_MENU", result.toString());
+            assertEquals("GAME_BOARD", result.toString());
+        }
+    }
+
+    @Nested
+    @DisplayName("Player setup summary")
+    class PlayerSetupSummaryTests {
+
+        @Test
+        @DisplayName("marks the local human player as 'you' even when sorted after a CPU")
+        void summaryMarksLocalPlayerInsteadOfFirstPlayer() {
+            System.setIn(new ByteArrayInputStream("\n".getBytes()));
+            PlayerSetupUI setupUI = new PlayerSetupUI();
+
+            List<Player> players = List.of(
+                    new Player("CPU-1", 0),
+                    new Player("dongey", 1));
+            PlayerSetupResult result = new PlayerSetupResult(
+                    "dongey",
+                    false,
+                    players,
+                    List.of(false, true),
+                    Arrays.asList("HARD", null));
+
+            invokePrivate(setupUI, "showSummary", new Class[]{PlayerSetupResult.class}, result);
+
+            String output = out();
+            assertTrue(output.contains("CPU-1  [CPU - HARD]"),
+                    "CPU entry should still be shown as CPU.");
+            assertTrue(output.contains("dongey  [Human] ← you"),
+                    "The local player should receive the 'you' marker.");
+            assertFalse(output.contains("CPU-1  [CPU - HARD] ← you"),
+                    "The first player should not be marked as 'you' when they are a CPU.");
         }
     }
 
@@ -415,7 +450,7 @@ class ConsoleUITest {
             players.add(new Player("Alice", 0));
             players.add(new Player("CPU-1", 1));
             return new PlayerSetupResult(
-                    "Alice", false, players, List.of(true, false));
+                    "Alice", false, players, List.of(true, false), Arrays.asList(null, "EASY"));
         }
 
         private GameState init(PlayerSetupResult setup) {
@@ -481,8 +516,10 @@ class ConsoleUITest {
                 players.add(new Player("CPU-" + i, i));
                 humans.add(false);
             }
+            List<String> diffs = new ArrayList<>();
+            for (int i = 0; i < players.size(); i++) diffs.add("EASY");
             PlayerSetupResult setup = new PlayerSetupResult(
-                    "CPU-0", false, players, humans);
+                    "CPU-0", false, players, humans, diffs);
             assertEquals(5, init(setup).getAvailableNobles().size());
         }
 

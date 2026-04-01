@@ -16,10 +16,23 @@ public final class NetworkProtocol {
     private NetworkProtocol() {
     }
 
+    /**
+     * Serializes and sends a message on the provided writer.
+     *
+     * @param writer the destination writer
+     * @param message the message to send
+     */
     public static void send(PrintWriter writer, NetworkMessage message) {
         writer.println(GSON.toJson(message));
     }
 
+    /**
+     * Reads and deserializes a single line-delimited JSON message.
+     *
+     * @param reader the source reader
+     * @return the parsed message, or null on end-of-stream
+     * @throws IOException if the read fails
+     */
     public static NetworkMessage read(BufferedReader reader) throws IOException {
         String line = reader.readLine();
         if (line == null) {

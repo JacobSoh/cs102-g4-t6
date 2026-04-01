@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
+import edu.cs102.g04t06.game.execution.ai.AIPlayer;
+import edu.cs102.g04t06.game.execution.ai.AIStrategy;
+import edu.cs102.g04t06.game.execution.ai.EasyAIStrategy;
+import edu.cs102.g04t06.game.execution.ai.HardAIStrategy;
 import edu.cs102.g04t06.game.presentation.console.MainMenuUI.MenuChoice;
 import edu.cs102.g04t06.game.presentation.console.PlayerSetupUI.PlayerSetupResult;
 import edu.cs102.g04t06.game.presentation.network.LanGameClient;
@@ -94,10 +98,6 @@ public class ConsoleUI implements ThemeStyleSheet {
             case OFFLINE_PLAY -> Route.PLAYER_SETUP;
             case HOST_LAN -> Route.HOST_LAN_SETUP;
             case JOIN_LAN -> Route.JOIN_LAN_SETUP;
-            case LOAD_GAME -> {
-                printLoadGameStub();
-                yield Route.MAIN_MENU;
-            }
             case QUIT -> Route.EXIT;
         };
     }
@@ -109,6 +109,19 @@ public class ConsoleUI implements ThemeStyleSheet {
         }
         this.gameBoardUI.setPerspectivePlayerName(setup.localPlayerName);
         this.gameState = createInitialGameState(setup);
+
+        List<AIPlayer> aiPlayerList = new ArrayList<>();
+        List<Player> statePlayers = this.gameState.getPlayers();
+        for (int i = 0; i < setup.isHuman.size(); i++) {
+            if (!setup.isHuman.get(i)) {
+                AIStrategy strategy = "HARD".equals(setup.aiDifficulties.get(i))
+                        ? new HardAIStrategy()
+                        : new EasyAIStrategy();
+                aiPlayerList.add(new AIPlayer(statePlayers.get(i), strategy));
+            }
+        }
+        this.gameBoardUI.setAIPlayers(aiPlayerList);
+
         return Route.GAME_BOARD;
     }
 
@@ -123,13 +136,13 @@ public class ConsoleUI implements ThemeStyleSheet {
 
     private Route handleHostLanSetup() {
         LanSetupUI.HostSetup setup = lanSetupUI.promptHostSetup();
-        new LanGameServer(setup.port, setup.totalPlayers, setup.hostPlayerName).run();
+        new LanGameServer(setup.port, setup.totalPlayers, setup.hostPlayerName, setup.hostPlayerAge).run();
         return Route.MAIN_MENU;
     }
 
     private Route handleJoinLanSetup() {
         LanSetupUI.JoinSetup setup = lanSetupUI.promptJoinSetup();
-        new LanGameClient(setup.playerName, setup.hostAddress, setup.port).run();
+        new LanGameClient(setup.playerName, setup.playerAge, setup.hostAddress, setup.port).run();
         return Route.MAIN_MENU;
     }
 

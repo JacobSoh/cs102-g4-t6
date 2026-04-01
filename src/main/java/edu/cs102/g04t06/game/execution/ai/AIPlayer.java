@@ -7,7 +7,9 @@ import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-
+/**
+ * Strategy-backed wrapper around a {@link Player} for AI-controlled turns.
+ */
 public class AIPlayer{
 
     private final Player player;

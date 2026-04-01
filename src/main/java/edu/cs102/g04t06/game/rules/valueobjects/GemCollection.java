@@ -27,7 +27,7 @@ public class GemCollection {
      * @param gems map of gemColor to Integer counts
      */
     public GemCollection(Map<GemColor, Integer> gems) {
-        this.gems = gems;
+        this.gems = new EnumMap<>(gems); // defensive copy — prevents external mutation
     }
 
     /**

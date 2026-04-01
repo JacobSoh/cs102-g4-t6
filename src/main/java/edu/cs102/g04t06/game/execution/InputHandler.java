@@ -73,10 +73,10 @@ public class InputHandler {
     private GemColor parseGemCode(char c) {
         return switch (c) {
             case 'W' -> GemColor.WHITE;
-            case 'U' -> GemColor.BLUE;
+            case 'B' -> GemColor.BLUE;
             case 'G' -> GemColor.GREEN;
             case 'R' -> GemColor.RED;
-            case 'K' -> GemColor.BLACK;
+            case 'D' -> GemColor.BLACK;
             case '*' -> GemColor.GOLD;
             default -> throw new IllegalArgumentException("Invalid gem code: " + c);
         };

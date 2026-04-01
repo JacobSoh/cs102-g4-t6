@@ -2,6 +2,7 @@ package edu.cs102.g04t06.game.rules.entities;
 
 import java.util.*;
 
+import edu.cs102.g04t06.game.exception.MaxReservedCardsException;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 
@@ -97,17 +98,18 @@ public class Player {
     }
 
     /**
-     * retutn the total points for this player
-     * summing all points from the cards and noble
+     * Returns the total prestige points for this player,
+     * summing all purchased cards and claimed nobles via the GameEntity interface.
+     *
      * @return total prestige points from cards and nobles
      */
     public int getPoints(){
         int total = 0;
-        for(Card card : purchasedCards){
-            total += card.getPoints();
-        }
-        for(Noble noble : claimedNobles){
-            total += noble.getPoints();
+        List<GameEntity> entities = new ArrayList<>();
+        entities.addAll(purchasedCards);
+        entities.addAll(claimedNobles);
+        for (GameEntity entity : entities) {
+            total += entity.getPoints();
         }
         return total;
     }
@@ -151,9 +153,7 @@ public class Player {
      */
     public void addReservedCard(Card card){
         if(reservedCards.size() >= 3){
-            throw new IllegalStateException(
-                "Cannot reserve more than 3 cards"
-            );
+            throw new MaxReservedCardsException();
         }
         reservedCards.add(card);
     }
