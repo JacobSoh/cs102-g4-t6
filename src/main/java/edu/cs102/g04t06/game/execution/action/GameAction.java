@@ -1,5 +1,6 @@
-package edu.cs102.g04t06.game.execution;
+package edu.cs102.g04t06.game.execution.action;
 
+import edu.cs102.g04t06.game.execution.ActionResult;
 import edu.cs102.g04t06.game.rules.GameState;
 
 /**

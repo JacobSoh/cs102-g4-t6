@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-// Edited by GPT-5 (Codex)
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;

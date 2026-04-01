@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.presentation.network;
 
-// Edited by GPT-5 (Codex)
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
