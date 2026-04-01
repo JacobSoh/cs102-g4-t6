@@ -125,7 +125,7 @@ public class GameRules{
     public List<Noble> getClaimableNobles(Player player, List<Noble> nobles){
         List<Noble> result = new ArrayList<>();
         for(Noble noble : nobles){
-            if(Noble.canBeClaimed(noble, player.calculateBonuses())){ //dont call static method on instance
+            if(Noble.canBeClaimed(noble, player.calculateBonuses())){
                 result.add(noble);
             }
         }
