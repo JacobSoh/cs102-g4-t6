@@ -1,20 +1,14 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import java.util.Scanner;
-
 /**
  * MainMenuUI
  *
  * Displays the main menu after the load screen.
- * Presents the available start options after the load screen.
- * Returns a MenuChoice enum so the caller (ConsoleUI / App) can
- * decide what screen to navigate to next.
+ * Presents the available start options and returns a MenuChoice so the
+ * caller (ConsoleUI / App) can decide what screen to navigate to next.
  */
-public class MainMenuUI implements ThemeStyleSheet {
+public class MainMenuUI extends AbstractConsoleUI {
 
-    // -------------------------------------------------------------------------
-    // ASCII Art Title (smaller than load screen, suits a menu)
-    // -------------------------------------------------------------------------
     private static final String[] TITLE_ART = {
         "  ███████╗██████╗ ██╗     ███████╗███╗   ██╗██████╗  ██████╗ ██████╗  ",
         "  ██╔════╝██╔══██╗██║     ██╔════╝████╗  ██║██╔══██╗██╔═══██╗██╔══██╗ ",
@@ -26,11 +20,7 @@ public class MainMenuUI implements ThemeStyleSheet {
 
     private static final int    BOX_WIDTH = 30;
     private static final String VERSION   = "v1.0.0";
-    private final Scanner scanner = new Scanner(System.in);
 
-    // -------------------------------------------------------------------------
-    // Menu choice — returned to the caller after the user picks an option
-    // -------------------------------------------------------------------------
     /**
      * Available top-level menu actions.
      */
@@ -40,10 +30,6 @@ public class MainMenuUI implements ThemeStyleSheet {
         JOIN_LAN,
         QUIT
     }
-
-    // -------------------------------------------------------------------------
-    // Public entry point
-    // -------------------------------------------------------------------------
 
     /**
      * Displays the main menu and blocks until the user enters a valid option.
@@ -65,20 +51,10 @@ public class MainMenuUI implements ThemeStyleSheet {
                 case 'j': return MenuChoice.JOIN_LAN;
                 case 'q': return MenuChoice.QUIT;
                 default:
-                    // Invalid key — just re-render the menu
                     printInvalidKey();
                     break;
             }
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Private rendering helpers
-    // -------------------------------------------------------------------------
-
-    private void clearScreen() {
-        System.out.print(CLEAR_SCREEN);
-        System.out.flush();
     }
 
     private void printTitle() {
@@ -89,29 +65,24 @@ public class MainMenuUI implements ThemeStyleSheet {
         System.out.println();
     }
 
-    /**
-     * Renders the bordered menu box with the available options.
-     * Each option is colour-coded to match the screenshot aesthetic:
-     *   O → green, H/J → LAN, Q → white/dim
-     */
     private void printMenu() {
         String top    = "  ┌" + "─".repeat(BOX_WIDTH) + "┐";
         String div    = "  ├" + "─".repeat(BOX_WIDTH) + "┤";
         String bottom = "  └" + "─".repeat(BOX_WIDTH) + "┘";
 
-        String title     = centreInBox("MAIN MENU", BOX_WIDTH);
+        String title       = centreInBox("MAIN MENU", BOX_WIDTH);
         String offlinePlay = menuLine(GREEN,  "O", "Offline Play", BOX_WIDTH);
-        String hostLan   = menuLine(CYAN,   "H", "Host LAN",   BOX_WIDTH);
-        String joinLan   = menuLine(PURPLE, "J", "Join LAN",   BOX_WIDTH);
-        String quit      = menuLine(WHITE,  "Q", "Quit",       BOX_WIDTH);
+        String hostLan     = menuLine(CYAN,   "H", "Host LAN",    BOX_WIDTH);
+        String joinLan     = menuLine(PURPLE, "J", "Join LAN",    BOX_WIDTH);
+        String quit        = menuLine(WHITE,  "Q", "Quit",        BOX_WIDTH);
 
         System.out.println(WHITE + top    + RESET);
-        System.out.println(WHITE + "  │" + BOLD + WHITE + title   + RESET + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + BOLD + WHITE + title + RESET + WHITE + "│" + RESET);
         System.out.println(WHITE + div    + RESET);
         System.out.println(WHITE + "  │" + offlinePlay + WHITE + "│" + RESET);
-        System.out.println(WHITE + "  │" + hostLan  + WHITE + "│" + RESET);
-        System.out.println(WHITE + "  │" + joinLan  + WHITE + "│" + RESET);
-        System.out.println(WHITE + "  │" + quit     + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + hostLan     + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + joinLan     + WHITE + "│" + RESET);
+        System.out.println(WHITE + "  │" + quit        + WHITE + "│" + RESET);
         System.out.println(WHITE + bottom + RESET);
         System.out.println();
     }
@@ -127,30 +98,15 @@ public class MainMenuUI implements ThemeStyleSheet {
         sleep(1000);
     }
 
-    // -------------------------------------------------------------------------
-    // Layout helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Builds a single menu row, e.g.:  "  [ O ]  Offline Play       "
-     * The key bracket is coloured, the label is white.
-     */
     private String menuLine(String colour, String key, String label, int width) {
         String bracket = colour + BOLD + "[ " + key + " ]" + RESET;
         String text    = WHITE + "  " + label + RESET;
-
-        // Calculate visible length for padding
         String visible = "  [ " + key + " ]  " + label;
         int padding    = width - visible.length();
         if (padding < 0) padding = 0;
-
         return "  " + bracket + text + " ".repeat(padding);
     }
 
-    /**
-     * Centres a plain string inside a box of the given inner width,
-     * padding with spaces on both sides.
-     */
     private String centreInBox(String text, int width) {
         int totalPad = width - text.length();
         int left     = totalPad / 2;
@@ -158,24 +114,9 @@ public class MainMenuUI implements ThemeStyleSheet {
         return " ".repeat(left) + text + " ".repeat(right);
     }
 
-    // -------------------------------------------------------------------------
-    // Input
-    // -------------------------------------------------------------------------
-
-    /**
-     * Reads one line and returns the first non-whitespace character.
-     * Returns '\0' when the line is empty.
-     */
     private char readChoice() {
         String input = scanner.nextLine().trim();
-        if (input.isEmpty()) {
-            return '\0';
-        }
+        if (input.isEmpty()) return '\0';
         return input.charAt(0);
-    }
-
-    private void sleep(int ms) {
-        try { Thread.sleep(ms); }
-        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 }

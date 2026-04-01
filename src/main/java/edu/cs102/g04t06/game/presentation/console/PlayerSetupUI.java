@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Scanner;
 
 import edu.cs102.g04t06.game.presentation.shared.PlayerIdentityPrompts;
 import edu.cs102.g04t06.game.rules.entities.Player;
@@ -19,25 +18,21 @@ import edu.cs102.g04t06.game.rules.entities.Player;
  *
  * Returns a PlayerSetupResult containing everything the game needs.
  */
-public class PlayerSetupUI implements ThemeStyleSheet {
+public class PlayerSetupUI extends AbstractConsoleUI {
 
     private static final int BOX_WIDTH = 50;
-
-    // -------------------------------------------------------------------------
-    // Result object returned to the caller
-    // -------------------------------------------------------------------------
 
     /**
      * Holds everything collected during player setup.
      * Pass this into your game initialisation logic.
      */
     public static class PlayerSetupResult {
-        public final String       localPlayerName;   // the human at this machine
-        public final boolean      isOnline;          // true = online, false = offline/CPU
-        public final int          totalPlayers;      // 2–4
-        public final List<Player> players;           // index 0 = local player, rest = friends/CPUs
-        public final List<Boolean> isHuman;          // true = human, false = CPU
-        public final List<String> aiDifficulties;   // "EASY" or "HARD" per player (null for humans)
+        public final String       localPlayerName;
+        public final boolean      isOnline;
+        public final int          totalPlayers;
+        public final List<Player> players;
+        public final List<Boolean> isHuman;
+        public final List<String> aiDifficulties;
 
         public PlayerSetupResult(String localPlayerName,
                                  boolean isOnline,
@@ -55,11 +50,6 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             this.aiDifficulties   = Collections.unmodifiableList(new ArrayList<>(aiDifficulties));
         }
 
-        /**
-         * Returns a readable summary of the configured player setup.
-         *
-         * @return a multiline summary string
-         */
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -75,15 +65,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Scanner (shared across steps)
-    // -------------------------------------------------------------------------
-    private final Scanner scanner = new Scanner(System.in);
     private final PlayerIdentityPrompts identityPrompts = new PlayerIdentityPrompts(scanner);
-
-    // -------------------------------------------------------------------------
-    // Public entry point
-    // -------------------------------------------------------------------------
 
     /**
      * Runs the offline player setup flow and returns a populated PlayerSetupResult.
@@ -91,8 +73,7 @@ public class PlayerSetupUI implements ThemeStyleSheet {
     public PlayerSetupResult show() {
         clearScreen();
         printHeader("PLAYER SETUP", "Offline Game");
-        System.out.println(WHITE + "  Mode: " + RESET
-                + BLUE + "Offline (vs CPU)" + RESET);
+        System.out.println(WHITE + "  Mode: " + RESET + BLUE + "Offline (vs CPU)" + RESET);
         System.out.println();
 
         String localName = identityPrompts.promptName("Your name");
@@ -103,7 +84,6 @@ public class PlayerSetupUI implements ThemeStyleSheet {
 
         playerSeeds.add(new PlayerSeed(localName, localAge, true));
         addCpuPlayers(opponentCount, localAge, playerSeeds);
-
         playerSeeds.sort(Comparator.comparingInt(PlayerSeed::age));
 
         List<Player> players = new ArrayList<>();
@@ -116,37 +96,21 @@ public class PlayerSetupUI implements ThemeStyleSheet {
             difficulties.add(seed.isHuman() ? null : promptDifficulty(seed.name()));
         }
 
-        PlayerSetupResult result = new PlayerSetupResult(
-                localName,
-                false,
-                players,
-                humans,
-                difficulties
-        );
+        PlayerSetupResult result = new PlayerSetupResult(localName, false, players, humans, difficulties);
         showSummary(result);
         return result;
     }
 
-    // -------------------------------------------------------------------------
-    // Inputs
-    // -------------------------------------------------------------------------
     private int promptTotalPlayers(String localName) {
-        System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD
-                + localName + RESET);
+        System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD + localName + RESET);
         System.out.println();
         return identityPrompts.promptTotalPlayers();
     }
 
-    // -------------------------------------------------------------------------
-    // Step 3 — Auto-generate CPU players
-    // -------------------------------------------------------------------------
-
     private void addCpuPlayers(int count, int referenceAge, List<PlayerSeed> playerSeeds) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
-            String cpuName = cpuNames[i];
-            int cpuAge = randomNearbyAge(referenceAge);
-            playerSeeds.add(new PlayerSeed(cpuName, cpuAge, false));
+            playerSeeds.add(new PlayerSeed(cpuNames[i], randomNearbyAge(referenceAge), false));
         }
     }
 
@@ -173,13 +137,9 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(minAge, maxAge + 1);
     }
 
-    // -------------------------------------------------------------------------
-    // Summary screen
-    // -------------------------------------------------------------------------
     private void showSummary(PlayerSetupResult result) {
         clearScreen();
         printHeader("PLAYER SETUP", "Summary — Ready to Play!");
-
         System.out.println(WHITE + "  Mode: " + RESET
                 + (result.isOnline
                     ? GREEN + BOLD + "Online" + RESET
@@ -189,28 +149,17 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         System.out.println();
 
         for (int i = 0; i < result.players.size(); i++) {
-            String name    = result.players.get(i).getName();
-            boolean human  = result.isHuman.get(i);
-            String diff    = result.aiDifficulties.get(i);
-            String tag     = human
-                    ? GREEN + "[Human]" + RESET
-                    : BLUE  + "[CPU - " + diff + "]" + RESET;
-            String youTag  = (i == 0) ? GOLD + " ← you" + RESET : "";
-            System.out.println("    " + CYAN + (i + 1) + ". " + RESET
-                    + WHITE + name + RESET + "  " + tag + youTag);
+            String name   = result.players.get(i).getName();
+            boolean human = result.isHuman.get(i);
+            String diff   = result.aiDifficulties.get(i);
+            String tag    = human ? GREEN + "[Human]" + RESET : BLUE + "[CPU - " + diff + "]" + RESET;
+            String youTag = (i == 0) ? GOLD + " ← you" + RESET : "";
+            System.out.println("    " + CYAN + (i + 1) + ". " + RESET + WHITE + name + RESET + "  " + tag + youTag);
         }
 
         System.out.println();
         System.out.print(GREEN + BOLD + "  Press Enter to start the game... " + RESET);
         waitForEnter();
-    }
-
-    // -------------------------------------------------------------------------
-    // Rendering helpers
-    // -------------------------------------------------------------------------
-    private void clearScreen() {
-        System.out.print(CLEAR_SCREEN);
-        System.out.flush();
     }
 
     private void printHeader(String title, String subtitle) {
@@ -221,34 +170,5 @@ public class PlayerSetupUI implements ThemeStyleSheet {
         System.out.println();
     }
 
-    private void printError(String msg) {
-        System.out.println();
-        System.out.println(RED + "  ✖  " + msg + RESET);
-    }
-
-    // -------------------------------------------------------------------------
-    // Input helpers
-    // -------------------------------------------------------------------------
-    private void waitForEnter() {
-        while (true) {
-            String input = scanner.nextLine();
-            if (input.isBlank()) {
-                return;
-            }
-            System.out.println(RED + "  Please press Enter only to continue." + RESET);
-            System.out.print(GREEN + "  > " + RESET);
-        }
-    }
-
-    private void sleep(int ms) {
-        try { Thread.sleep(ms); }
-        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
-
-    private String stripAnsi(String s) {
-        return s.replaceAll(ANSI_REGEX, "");
-    }
-
     private record PlayerSeed(String name, int age, boolean isHuman) {}
-
 }

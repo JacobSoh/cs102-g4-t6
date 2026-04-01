@@ -2,9 +2,9 @@ package edu.cs102.g04t06.game.rules.entities;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 
 /**
- * represents an immutable Development card 
+ * represents an immutable Development card
  */
-public class Card {
+public class Card implements GameEntity {
 
     private final int level;
     private final int points;

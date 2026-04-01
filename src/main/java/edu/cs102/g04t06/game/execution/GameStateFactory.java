@@ -27,10 +27,11 @@ public class GameStateFactory {
         String cardPath = paths.get("card");
         String noblePath = paths.get("noblePath");
 
-        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(cardPath);
-        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(cardPath);
-        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(cardPath);
-        List<Noble> allNobles = ExcelDataLoader.loadNobles(noblePath);
+        ExcelDataLoader dataLoader = new ExcelDataLoader();
+        List<Card> level1 = dataLoader.loadLevel1Cards(cardPath);
+        List<Card> level2 = dataLoader.loadLevel2Cards(cardPath);
+        List<Card> level3 = dataLoader.loadLevel3Cards(cardPath);
+        List<Noble> allNobles = dataLoader.loadNobles(noblePath);
 
         return new GameEngine().initializeGame(
                 totalPlayers, playerNames, config, level1, level2, level3, allNobles);
