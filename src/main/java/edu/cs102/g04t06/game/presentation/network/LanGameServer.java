@@ -100,6 +100,12 @@ public class LanGameServer implements ThemeStyleSheet {
                         MessageType.INFO,
                         "Player name is available."));
             }
+            writer.flush();
+            try {
+                socket.shutdownOutput();
+            } catch (IOException ignored) {
+                // Some platforms may not support half-close cleanly.
+            }
             socket.close();
             return null;
         }
@@ -113,27 +119,6 @@ public class LanGameServer implements ThemeStyleSheet {
             NetworkProtocol.send(writer, NetworkMessage.of(
                     MessageType.ERROR,
                     "Player name already exists. Choose a different name."));
-            socket.close();
-            return null;
-        }
-
-        String requestedName = join.playerName.trim();
-        if (join.type == MessageType.CHECK_NAME) {
-            if (isDuplicatePlayerName(requestedName)) {
-                NetworkProtocol.send(writer, NetworkMessage.of(
-                        MessageType.ERROR,
-                        "Player name already exists. Choose a different name."));
-            } else {
-                NetworkProtocol.send(writer, NetworkMessage.of(
-                        MessageType.INFO,
-                        "Player name is available."));
-            }
-            writer.flush();
-            try {
-                socket.shutdownOutput();
-            } catch (IOException ignored) {
-                // Some platforms may not support half-close cleanly.
-            }
             socket.close();
             return null;
         }
