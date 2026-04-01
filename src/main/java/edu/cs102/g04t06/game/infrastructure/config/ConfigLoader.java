@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.infrastructure.config;
 
-// Edited by GPT-5 (Codex)
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;

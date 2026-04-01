@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.rules;
 
-// Edited by GPT-5 (Codex)
-
 import java.util.List;
 
 import edu.cs102.g04t06.game.exception.NobleNotAvailableException;

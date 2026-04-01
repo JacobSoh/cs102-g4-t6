@@ -1,7 +1,5 @@
 package edu.cs102.g04t06.game.rules;
 
-// Edited by GPT-5 (Codex)
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
