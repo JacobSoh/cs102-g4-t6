@@ -1,11 +1,13 @@
 package edu.cs102.g04t06.game.execution;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
+import edu.cs102.g04t06.game.rules.entities.Noble;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
@@ -102,5 +105,81 @@ class GameEngineTurnResultTest {
         assertEquals(10, player.getGemCount());
         assertEquals(1, state.getCurrentPlayerIndex());
         assertTrue(result.getMessage().contains("auto-returned"));
+    }
+
+    @Test
+    void processPlayerCommand_multipleClaimableNoblesAwaitsSelection() {
+        Player secondPlayer = new Player("Bob", 1);
+        state = new GameState(
+                List.of(player, secondPlayer),
+                state.getMarket(),
+                state.getGemBank(),
+                new ArrayList<>(),
+                15);
+
+        Card whiteBonus = new Card(1, 0, GemColor.WHITE, new Cost(new EnumMap<>(GemColor.class)));
+        Card blueBonus = new Card(1, 0, GemColor.BLUE, new Cost(new EnumMap<>(GemColor.class)));
+        for (int i = 0; i < 3; i++) {
+            player.addCard(whiteBonus);
+            player.addCard(blueBonus);
+        }
+
+        Map<GemColor, Integer> whiteReq = new EnumMap<>(GemColor.class);
+        whiteReq.put(GemColor.WHITE, 3);
+        Noble whiteNoble = new Noble(1, "White Court", whiteReq);
+
+        Map<GemColor, Integer> blueReq = new EnumMap<>(GemColor.class);
+        blueReq.put(GemColor.BLUE, 3);
+        Noble blueNoble = new Noble(2, "Blue Court", blueReq);
+
+        state.getAvailableNobles().add(whiteNoble);
+        state.getAvailableNobles().add(blueNoble);
+
+        GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, "pass");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.isAwaitingNobleSelection());
+        assertEquals(2, result.getClaimableNobles().size());
+        assertEquals(0, player.getClaimedNobles().size());
+        assertEquals(0, state.getCurrentPlayerIndex(), "Turn should wait for noble choice");
+    }
+
+    @Test
+    void processNobleSelection_claimsChosenNobleAndAdvancesTurn() {
+        Player secondPlayer = new Player("Bob", 1);
+        state = new GameState(
+                List.of(player, secondPlayer),
+                state.getMarket(),
+                state.getGemBank(),
+                new ArrayList<>(),
+                15);
+
+        Card whiteBonus = new Card(1, 0, GemColor.WHITE, new Cost(new EnumMap<>(GemColor.class)));
+        Card blueBonus = new Card(1, 0, GemColor.BLUE, new Cost(new EnumMap<>(GemColor.class)));
+        for (int i = 0; i < 3; i++) {
+            player.addCard(whiteBonus);
+            player.addCard(blueBonus);
+        }
+
+        Map<GemColor, Integer> whiteReq = new EnumMap<>(GemColor.class);
+        whiteReq.put(GemColor.WHITE, 3);
+        Noble whiteNoble = new Noble(1, "White Court", whiteReq);
+
+        Map<GemColor, Integer> blueReq = new EnumMap<>(GemColor.class);
+        blueReq.put(GemColor.BLUE, 3);
+        Noble blueNoble = new Noble(2, "Blue Court", blueReq);
+
+        state.getAvailableNobles().add(whiteNoble);
+        state.getAvailableNobles().add(blueNoble);
+
+        GameEngine.TurnResult pendingResult = gameEngine.processPlayerCommand(state, "pass");
+        GameEngine.TurnResult result = gameEngine.processNobleSelection(state, "2", pendingResult.getMessage());
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, player.getClaimedNobles().size());
+        assertTrue(player.getClaimedNobles().contains(blueNoble));
+        assertTrue(state.getAvailableNobles().contains(whiteNoble));
+        assertFalse(state.getAvailableNobles().contains(blueNoble));
+        assertEquals(1, state.getCurrentPlayerIndex(), "Turn should advance after noble choice");
     }
 }
