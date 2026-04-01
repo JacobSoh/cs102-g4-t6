@@ -1,7 +1,6 @@
 package edu.cs102.g04t06.game.execution.action;
 
 import edu.cs102.g04t06.game.execution.ActionResult;
-import edu.cs102.g04t06.game.execution.GameAction;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;

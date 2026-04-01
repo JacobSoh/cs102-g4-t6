@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import edu.cs102.g04t06.game.execution.ActionResult;
-import edu.cs102.g04t06.game.execution.GameAction;
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
