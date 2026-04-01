@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Scanner; // kept for GameBoardUI(Scanner) constructor parameter
 
 import edu.cs102.g04t06.game.execution.GameEngine;
-import edu.cs102.g04t06.game.execution.TurnProcessor;
 import edu.cs102.g04t06.game.execution.ai.AIPlayer;
 import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.GameState;
@@ -156,7 +155,7 @@ public class GameBoardUI extends AbstractConsoleUI {
             AIPlayer aiPlayer = aiPlayers.get(currentPlayer);
             if (aiPlayer != null) {
                 sleep(1000);
-                TurnProcessor.TurnResult result = executeAITurn(state, aiPlayer);
+                GameEngine.TurnResult result = executeAITurn(state, aiPlayer);
                 logPlayerAction(currentPlayer.getName(), result.getMessage());
                 ok(result.getMessage());
                 sleep(800);
@@ -649,7 +648,7 @@ public class GameBoardUI extends AbstractConsoleUI {
      */
     private void handleAction(GameState state, String input) {
         String actingPlayer = state.getCurrentPlayer().getName();
-        TurnProcessor.TurnResult result = gameEngine.processPlayerCommand(state, input);
+        GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, input);
         if (!result.isSuccess()) {
             err(result.getMessage());
             return;
@@ -678,7 +677,7 @@ public class GameBoardUI extends AbstractConsoleUI {
         while (excess > 0) {
             String input = promptActionStatus(state, promptMessage);
 
-            TurnProcessor.TurnResult result = gameEngine.processGemReturn(state, input);
+            GameEngine.TurnResult result = gameEngine.processGemReturn(state, input);
             if (!result.isSuccess()) {
                 promptMessage = "Return " + excess + " gem(s) [invalid input, try again]: ";
                 continue;
@@ -702,7 +701,7 @@ public class GameBoardUI extends AbstractConsoleUI {
     // AI turn handling
     // -------------------------------------------------------------------------
 
-    private TurnProcessor.TurnResult executeAITurn(GameState state, AIPlayer aiPlayer) {
+    private GameEngine.TurnResult executeAITurn(GameState state, AIPlayer aiPlayer) {
         return gameEngine.processAITurn(state, aiPlayer);
     }
 

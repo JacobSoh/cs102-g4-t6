@@ -26,6 +26,90 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  */
 public class GameEngine {
 
+    /**
+     * Result of a processed turn step.
+     */
+    public static final class TurnResult {
+        private final boolean success;
+        private final boolean awaitingReturn;
+        private final int excessCount;
+        private final String message;
+
+        private TurnResult(boolean success, boolean awaitingReturn, int excessCount, String message) {
+            this.success = success;
+            this.awaitingReturn = awaitingReturn;
+            this.excessCount = excessCount;
+            this.message = message;
+        }
+
+        /**
+         * Creates a successful result that completes the turn.
+         *
+         * @param message the message to expose to the caller
+         * @return a successful turn result
+         */
+        public static TurnResult success(String message) {
+            return new TurnResult(true, false, 0, message);
+        }
+
+        /**
+         * Creates a successful result that still requires gem returns.
+         *
+         * @param message the message to expose to the caller
+         * @param excessCount the number of gems that must be returned
+         * @return a turn result awaiting gem return
+         */
+        public static TurnResult awaitingReturn(String message, int excessCount) {
+            return new TurnResult(true, true, excessCount, message);
+        }
+
+        /**
+         * Creates a failed result.
+         *
+         * @param message the failure message
+         * @return a failed turn result
+         */
+        public static TurnResult failure(String message) {
+            return new TurnResult(false, false, 0, message);
+        }
+
+        /**
+         * Returns whether the turn step succeeded.
+         *
+         * @return true when the operation succeeded
+         */
+        public boolean isSuccess() {
+            return success;
+        }
+
+        /**
+         * Returns whether gem return input is still required.
+         *
+         * @return true when the caller must return gems
+         */
+        public boolean isAwaitingReturn() {
+            return awaitingReturn;
+        }
+
+        /**
+         * Returns how many gems must be returned.
+         *
+         * @return the excess gem count
+         */
+        public int getExcessCount() {
+            return excessCount;
+        }
+
+        /**
+         * Returns the user-facing outcome message.
+         *
+         * @return the turn result message
+         */
+        public String getMessage() {
+            return message;
+        }
+    }
+
     private final GameRules gameRules;
     private final InputHandler inputHandler;
 
@@ -107,20 +191,20 @@ public class GameEngine {
      * @param input the raw player command
      * @return the turn outcome
      */
-    public TurnProcessor.TurnResult processPlayerCommand(GameState state, String input) {
+    public TurnResult processPlayerCommand(GameState state, String input) {
         if (state == null) {
-            return TurnProcessor.TurnResult.failure("Game state is unavailable.");
+            return TurnResult.failure("Game state is unavailable.");
         }
         if (input == null || input.isBlank()) {
-            return TurnProcessor.TurnResult.failure("Command cannot be empty.");
+            return TurnResult.failure("Command cannot be empty.");
         }
 
         String s = input.toLowerCase().trim();
         if (s.equals("q")) {
-            return TurnProcessor.TurnResult.failure("Quitting is not supported during a turn.");
+            return TurnResult.failure("Quitting is not supported during a turn.");
         }
         if (s.equals("?")) {
-            return TurnProcessor.TurnResult.failure("Help is handled by the local UI. Use take, buy, reserve, or pass.");
+            return TurnResult.failure("Help is handled by the local UI. Use take, buy, reserve, or pass.");
         }
 
         ActionResult actionResult;
@@ -133,17 +217,17 @@ public class GameEngine {
         } else if (s.equals("pass")) {
             actionResult = new ActionResult(true, "Turn passed.");
         } else {
-            return TurnProcessor.TurnResult.failure("Unknown command. Try: take, buy, reserve, pass");
+            return TurnResult.failure("Unknown command. Try: take, buy, reserve, pass");
         }
 
         if (!actionResult.isSuccess()) {
-            return TurnProcessor.TurnResult.failure(actionResult.getMessage());
+            return TurnResult.failure(actionResult.getMessage());
         }
 
         Player player = state.getCurrentPlayer();
         int excess = Math.max(0, player.getGemCount() - 10);
         if (excess > 0) {
-            return TurnProcessor.TurnResult.awaitingReturn(actionResult.getMessage(), excess);
+            return TurnResult.awaitingReturn(actionResult.getMessage(), excess);
         }
 
         return finalizeTurn(state, player, actionResult.getMessage(), null);
@@ -156,15 +240,15 @@ public class GameEngine {
      * @param input the raw gem return input
      * @return the turn outcome
      */
-    public TurnProcessor.TurnResult processGemReturn(GameState state, String input) {
+    public TurnResult processGemReturn(GameState state, String input) {
         if (state == null) {
-            return TurnProcessor.TurnResult.failure("Game state is unavailable.");
+            return TurnResult.failure("Game state is unavailable.");
         }
 
         Player player = state.getCurrentPlayer();
         int excess = Math.max(0, player.getGemCount() - 10);
         if (excess <= 0) {
-            return TurnProcessor.TurnResult.failure("No gems need to be returned.");
+            return TurnResult.failure("No gems need to be returned.");
         }
 
         try {
@@ -172,11 +256,11 @@ public class GameEngine {
             GemCollection toReturn = inputHandler.promptGemsToReturn(player, excess, colors);
             ActionResult result = ActionExecutor.executeReturnGems(state, toReturn);
             if (!result.isSuccess()) {
-                return TurnProcessor.TurnResult.failure(result.getMessage());
+                return TurnResult.failure(result.getMessage());
             }
             return finalizeTurn(state, player, result.getMessage(), null);
         } catch (IllegalArgumentException e) {
-            return TurnProcessor.TurnResult.failure(e.getMessage());
+            return TurnResult.failure(e.getMessage());
         }
     }
 
@@ -186,9 +270,9 @@ public class GameEngine {
      * @param state the active game state
      * @return the turn outcome
      */
-    public TurnProcessor.TurnResult processAutomaticPass(GameState state) {
+    public TurnResult processAutomaticPass(GameState state) {
         if (state == null) {
-            return TurnProcessor.TurnResult.failure("Game state is unavailable.");
+            return TurnResult.failure("Game state is unavailable.");
         }
         return finalizeTurn(state, state.getCurrentPlayer(), "Turn auto-passed after disconnect.", null);
     }
@@ -199,9 +283,9 @@ public class GameEngine {
      * @param state the active game state
      * @return the turn outcome
      */
-    public TurnProcessor.TurnResult processAutomaticReturnGems(GameState state) {
+    public TurnResult processAutomaticReturnGems(GameState state) {
         if (state == null) {
-            return TurnProcessor.TurnResult.failure("Game state is unavailable.");
+            return TurnResult.failure("Game state is unavailable.");
         }
 
         Player player = state.getCurrentPlayer();
@@ -213,7 +297,7 @@ public class GameEngine {
         GemCollection toReturn = chooseAutomaticReturnGems(player, excess);
         ActionResult result = ActionExecutor.executeReturnGems(state, toReturn);
         if (!result.isSuccess()) {
-            return TurnProcessor.TurnResult.failure(result.getMessage());
+            return TurnResult.failure(result.getMessage());
         }
         return finalizeTurn(state, player, "Excess gems were auto-returned after disconnect.", null);
     }
@@ -225,12 +309,12 @@ public class GameEngine {
      * @param aiPlayer the AI player making the decision
      * @return the turn outcome
      */
-    public TurnProcessor.TurnResult processAITurn(GameState state, AIPlayer aiPlayer) {
+    public TurnResult processAITurn(GameState state, AIPlayer aiPlayer) {
         if (state == null) {
-            return TurnProcessor.TurnResult.failure("Game state is unavailable.");
+            return TurnResult.failure("Game state is unavailable.");
         }
         if (aiPlayer == null) {
-            return TurnProcessor.TurnResult.failure("AI player is unavailable.");
+            return TurnResult.failure("AI player is unavailable.");
         }
 
         Player player = state.getCurrentPlayer();
@@ -239,7 +323,7 @@ public class GameEngine {
         ActionResult actionResult = executeAIAction(state, action);
         if (!actionResult.isSuccess()) {
             state.advanceToNextPlayer();
-            return TurnProcessor.TurnResult.success(player.getName() + " passed (AI could not act).");
+            return TurnResult.success(player.getName() + " passed (AI could not act).");
         }
 
         StringBuilder message = new StringBuilder(actionResult.getMessage());
@@ -248,7 +332,7 @@ public class GameEngine {
             GemCollection toReturn = aiPlayer.chooseGemsToReturn(excess, state);
             ActionResult returnResult = ActionExecutor.executeReturnGems(state, toReturn);
             if (!returnResult.isSuccess()) {
-                return TurnProcessor.TurnResult.failure(returnResult.getMessage());
+                return TurnResult.failure(returnResult.getMessage());
             }
             message.append(" ").append(returnResult.getMessage());
         }
@@ -453,7 +537,7 @@ public class GameEngine {
         };
     }
 
-    private TurnProcessor.TurnResult finalizeTurn(
+    private TurnResult finalizeTurn(
             GameState state,
             Player player,
             String baseMessage,
@@ -493,7 +577,7 @@ public class GameEngine {
             }
         }
 
-        return TurnProcessor.TurnResult.success(message.toString());
+        return TurnResult.success(message.toString());
     }
 
     private int getRegularGemCount(int playerCount) {

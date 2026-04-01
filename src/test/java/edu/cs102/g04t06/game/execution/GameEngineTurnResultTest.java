@@ -18,15 +18,15 @@ import edu.cs102.g04t06.game.rules.valueobjects.CardMarket;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-class TurnProcessorTest {
+class GameEngineTurnResultTest {
 
-    private TurnProcessor turnProcessor;
+    private GameEngine gameEngine;
     private GameState state;
     private Player player;
 
     @BeforeEach
     void setUp() {
-        turnProcessor = new TurnProcessor();
+        gameEngine = new GameEngine();
         player = new Player("Alice", 0);
 
         Cost zeroCost = new Cost(new EnumMap<>(GemColor.class));
@@ -51,7 +51,7 @@ class TurnProcessorTest {
     void processCommand_reserveDeckReservesTopCard() {
         int deckSizeBefore = state.getMarket().getDeckSize(1);
 
-        TurnProcessor.TurnResult result = turnProcessor.processCommand(state, "reserve deck t1");
+        GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, "reserve deck t1");
 
         assertTrue(result.isSuccess());
         assertEquals(1, player.getReservedCards().size());
@@ -69,7 +69,7 @@ class TurnProcessorTest {
                 new ArrayList<>(),
                 15);
 
-        TurnProcessor.TurnResult result = turnProcessor.processAutomaticPass(state);
+        GameEngine.TurnResult result = gameEngine.processAutomaticPass(state);
 
         assertTrue(result.isSuccess());
         assertEquals(1, state.getCurrentPlayerIndex());
@@ -96,7 +96,7 @@ class TurnProcessorTest {
                 .add(GemColor.BLUE, 4)
                 .add(GemColor.GREEN, 4));
 
-        TurnProcessor.TurnResult result = turnProcessor.processAutomaticReturnGems(state);
+        GameEngine.TurnResult result = gameEngine.processAutomaticReturnGems(state);
 
         assertTrue(result.isSuccess());
         assertEquals(10, player.getGemCount());
