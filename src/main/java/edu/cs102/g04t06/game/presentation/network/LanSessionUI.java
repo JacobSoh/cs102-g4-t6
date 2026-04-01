@@ -30,6 +30,7 @@ public class LanSessionUI implements ThemeStyleSheet {
             }
             case REQUEST_COMMAND -> promptCommand(message);
             case REQUEST_RETURN_GEMS -> promptGemReturn(message);
+            case REQUEST_NOBLE_SELECTION -> promptNobleSelection(message);
             default -> null;
         };
     }
@@ -83,6 +84,20 @@ public class LanSessionUI implements ThemeStyleSheet {
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
         NetworkMessage reply = NetworkMessage.of(MessageType.RETURN_GEMS, null);
+        reply.command = input;
+        return reply;
+    }
+
+    private NetworkMessage promptNobleSelection(NetworkMessage message) {
+        String statusMessage = inlineError;
+        String statusColor = RED + BOLD;
+        if (statusMessage == null || statusMessage.isBlank()) {
+            statusMessage = safeMessage(message);
+            statusColor = YELLOW;
+        }
+        String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
+        inlineError = "";
+        NetworkMessage reply = NetworkMessage.of(MessageType.NOBLE_SELECTION, null);
         reply.command = input;
         return reply;
     }

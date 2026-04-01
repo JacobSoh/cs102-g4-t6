@@ -143,6 +143,25 @@ class GameBoardUITest {
     }
 
     @Test
+    void promptNetworkTurn_showsHelpLocallyAndReturnsNextCommand() {
+        GameBoardUI networkBoard = new GameBoardUI(
+                new Scanner(new ByteArrayInputStream("?\nclose-help\npass\n".getBytes())));
+
+        String input = networkBoard.promptNetworkTurn(
+                makeGameState(),
+                "Your turn.",
+                ThemeStyleSheet.CYAN,
+                List.of("Alice: took gems"));
+
+        assertEquals("pass", input, "Network prompt should keep reading after showing local help");
+
+        String out = plainOutput();
+        assertTrue(out.contains("SPLENDOR HELP"), "Help overlay should render for the local network player");
+        assertTrue(out.contains("Press any key, then Enter, to return to the game board."),
+                "Help overlay should be dismissible locally before resuming the turn prompt");
+    }
+
+    @Test
     void displayGameState_includesPlayersFromState() {
         boardUI.displayGameState(makeGameState());
         String out = plainOutput();

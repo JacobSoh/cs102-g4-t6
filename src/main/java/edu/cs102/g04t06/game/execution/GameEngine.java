@@ -30,14 +30,19 @@ public class GameEngine {
     public static final class TurnResult {
         private final boolean success;
         private final boolean awaitingReturn;
+        private final boolean awaitingNobleSelection;
         private final int excessCount;
         private final String message;
+        private final List<Noble> claimableNobles;
 
-        private TurnResult(boolean success, boolean awaitingReturn, int excessCount, String message) {
+        private TurnResult(boolean success, boolean awaitingReturn, boolean awaitingNobleSelection,
+                int excessCount, String message, List<Noble> claimableNobles) {
             this.success = success;
             this.awaitingReturn = awaitingReturn;
+            this.awaitingNobleSelection = awaitingNobleSelection;
             this.excessCount = excessCount;
             this.message = message;
+            this.claimableNobles = claimableNobles == null ? List.of() : List.copyOf(claimableNobles);
         }
 
         /**
@@ -47,7 +52,7 @@ public class GameEngine {
          * @return a successful turn result
          */
         public static TurnResult success(String message) {
-            return new TurnResult(true, false, 0, message);
+            return new TurnResult(true, false, false, 0, message, null);
         }
 
         /**
@@ -58,7 +63,18 @@ public class GameEngine {
          * @return a turn result awaiting gem return
          */
         public static TurnResult awaitingReturn(String message, int excessCount) {
-            return new TurnResult(true, true, excessCount, message);
+            return new TurnResult(true, true, false, excessCount, message, null);
+        }
+
+        /**
+         * Creates a successful result that requires the player to choose a noble.
+         *
+         * @param message the message to expose to the caller
+         * @param claimableNobles the nobles the player may choose from
+         * @return a turn result awaiting noble selection
+         */
+        public static TurnResult awaitingNobleSelection(String message, List<Noble> claimableNobles) {
+            return new TurnResult(true, false, true, 0, message, claimableNobles);
         }
 
         /**
@@ -68,7 +84,7 @@ public class GameEngine {
          * @return a failed turn result
          */
         public static TurnResult failure(String message) {
-            return new TurnResult(false, false, 0, message);
+            return new TurnResult(false, false, false, 0, message, null);
         }
 
         /**
@@ -90,6 +106,15 @@ public class GameEngine {
         }
 
         /**
+         * Returns whether noble selection input is still required.
+         *
+         * @return true when the caller must choose a noble
+         */
+        public boolean isAwaitingNobleSelection() {
+            return awaitingNobleSelection;
+        }
+
+        /**
          * Returns how many gems must be returned.
          *
          * @return the excess gem count
@@ -105,6 +130,15 @@ public class GameEngine {
          */
         public String getMessage() {
             return message;
+        }
+
+        /**
+         * Returns the nobles that may be chosen.
+         *
+         * @return selectable nobles for the current player
+         */
+        public List<Noble> getClaimableNobles() {
+            return claimableNobles;
         }
     }
 
@@ -228,7 +262,7 @@ public class GameEngine {
             return TurnResult.awaitingReturn(actionResult.getMessage(), excess);
         }
 
-        return finalizeTurn(state, player, actionResult.getMessage(), null);
+        return resolveTurnCompletion(state, player, actionResult.getMessage(), null, true);
     }
 
     /**
@@ -256,7 +290,40 @@ public class GameEngine {
             if (!result.isSuccess()) {
                 return TurnResult.failure(result.getMessage());
             }
-            return finalizeTurn(state, player, result.getMessage(), null);
+            return resolveTurnCompletion(state, player, result.getMessage(), null, true);
+        } catch (IllegalArgumentException e) {
+            return TurnResult.failure(e.getMessage());
+        }
+    }
+
+    /**
+     * Processes a noble-selection command when multiple nobles are claimable.
+     *
+     * @param state the active game state
+     * @param input the selected noble number
+     * @param baseMessage the turn message that led into noble selection
+     * @return the turn outcome
+     */
+    public TurnResult processNobleSelection(GameState state, String input, String baseMessage) {
+        if (state == null) {
+            return TurnResult.failure("Game state is unavailable.");
+        }
+        if (input == null || input.isBlank()) {
+            return TurnResult.failure("Select a noble by number.");
+        }
+
+        Player player = state.getCurrentPlayer();
+        List<Noble> claimable = gameRules.getClaimableNobles(player, state.getAvailableNobles());
+        if (claimable.isEmpty()) {
+            return TurnResult.failure("No nobles are available to claim.");
+        }
+
+        try {
+            int selection = Integer.parseInt(input.trim());
+            Noble chosenNoble = inputHandler.promptNobleSelection(claimable, selection);
+            return finalizeTurn(state, player, baseMessage, chosenNoble);
+        } catch (NumberFormatException e) {
+            return TurnResult.failure("Select a noble by number.");
         } catch (IllegalArgumentException e) {
             return TurnResult.failure(e.getMessage());
         }
@@ -272,7 +339,7 @@ public class GameEngine {
         if (state == null) {
             return TurnResult.failure("Game state is unavailable.");
         }
-        return finalizeTurn(state, state.getCurrentPlayer(), "Turn auto-passed after disconnect.", null);
+        return resolveTurnCompletion(state, state.getCurrentPlayer(), "Turn auto-passed after disconnect.", null, false);
     }
 
     /**
@@ -289,7 +356,7 @@ public class GameEngine {
         Player player = state.getCurrentPlayer();
         int excess = Math.max(0, player.getGemCount() - 10);
         if (excess <= 0) {
-            return finalizeTurn(state, player, "Disconnected turn resolved automatically.", null);
+            return resolveTurnCompletion(state, player, "Disconnected turn resolved automatically.", null, false);
         }
 
         GemCollection toReturn = chooseAutomaticReturnGems(player, excess);
@@ -297,7 +364,7 @@ public class GameEngine {
         if (!result.isSuccess()) {
             return TurnResult.failure(result.getMessage());
         }
-        return finalizeTurn(state, player, "Excess gems were auto-returned after disconnect.", null);
+        return resolveTurnCompletion(state, player, "Excess gems were auto-returned after disconnect.", null, false);
     }
 
     /**
@@ -341,7 +408,7 @@ public class GameEngine {
             chosenNoble = aiPlayer.chooseNoble(claimable, state);
         }
 
-        return finalizeTurn(state, player, message.toString(), chosenNoble);
+        return resolveTurnCompletion(state, player, message.toString(), chosenNoble, false);
     }
 
     /**
@@ -576,6 +643,20 @@ public class GameEngine {
         }
 
         return TurnResult.success(message.toString());
+    }
+
+    private TurnResult resolveTurnCompletion(
+            GameState state,
+            Player player,
+            String baseMessage,
+            Noble preferredNoble,
+            boolean allowSelectionPrompt
+    ) {
+        List<Noble> claimable = gameRules.getClaimableNobles(player, state.getAvailableNobles());
+        if (claimable.size() > 1 && preferredNoble == null && allowSelectionPrompt) {
+            return TurnResult.awaitingNobleSelection(baseMessage, claimable);
+        }
+        return finalizeTurn(state, player, baseMessage, preferredNoble);
     }
 
     private int getRegularGemCount(int playerCount) {

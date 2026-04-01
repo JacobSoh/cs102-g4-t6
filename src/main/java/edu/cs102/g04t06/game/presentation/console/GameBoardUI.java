@@ -218,12 +218,20 @@ public class GameBoardUI extends AbstractConsoleUI {
         if (state == null) {
             throw new IllegalArgumentException("GameState must not be null");
         }
-        this.actionPromptLabel = YOUR_TURN_PROMPT;
-        this.actionStatus = formatInlineStatus(statusMessage, statusColor);
-        this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
-        clearScreen();
-        render(state);
-        return promptAction();
+        while (true) {
+            this.actionPromptLabel = YOUR_TURN_PROMPT;
+            this.actionStatus = formatInlineStatus(statusMessage, statusColor);
+            this.readOnlyLogEntries = logEntries == null ? null : new ArrayList<>(logEntries);
+            clearScreen();
+            render(state);
+
+            String input = promptAction();
+            if ("?".equals(input)) {
+                showHelpOverlay();
+                continue;
+            }
+            return input;
+        }
     }
 
     /**
@@ -662,6 +670,11 @@ public class GameBoardUI extends AbstractConsoleUI {
             return;
         }
 
+        if (result.isAwaitingNobleSelection()) {
+            handleNobleSelection(state, actingPlayer, result);
+            return;
+        }
+
         logPlayerAction(actingPlayer, result.getMessage());
         ok(result.getMessage());
         sleep(800);
@@ -685,6 +698,11 @@ public class GameBoardUI extends AbstractConsoleUI {
                 continue;
             }
 
+            if (result.isAwaitingNobleSelection()) {
+                handleNobleSelection(state, actingPlayer, result);
+                return;
+            }
+
             logPlayerAction(actingPlayer, result.getMessage());
             ok(result.getMessage());
             excess = player.getGemCount() - 10;
@@ -692,6 +710,37 @@ public class GameBoardUI extends AbstractConsoleUI {
         }
         actionStatus = "";
         sleep(800);
+    }
+
+    private void handleNobleSelection(GameState state, String actingPlayer, GameEngine.TurnResult initialResult) {
+        String promptMessage = formatNobleSelectionPrompt(initialResult.getClaimableNobles());
+        while (true) {
+            String input = promptActionStatus(state, promptMessage);
+            GameEngine.TurnResult result = gameEngine.processNobleSelection(state, input, initialResult.getMessage());
+            if (!result.isSuccess()) {
+                promptMessage = result.getMessage() + " " + formatNobleSelectionPrompt(initialResult.getClaimableNobles());
+                continue;
+            }
+
+            logPlayerAction(actingPlayer, result.getMessage());
+            ok(result.getMessage());
+            actionStatus = "";
+            sleep(800);
+            return;
+        }
+    }
+
+    private String formatNobleSelectionPrompt(List<Noble> claimableNobles) {
+        StringBuilder prompt = new StringBuilder("Choose noble");
+        for (int i = 0; i < claimableNobles.size(); i++) {
+            if (i == 0) {
+                prompt.append(": ");
+            } else {
+                prompt.append("  ");
+            }
+            prompt.append(i + 1).append("=").append(claimableNobles.get(i).getName());
+        }
+        return prompt.toString();
     }
 
     private void logPlayerAction(String playerName, String message) {

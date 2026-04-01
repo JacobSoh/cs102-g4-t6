@@ -32,6 +32,7 @@ public class LanGameServer implements ThemeStyleSheet {
     private String lastActionMessage = "No actions yet";
     private String finalGameMessage = "Match complete.";
     private String hostInlineError = "";
+    private String hostPendingTurnMessage = "";
 
     public LanGameServer(int port, int totalPlayers, String hostPlayerName, int hostPlayerAge) {
         this.port = port;
@@ -205,10 +206,17 @@ public class LanGameServer implements ThemeStyleSheet {
             }
 
             if (result.isAwaitingReturn()) {
+                hostPendingTurnMessage = result.getMessage();
                 if (!handleHostGemReturn(state, result)) {
                     continue;
                 }
+            } else if (result.isAwaitingNobleSelection()) {
+                hostPendingTurnMessage = result.getMessage();
+                if (!handleHostNobleSelection(state, result)) {
+                    continue;
+                }
             } else {
+                hostPendingTurnMessage = "";
                 broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             }
             break;
@@ -233,6 +241,35 @@ public class LanGameServer implements ThemeStyleSheet {
                 hostInlineError = result.getMessage();
                 continue;
             }
+            if (result.isAwaitingNobleSelection()) {
+                hostPendingTurnMessage = result.getMessage();
+                return handleHostNobleSelection(state, result);
+            }
+            hostPendingTurnMessage = "";
+            broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleHostNobleSelection(GameState state, GameEngine.TurnResult initialResult) {
+        while (true) {
+            String statusMessage = hostInlineError;
+            if (statusMessage == null || statusMessage.isBlank()) {
+                statusMessage = formatNobleSelectionPrompt(initialResult.getClaimableNobles());
+            }
+            String statusColor = (hostInlineError == null || hostInlineError.isBlank()) ? YELLOW : RED + BOLD;
+            String input = boardUI.promptNetworkTurn(
+                    state,
+                    statusMessage,
+                    statusColor,
+                    getRecentGlobalLog());
+            hostInlineError = "";
+            GameEngine.TurnResult result = gameEngine.processNobleSelection(state, input, hostPendingTurnMessage);
+            if (!result.isSuccess()) {
+                hostInlineError = result.getMessage();
+                continue;
+            }
+            hostPendingTurnMessage = "";
             broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             return true;
         }
@@ -267,7 +304,11 @@ public class LanGameServer implements ThemeStyleSheet {
             }
 
             if (result.isAwaitingReturn()) {
-                if (!handleRemoteGemReturn(state, connection, result)) {
+                if (!handleRemoteGemReturn(state, connection, result, result.getMessage())) {
+                    continue;
+                }
+            } else if (result.isAwaitingNobleSelection()) {
+                if (!handleRemoteNobleSelection(state, connection, result, result.getMessage())) {
                     continue;
                 }
             } else {
@@ -278,7 +319,7 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private boolean handleRemoteGemReturn(GameState state, ClientConnection connection,
-            GameEngine.TurnResult initialResult) throws IOException {
+            GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
         while (true) {
             NetworkMessage prompt = NetworkMessage.of(MessageType.REQUEST_RETURN_GEMS, initialResult.getMessage());
             prompt.excessCount = initialResult.getExcessCount();
@@ -295,6 +336,38 @@ public class LanGameServer implements ThemeStyleSheet {
             }
 
             GameEngine.TurnResult result = gameEngine.processGemReturn(state, reply.command);
+            if (!result.isSuccess()) {
+                sendError(connection, state, result.getMessage());
+                continue;
+            }
+            if (result.isAwaitingNobleSelection()) {
+                return handleRemoteNobleSelection(state, connection, result, result.getMessage());
+            }
+            broadcastTurnOutcome(state, connection.playerName, result.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleRemoteNobleSelection(GameState state, ClientConnection connection,
+            GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
+        while (true) {
+            NetworkMessage prompt = NetworkMessage.of(
+                    MessageType.REQUEST_NOBLE_SELECTION,
+                    formatNobleSelectionPrompt(initialResult.getClaimableNobles()));
+            prompt.state = state;
+            prompt.logEntries = getRecentGlobalLog();
+            NetworkProtocol.send(connection.writer, prompt);
+
+            NetworkMessage reply = NetworkProtocol.read(connection.reader);
+            if (reply == null) {
+                throw new IOException(connection.playerName + " disconnected.");
+            }
+            if (reply.type != MessageType.NOBLE_SELECTION) {
+                sendError(connection, state, "Expected a noble selection.");
+                continue;
+            }
+
+            GameEngine.TurnResult result = gameEngine.processNobleSelection(state, reply.command, pendingTurnMessage);
             if (!result.isSuccess()) {
                 sendError(connection, state, result.getMessage());
                 continue;
@@ -440,6 +513,19 @@ public class LanGameServer implements ThemeStyleSheet {
             }
             NetworkProtocol.send(client.writer, message);
         }
+    }
+
+    private String formatNobleSelectionPrompt(List<edu.cs102.g04t06.game.rules.entities.Noble> nobles) {
+        StringBuilder prompt = new StringBuilder("Choose noble");
+        for (int i = 0; i < nobles.size(); i++) {
+            if (i == 0) {
+                prompt.append(": ");
+            } else {
+                prompt.append("  ");
+            }
+            prompt.append(i + 1).append("=").append(nobles.get(i).getName());
+        }
+        return prompt.toString();
     }
 
     private void autoResolveDisconnectedTurn(GameState state, String playerName) {
