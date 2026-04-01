@@ -471,6 +471,15 @@ public class HardAIStrategy implements AIStrategy {
      *   held  = 7: 0.70
      *   held  = 9: 0.40
      *   held  = 10: 0.25
+     *
+     * Overflow penalty (applied on top of saturation): if taking these gems would
+     * push the total above 10, a severe additional multiplier is applied.
+     * Each gem over the limit costs 50% of the remaining score, floored at 0.02:
+     *   1 over limit: × 0.50
+     *   2 over limit: × 0.25
+     *   3 over limit: × 0.02  (floor)
+     * This makes any gem-take that forces a return-gems turn almost always lose
+     * to a purchase or a safer gem-take.
      */
     private double scoreGemTake(GemCollection gems, GameState state, Player self) {
         List<Card> topCards = getTopCards(state, self, 3);
@@ -479,12 +488,24 @@ public class HardAIStrategy implements AIStrategy {
         double raw = scoreGemCombo(gems, topCards, cardScores, self);
         int held = self.getGemCount();
         double saturation = Math.max(0.1, 1.0 - Math.max(0, held - 5) * 0.15);
-        return raw * saturation;
+
+        int heldAfter = held + gems.getTotalCount();
+        double overflowPenalty = 1.0;
+        if (heldAfter > 10) {
+            int excess = heldAfter - 10;
+            overflowPenalty = Math.max(0.02, Math.pow(0.5, excess));
+        }
+
+        return raw * saturation * overflowPenalty;
     }
 
     /**
      * Scores a gem combination: sum of (cardScore x turnsReduced) across top cards.
      * Simulates taking the gems and recalculates turns-to-acquire for each target.
+     *
+     * Also applies an overflow penalty when the combo would push the player above
+     * 10 gems, so findBestGemTake naturally prefers non-overflowing combinations
+     * when scoring alternatives against each other.
      */
     private double scoreGemCombo(GemCollection combo, List<Card> topCards, Map<Card, Double> cardScores, Player self) {
         GemCollection simGems      = self.getGems().add(combo);
@@ -498,6 +519,13 @@ public class HardAIStrategy implements AIStrategy {
                 score += cardScores.get(card) * reduced;
             }
         }
+
+        int heldAfter = self.getGemCount() + combo.getTotalCount();
+        if (heldAfter > 10) {
+            int excess = heldAfter - 10;
+            score *= Math.max(0.02, Math.pow(0.5, excess));
+        }
+
         return score;
     }
 

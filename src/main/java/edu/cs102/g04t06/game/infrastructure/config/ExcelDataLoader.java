@@ -29,54 +29,29 @@ import edu.cs102.g04t06.game.rules.valueobjects.Cost;
  * </pre>
  * 
  */
-public class ExcelDataLoader {
-    
-    // Private constructor - utility class should not be instantiated
-    private ExcelDataLoader() {
-        throw new AssertionError("ExcelDataLoader is a utility class and should not be instantiated");
-    }
-    
-    /**
-     * Loads Level 1 cards from CSV file.
-     * 
-     * @param filePath Path to the CSV file containing card data
-     * @return List of Level 1 cards
-     * @throws RuntimeException if file cannot be read or data is invalid
-     */
-    public static List<Card> loadLevel1Cards(String filePath) {
+public class ExcelDataLoader implements DataLoader {
+
+    // -------------------------------------------------------------------------
+    // DataLoader instance methods (polymorphic entry points)
+    // -------------------------------------------------------------------------
+
+    @Override
+    public List<Card> loadLevel1Cards(String filePath) {
         return loadCardsFromFile(filePath, 1);
     }
-    
-    /**
-     * Loads Level 2 cards from CSV file.
-     * 
-     * @param filePath Path to the CSV file containing card data
-     * @return List of Level 2 cards
-     * @throws RuntimeException if file cannot be read or data is invalid
-     */
-    public static List<Card> loadLevel2Cards(String filePath) {
+
+    @Override
+    public List<Card> loadLevel2Cards(String filePath) {
         return loadCardsFromFile(filePath, 2);
     }
-    
-    /**
-     * Loads Level 3 cards from CSV file.
-     * 
-     * @param filePath Path to the CSV file containing card data
-     * @return List of Level 3 cards
-     * @throws RuntimeException if file cannot be read or data is invalid
-     */
-    public static List<Card> loadLevel3Cards(String filePath) {
+
+    @Override
+    public List<Card> loadLevel3Cards(String filePath) {
         return loadCardsFromFile(filePath, 3);
     }
-    
-    /**
-     * Loads nobles from CSV file.
-     * 
-     * @param filePath Path to the CSV file containing noble data
-     * @return List of nobles
-     * @throws RuntimeException if file cannot be read or data is invalid
-     */
-    public static List<Noble> loadNobles(String filePath) {
+
+    @Override
+    public List<Noble> loadNobles(String filePath) {
         List<Noble> nobles = new ArrayList<>();
         
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {

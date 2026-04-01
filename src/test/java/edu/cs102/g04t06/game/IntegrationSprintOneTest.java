@@ -82,12 +82,13 @@ class IntegrationSprintOneTest {
         String nobleFile = TEST_NOBLE_FILE;
         
         // Load cards
-        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(cardFile);
-        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(cardFile);
-        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(cardFile);
-        
+        ExcelDataLoader dataLoader = new ExcelDataLoader();
+        List<Card> level1 = dataLoader.loadLevel1Cards(cardFile);
+        List<Card> level2 = dataLoader.loadLevel2Cards(cardFile);
+        List<Card> level3 = dataLoader.loadLevel3Cards(cardFile);
+
         // Load nobles
-        List<Noble> nobles = ExcelDataLoader.loadNobles(nobleFile);
+        List<Noble> nobles = dataLoader.loadNobles(nobleFile);
         
         System.out.println("✓ Data loaded successfully");
         

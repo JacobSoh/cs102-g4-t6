@@ -22,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DisplayName("ExcelDataLoader Tests")
 class ExcelDataLoaderTest {
-    
+
+    private static final ExcelDataLoader loader = new ExcelDataLoader();
+
     private static final String TEST_CARD_FILE = "src/main/data/cards/test_cards.csv";
     private static final String TEST_NOBLE_FILE = "src/main/data/cards/test_nobles.csv";
     private static final String ACTUAL_CARD_FILE = "src/main/data/cards/splendor_card.csv";
@@ -54,7 +56,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel1Cards should load only level 1 cards")
     void loadLevel1CardsShouldLoadOnlyLevel1() {
-        List<Card> cards = ExcelDataLoader.loadLevel1Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel1Cards(TEST_CARD_FILE);
         
         assertEquals(2, cards.size());
         
@@ -66,7 +68,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel2Cards should load only level 2 cards")
     void loadLevel2CardsShouldLoadOnlyLevel2() {
-        List<Card> cards = ExcelDataLoader.loadLevel2Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel2Cards(TEST_CARD_FILE);
         
         assertEquals(2, cards.size());
         
@@ -78,7 +80,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel3Cards should load only level 3 cards")
     void loadLevel3CardsShouldLoadOnlyLevel3() {
-        List<Card> cards = ExcelDataLoader.loadLevel3Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel3Cards(TEST_CARD_FILE);
         
         assertEquals(1, cards.size());
         
@@ -90,7 +92,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel1Cards should parse card data correctly")
     void loadLevel1CardsShouldParseDataCorrectly() {
-        List<Card> cards = ExcelDataLoader.loadLevel1Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel1Cards(TEST_CARD_FILE);
         
         // First card: 1,BLACK,0,0,1,1,1,1
         Card card1 = cards.get(0);
@@ -117,7 +119,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel2Cards should parse points correctly")
     void loadLevel2CardsShouldParsePoints() {
-        List<Card> cards = ExcelDataLoader.loadLevel2Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel2Cards(TEST_CARD_FILE);
         
         // First level 2 card: 2,GREEN,2,...
         Card card1 = cards.get(0);
@@ -131,7 +133,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadLevel3Cards should parse high-value cards correctly")
     void loadLevel3CardsShouldParseHighValueCards() {
-        List<Card> cards = ExcelDataLoader.loadLevel3Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel3Cards(TEST_CARD_FILE);
         
         // 3,WHITE,5,3,3,3,0,0
         Card card = cards.get(0);
@@ -144,7 +146,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("Card loading should handle zero costs")
     void cardLoadingShouldHandleZeroCosts() {
-        List<Card> cards = ExcelDataLoader.loadLevel3Cards(TEST_CARD_FILE);
+        List<Card> cards = loader.loadLevel3Cards(TEST_CARD_FILE);
         
         // 3,WHITE,5,3,3,3,0,0 (zero red and white)
         Card card = cards.get(0);
@@ -155,9 +157,9 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("Card loading should handle all gem colors")
     void cardLoadingShouldHandleAllGemColors() {
-        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(TEST_CARD_FILE);
-        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(TEST_CARD_FILE);
-        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(TEST_CARD_FILE);
+        List<Card> level1 = loader.loadLevel1Cards(TEST_CARD_FILE);
+        List<Card> level2 = loader.loadLevel2Cards(TEST_CARD_FILE);
+        List<Card> level3 = loader.loadLevel3Cards(TEST_CARD_FILE);
         
         List<Card> allCards = new java.util.ArrayList<>();
         allCards.addAll(level1);
@@ -183,7 +185,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadNobles should load all nobles")
     void loadNoblesShouldLoadAllNobles() {
-        List<Noble> nobles = ExcelDataLoader.loadNobles(TEST_NOBLE_FILE);
+        List<Noble> nobles = loader.loadNobles(TEST_NOBLE_FILE);
         
         assertEquals(3, nobles.size());
     }
@@ -191,7 +193,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadNobles should parse noble data correctly")
     void loadNoblesShouldParseDataCorrectly() {
-        List<Noble> nobles = ExcelDataLoader.loadNobles(TEST_NOBLE_FILE);
+        List<Noble> nobles = loader.loadNobles(TEST_NOBLE_FILE);
         
         // First noble: 1,Caroline,3,0,0,3,3
         Noble noble1 = nobles.get(0);
@@ -224,7 +226,7 @@ class ExcelDataLoaderTest {
     @Test
     @DisplayName("loadNobles should handle zero requirements")
     void loadNoblesShouldHandleZeroRequirements() {
-        List<Noble> nobles = ExcelDataLoader.loadNobles(TEST_NOBLE_FILE);
+        List<Noble> nobles = loader.loadNobles(TEST_NOBLE_FILE);
         
         // Third noble has zeros for green, red, white
         Noble noble = nobles.get(2);
@@ -239,7 +241,7 @@ class ExcelDataLoaderTest {
     @DisplayName("loadLevel1Cards should throw exception for non-existent file")
     void loadLevel1CardsShouldThrowExceptionForNonExistentFile() {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            ExcelDataLoader.loadLevel1Cards("nonexistent.csv");
+            loader.loadLevel1Cards("nonexistent.csv");
         });
         
         assertTrue(exception.getMessage().contains("Failed to load cards"));
@@ -249,7 +251,7 @@ class ExcelDataLoaderTest {
     @DisplayName("loadNobles should throw exception for non-existent file")
     void loadNoblesShouldThrowExceptionForNonExistentFile() {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            ExcelDataLoader.loadNobles("nonexistent.csv");
+            loader.loadNobles("nonexistent.csv");
         });
         
         assertTrue(exception.getMessage().contains("Failed to load nobles"));
@@ -268,7 +270,7 @@ class ExcelDataLoaderTest {
             writer.write("  \n"); // Whitespace line
         }
         
-        List<Card> cards = ExcelDataLoader.loadLevel1Cards(emptyLineFile);
+        List<Card> cards = loader.loadLevel1Cards(emptyLineFile);
         
         assertEquals(2, cards.size());
         
@@ -288,7 +290,7 @@ class ExcelDataLoaderTest {
             writer.write("2,Mary Stuart,4,4,0,0,0\n");
         }
         
-        List<Noble> nobles = ExcelDataLoader.loadNobles(emptyLineFile);
+        List<Noble> nobles = loader.loadNobles(emptyLineFile);
         
         assertEquals(2, nobles.size());
         
@@ -306,7 +308,7 @@ class ExcelDataLoaderTest {
             writer.write("1,BLACK,0,0,1,1,1,1,\n"); // Trailing comma
         }
         
-        List<Card> cards = ExcelDataLoader.loadLevel1Cards(trailingCommaFile);
+        List<Card> cards = loader.loadLevel1Cards(trailingCommaFile);
         
         assertEquals(1, cards.size());
         
@@ -325,7 +327,7 @@ class ExcelDataLoaderTest {
         }
         
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            ExcelDataLoader.loadLevel1Cards(invalidColorFile);
+            loader.loadLevel1Cards(invalidColorFile);
         });
         
         assertTrue(exception.getMessage().contains("Invalid gem color"));
@@ -345,7 +347,7 @@ class ExcelDataLoaderTest {
         }
         
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            ExcelDataLoader.loadLevel1Cards(invalidNumberFile);
+            loader.loadLevel1Cards(invalidNumberFile);
         });
         
         assertTrue(exception.getMessage().contains("Invalid integer value"));
@@ -365,7 +367,7 @@ class ExcelDataLoaderTest {
         }
         
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            ExcelDataLoader.loadLevel1Cards(insufficientColumnsFile);
+            loader.loadLevel1Cards(insufficientColumnsFile);
         });
         
         assertTrue(exception.getMessage().contains("Invalid card format"));
@@ -383,9 +385,9 @@ class ExcelDataLoaderTest {
         
         if (cardFile.exists()) {
             assertDoesNotThrow(() -> {
-                List<Card> level1 = ExcelDataLoader.loadLevel1Cards(ACTUAL_CARD_FILE);
-                List<Card> level2 = ExcelDataLoader.loadLevel2Cards(ACTUAL_CARD_FILE);
-                List<Card> level3 = ExcelDataLoader.loadLevel3Cards(ACTUAL_CARD_FILE);
+                List<Card> level1 = loader.loadLevel1Cards(ACTUAL_CARD_FILE);
+                List<Card> level2 = loader.loadLevel2Cards(ACTUAL_CARD_FILE);
+                List<Card> level3 = loader.loadLevel3Cards(ACTUAL_CARD_FILE);
                 
                 assertTrue(level1.size() > 0, "Level 1 should have cards");
                 assertTrue(level2.size() > 0, "Level 2 should have cards");
@@ -400,7 +402,7 @@ class ExcelDataLoaderTest {
         File nobleFile = new File(ACTUAL_NOBLE_FILE);
 
         if (nobleFile.exists()) {
-            List<Noble> nobles = ExcelDataLoader.loadNobles(ACTUAL_NOBLE_FILE);
+            List<Noble> nobles = loader.loadNobles(ACTUAL_NOBLE_FILE);
             assertFalse(nobles.isEmpty(), "Nobles should be loaded from file");
             assertTrue(nobles.stream().anyMatch(n -> n.getName().contains(",")),
                     "At least one noble name should contain a comma");
@@ -413,9 +415,9 @@ class ExcelDataLoaderTest {
         File cardFile = new File(ACTUAL_CARD_FILE);
         
         if (cardFile.exists()) {
-            List<Card> level1 = ExcelDataLoader.loadLevel1Cards(ACTUAL_CARD_FILE);
-            List<Card> level2 = ExcelDataLoader.loadLevel2Cards(ACTUAL_CARD_FILE);
-            List<Card> level3 = ExcelDataLoader.loadLevel3Cards(ACTUAL_CARD_FILE);
+            List<Card> level1 = loader.loadLevel1Cards(ACTUAL_CARD_FILE);
+            List<Card> level2 = loader.loadLevel2Cards(ACTUAL_CARD_FILE);
+            List<Card> level3 = loader.loadLevel3Cards(ACTUAL_CARD_FILE);
             
             // Level 1 cards typically have 0-1 points
             for (Card card : level1) {

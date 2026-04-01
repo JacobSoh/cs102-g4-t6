@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
+import java.util.Scanner; // kept for GameBoardUI(Scanner) constructor parameter
 
 import edu.cs102.g04t06.game.execution.GameEngine;
 import edu.cs102.g04t06.game.execution.TurnProcessor;
@@ -28,7 +28,7 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
  * Renders the full Splendor game board in the console.
  *
  */
-public class GameBoardUI implements ThemeStyleSheet {
+public class GameBoardUI extends AbstractConsoleUI {
     private static final String ACTION_PROMPT = "ACTION > ";
     private static final String YOUR_TURN_PROMPT = "YOUR TURN > ";
     private static final String WAITING_PROMPT = "WAITING > ";
@@ -77,9 +77,8 @@ public class GameBoardUI implements ThemeStyleSheet {
     private static final int CARD_INNER  = 12;   // ┌ + 12×─ + ┐  = 14 wide
 
     // -------------------------------------------------------------------------
-    // Scanner + UI-local session state
+    // UI-local session state
     // -------------------------------------------------------------------------
-    private final Scanner scanner;
     private final List<String> actionLog = new ArrayList<>();
     private final GameEngine gameEngine;
     private final GameRules gameRules = new GameRules();
@@ -108,7 +107,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      * Creates a board UI that reads input from standard input.
      */
     public GameBoardUI() {
-        this(new Scanner(System.in));
+        this.gameEngine = new GameEngine();
     }
 
     /**
@@ -117,7 +116,7 @@ public class GameBoardUI implements ThemeStyleSheet {
      * @param scanner scanner used for interactive commands
      */
     GameBoardUI(Scanner scanner) {
-        this.scanner = scanner;
+        super(scanner);
         this.gameEngine = new GameEngine();
     }
 
@@ -1538,14 +1537,6 @@ public class GameBoardUI implements ThemeStyleSheet {
         return input;
     }
 
-    /**
-     * Clears the terminal and moves the cursor to the home position.
-     */
-    private void clearScreen() {
-        System.out.print(CLEAR_SCREEN);
-        System.out.flush();
-    }
-
     // -------------------------------------------------------------------------
     // Game over screen
     // -------------------------------------------------------------------------
@@ -1712,16 +1703,4 @@ public class GameBoardUI implements ThemeStyleSheet {
         return a.getPurchasedCards().size() - b.getPurchasedCards().size();
     }
 
-    /**
-     * Sleeps for a short UI delay while preserving interruption status.
-     *
-     * @param ms sleep duration in milliseconds
-     */
-    private void sleep(int ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }
