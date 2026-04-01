@@ -1452,11 +1452,12 @@ public class GameBoardUI extends AbstractConsoleUI {
      */
     private String panelBody(int width, String content, String borderColor) {
         int bodyWidth = width - 2;
-        int pad = bodyWidth - vlen(content);
+        String visibleContent = truncateVisible(content, bodyWidth);
+        int pad = bodyWidth - vlen(visibleContent);
         if (pad < 0) {
             pad = 0;
         }
-        return borderColor + "│" + RESET + content + sp(pad) + borderColor + "│" + RESET;
+        return borderColor + "│" + RESET + visibleContent + sp(pad) + borderColor + "│" + RESET;
     }
 
     /**
@@ -1513,7 +1514,40 @@ public class GameBoardUI extends AbstractConsoleUI {
         if (vlen(text) <= maxVisibleChars) {
             return text;
         }
-        return text.substring(0, Math.max(0, maxVisibleChars - 3)) + "...";
+        if (maxVisibleChars <= 0) {
+            return "";
+        }
+        if (maxVisibleChars <= 3) {
+            return ".".repeat(maxVisibleChars);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int visibleCount = 0;
+        int targetVisibleChars = maxVisibleChars - 3;
+
+        for (int i = 0; i < text.length() && visibleCount < targetVisibleChars; i++) {
+            char ch = text.charAt(i);
+            if (ch == '\u001B') {
+                int end = i + 1;
+                while (end < text.length() && text.charAt(end) != 'm') {
+                    end++;
+                }
+                if (end < text.length()) {
+                    sb.append(text, i, end + 1);
+                    i = end;
+                }
+                continue;
+            }
+
+            sb.append(ch);
+            visibleCount++;
+        }
+
+        sb.append("...");
+        if (text.contains(RESET)) {
+            sb.append(RESET);
+        }
+        return sb.toString();
     }
 
     /**

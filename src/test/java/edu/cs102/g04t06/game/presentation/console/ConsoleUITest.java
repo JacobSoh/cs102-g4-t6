@@ -379,6 +379,38 @@ class ConsoleUITest {
         }
     }
 
+    @Nested
+    @DisplayName("Player setup summary")
+    class PlayerSetupSummaryTests {
+
+        @Test
+        @DisplayName("marks the local human player as 'you' even when sorted after a CPU")
+        void summaryMarksLocalPlayerInsteadOfFirstPlayer() {
+            System.setIn(new ByteArrayInputStream("\n".getBytes()));
+            PlayerSetupUI setupUI = new PlayerSetupUI();
+
+            List<Player> players = List.of(
+                    new Player("CPU-1", 0),
+                    new Player("dongey", 1));
+            PlayerSetupResult result = new PlayerSetupResult(
+                    "dongey",
+                    false,
+                    players,
+                    List.of(false, true),
+                    Arrays.asList("HARD", null));
+
+            invokePrivate(setupUI, "showSummary", new Class[]{PlayerSetupResult.class}, result);
+
+            String output = out();
+            assertTrue(output.contains("CPU-1  [CPU - HARD]"),
+                    "CPU entry should still be shown as CPU.");
+            assertTrue(output.contains("dongey  [Human] ← you"),
+                    "The local player should receive the 'you' marker.");
+            assertFalse(output.contains("CPU-1  [CPU - HARD] ← you"),
+                    "The first player should not be marked as 'you' when they are a CPU.");
+        }
+    }
+
     // =========================================================================
     // 7. printLoadGameStub
     // =========================================================================

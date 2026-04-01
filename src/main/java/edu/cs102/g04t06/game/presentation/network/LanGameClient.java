@@ -119,8 +119,9 @@ public class LanGameClient {
 
             NetworkMessage response = NetworkProtocol.read(reader);
             if (response == null) {
-                return new JoinValidationResult(JoinValidationStatus.INVALID_HOST,
-                        "Host closed the connection while validating the player name.");
+                // Some hosts close the short-lived validation probe immediately after replying.
+                // Treat EOF here as a soft success and let the real join request remain authoritative.
+                return new JoinValidationResult(JoinValidationStatus.OK, null);
             }
             if (response.type == MessageType.ERROR) {
                 return new JoinValidationResult(JoinValidationStatus.INVALID_NAME,

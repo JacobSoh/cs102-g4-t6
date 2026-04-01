@@ -97,6 +97,25 @@ public class LanGameServer implements ThemeStyleSheet {
                         MessageType.INFO,
                         "Player name is available."));
             }
+            writer.flush();
+            try {
+                socket.shutdownOutput();
+            } catch (IOException ignored) {
+                // Some platforms may not support half-close cleanly.
+            }
+            socket.close();
+            return null;
+        }
+
+        if (join.type != MessageType.JOIN_REQUEST || join.playerAge == null) {
+            socket.close();
+            return null;
+        }
+
+        if (isDuplicatePlayerName(requestedName)) {
+            NetworkProtocol.send(writer, NetworkMessage.of(
+                    MessageType.ERROR,
+                    "Player name already exists. Choose a different name."));
             socket.close();
             return null;
         }
@@ -301,6 +320,17 @@ public class LanGameServer implements ThemeStyleSheet {
         }
         connection.disconnected = true;
         closeClient(connection);
+
+        if (totalPlayers == 2) {
+            String message = connection.playerName + " disconnected. Ending the 2-player game.";
+            if (reason != null && !reason.isBlank()) {
+                message += " " + reason;
+            }
+            finalGameMessage = message;
+            appendGlobalLog(message);
+            state.setGameOver(true);
+            return;
+        }
 
         String message = connection.playerName + " disconnected.";
         if (reason != null && !reason.isBlank()) {

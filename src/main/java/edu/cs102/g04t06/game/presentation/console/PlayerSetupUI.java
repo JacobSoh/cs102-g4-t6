@@ -153,7 +153,7 @@ public class PlayerSetupUI extends AbstractConsoleUI {
             boolean human = result.isHuman.get(i);
             String diff   = result.aiDifficulties.get(i);
             String tag    = human ? GREEN + "[Human]" + RESET : BLUE + "[CPU - " + diff + "]" + RESET;
-            String youTag = (i == 0) ? GOLD + " ← you" + RESET : "";
+            String youTag = name.equals(result.localPlayerName) ? GOLD + " ← you" + RESET : "";
             System.out.println("    " + CYAN + (i + 1) + ". " + RESET + WHITE + name + RESET + "  " + tag + youTag);
         }
 
