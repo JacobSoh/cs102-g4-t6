@@ -29,16 +29,12 @@ public class HardAIStrategy implements AIStrategy {
         GemColor.WHITE, GemColor.BLUE, GemColor.GREEN, GemColor.RED, GemColor.BLACK
     };
 
-    // =========================================================
-    // AIStrategy interface
-    // =========================================================
-
     /**
      * Scores every purchasable card, reservable card, and gem-take combination,
      * then returns the highest-scored action.
      * @param current gamestate
      * @param the AI Player
-     * @return Best Action to take
+     * @return Best action to take
      */
     @Override
     public AIAction decideAction(GameState state, Player self) {
@@ -103,9 +99,8 @@ public class HardAIStrategy implements AIStrategy {
 
     /**
      * Picks the noble that opponents are closest to claiming (blocking strategy).
-     * Since all nobles are worth the same 3 points, the tiebreaker is denying the most urgent opponent
      *
-     * Score per candidate = sum over opponents of 1 / (deficit + 1)
+     * Score per noble = sum over opponents of 1 / (deficit + 1)
      * where deficit = total bonus cards the opponent still needs for that noble.
      * A deficit of 0 means the opponent can already claim it next turn → highest urgency.
      * @param list of claimable nobles
@@ -190,11 +185,12 @@ public class HardAIStrategy implements AIStrategy {
             }
         }
 
-        // Last resort: return gold if still short
+        // Gold fallback: return gold only as absolute last resort
         if (remaining > 0) {
-            int goldAmount = Math.min(remaining, self.getGems().getCount(GemColor.GOLD));
-            if (goldAmount > 0) {
-                toReturn = toReturn.add(GemColor.GOLD, goldAmount);
+            int goldAvailable = self.getGems().getCount(GemColor.GOLD);
+            int amount = Math.min(remaining, goldAvailable);
+            if (amount > 0) {
+                toReturn = toReturn.add(GemColor.GOLD, amount);
             }
         }
 
@@ -206,7 +202,7 @@ public class HardAIStrategy implements AIStrategy {
     // =========================================================
 
     /**
-     * Returns how many more bonus cards {@code opponent} needs to claim {@code noble}.
+     * Returns how many more bonus cards the opponent needs to claim noble
      * A value of 0 means the opponent already meets all requirements.
      */
     private int opponentNobleDeficit(Noble noble, Player opponent) {
@@ -227,14 +223,11 @@ public class HardAIStrategy implements AIStrategy {
      *
      * plus a blocking bonus for opponents near winning.
      *
-     * turns^1.3 (instead of linear turns) penalizes expensive cards progressively
+     * turns^1.3 (instead of linear turns) penalises expensive cards progressively
      * more, pushing the AI toward affordable buys in mid game.
      *
      * diversityFactor = 1 / (1 + existingSameColorBonuses × 0.3) gives diminishing
      * returns for stacking the same bonus color, naturally spreading acquisitions.
-     *
-     * The blocking bonus is kept outside the diversity/turns factors because
-     * urgency is independent of personal portfolio balance.
      *
      * In the bonus-chase phase (W1=0, W2=0, W3=1) this reduces to:
      *   DiscountUtility / turns^1.3 × diversityFactor
@@ -246,7 +239,7 @@ public class HardAIStrategy implements AIStrategy {
         double prestige      = card.getPoints();
         double nobleProgress = calculateNobleProgress(card, self, state.getAvailableNobles());
         double discountUtil  = calculateDiscountUtility(card, state);
-        int turns            = calculateTurnsToAcquire(card, self, state.getGemBank());
+        int turns            = calculateTurnsInternal(card, self.calculateBonuses(), self.getGems());
 
         // Diminishing-returns penalty for stacking the same bonus colour
         int existing = self.calculateBonuses().getOrDefault(card.getBonus(), 0);
@@ -297,45 +290,44 @@ public class HardAIStrategy implements AIStrategy {
     }
 
     /**
-     * Estimates how many gem-take turns are needed before the AI can afford this card.
-     * Returns at least 1 to prevent division by zero in scoreCard.
-     */
-    private int calculateTurnsToAcquire(Card card, Player self, GemCollection bank) {
-        return calculateTurnsInternal(card, self.calculateBonuses(), self.getGems());
-    }
-
-    /**
-     * Internal overload accepting an explicit gem state so gem-take simulations
-     * can compute turns-after without mutating the real Player.
+     * Formula: turns = max(ceil(netDeficit / 3), ceil(maxColorDeficit / 2)), where
+     *   netDeficit      = sum of per-color deficits minus gold wildcards.
+     *   maxColorDeficit = largest single-color deficit after applying gold to that color.
      *
-     * Formula: turns = ceil(netDeficit / 3), where
-     *   netDeficit = sum of max(0, cost[c] - bonus[c] - held[c]) across all colors,
-     *                minus gold wildcards.
-     * Each turn takes at most 3 gems, so dividing by 3 gives a pure gem-count
-     * estimate of how many turns are needed.
+     * The net formula captures overall throughput (3 gems/turn max).
+     * The color bottleneck captures that at most 2 of one color can be taken per turn,
+     * so a single high-deficit color can be the real limiting factor even when the
+     * total looks reachable quickly.
      */
     private int calculateTurnsInternal(Card card, Map<GemColor, Integer> bonuses,
                                         GemCollection playerGems) {
         int totalDeficit = 0;
+        int maxColorDeficit = 0;
         for (GemColor c : NON_GOLD) {
             int actual = Math.max(0, card.getCost().getRequired(c) - bonuses.getOrDefault(c, 0));
-            totalDeficit += Math.max(0, actual - playerGems.getCount(c));
+            int colorDeficit = Math.max(0, actual - playerGems.getCount(c));
+            totalDeficit += colorDeficit;
+            maxColorDeficit = Math.max(maxColorDeficit, colorDeficit);
         }
-        int netDeficit = Math.max(0, totalDeficit - playerGems.getCount(GemColor.GOLD));
-        if (netDeficit == 0) return 1;
-        return (netDeficit + 2) / 3;   // ceiling division: 1 gem → 1 turn, 4 gems → 2 turns
+        int gold = playerGems.getCount(GemColor.GOLD);
+        int netDeficit = Math.max(0, totalDeficit - gold);
+        if (netDeficit == 0) {
+            return 1;
+        }
+
+        return Math.max((netDeficit + 2) / 3, maxColorDeficit);
     }
 
     /**
      * Returns [W1, W2, W3] tuned to the current game phase.
      *
-     * <ul>
-     *   <li>Bonus-chase (< 3 bonuses): W=[0, 0, 1] — pure discount utility.
-     *       Acquire cheap cards that produce widely-useful permanent discounts.</li>
-     *   <li>Early (3–5 bonuses): W=[0.1, 0.3, 0.6] — discount + noble progress.</li>
-     *   <li>Mid (6–10, nobody near win): W=[0.4, 0.4, 0.2] — balanced.</li>
-     *   <li>Late (>10 bonuses or someone ≥ 10 pts): W=[0.7, 0.2, 0.1] — prestige focused.</li>
-     * </ul>
+     * Bonus-chase (< 3 bonuses): W=[0, 0, 1] — pure discount utility.
+     * Acquire cheap cards that produce widely-useful permanent discounts.
+     * 
+     * Early (3–5 bonuses): W=[0.1, 0.3, 0.6] — discount + noble progress.
+     * Mid (6–10, nobody near win): W=[0.4, 0.4, 0.2] — balanced.
+     * Late (>10 bonuses or someone ≥ 10 pts): W=[0.7, 0.2, 0.1] — prestige focused.
+     *
      */
     private double[] getPhaseWeights(Player self, GameState state) {
         int totalBonuses = self.calculateBonuses().values().stream()
@@ -345,7 +337,7 @@ public class HardAIStrategy implements AIStrategy {
 
         if (totalBonuses < 5) {
             return new double[]{0.0, 0.0, 1.0};    // Bonus-chase: pure discount utility
-        } else if (totalBonuses < 6) {
+        } else if (totalBonuses < 7) {
             return new double[]{0.1, 0.3, 0.6};    // Early: discount + noble progress
         } else if (totalBonuses <= 10 && !anyNearWin) {
             return new double[]{0.4, 0.4, 0.2};    // Mid: balanced
@@ -474,12 +466,10 @@ public class HardAIStrategy implements AIStrategy {
      *
      * Overflow penalty (applied on top of saturation): if taking these gems would
      * push the total above 10, a severe additional multiplier is applied.
-     * Each gem over the limit costs 50% of the remaining score, floored at 0.02:
      *   1 over limit: × 0.50
      *   2 over limit: × 0.25
-     *   3 over limit: × 0.02  (floor)
-     * This makes any gem-take that forces a return-gems turn almost always lose
-     * to a purchase or a safer gem-take.
+     *   3 over limit: × 0.02
+     * This is to penalise any gem combination that would make the AI have to return gems
      */
     private double scoreGemTake(GemCollection gems, GameState state, Player self) {
         List<Card> topCards = getTopCards(state, self, 3);
