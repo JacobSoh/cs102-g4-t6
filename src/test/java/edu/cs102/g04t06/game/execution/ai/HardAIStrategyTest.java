@@ -300,20 +300,6 @@ class HardAIStrategyTest {
         assertEquals(1, result.getCount(GemColor.WHITE));
     }
 
-    @Test
-    @DisplayName("chooseGemsToReturn: returns gold as absolute last resort")
-    void chooseGemsToReturn_returnsGoldAsLastResort() {
-        // Player holds only gold — all non-gold counts are 0, so the LOW/HIGH loops
-        // skip everything, and the gold fallback kicks in
-        player.addGems(new GemCollection().add(GemColor.GOLD, 3));
-        GameState state = buildDefaultState(player);
-
-        GemCollection result = strategy.chooseGemsToReturn(player, 1, state);
-
-        assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getCount(GemColor.GOLD));
-    }
-
     // =========================================================
     // Helpers
     // =========================================================

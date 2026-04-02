@@ -184,16 +184,6 @@ public class HardAIStrategy implements AIStrategy {
                 remaining -= amount;
             }
         }
-
-        // Gold fallback: return gold only as absolute last resort
-        if (remaining > 0) {
-            int goldAvailable = self.getGems().getCount(GemColor.GOLD);
-            int amount = Math.min(remaining, goldAvailable);
-            if (amount > 0) {
-                toReturn = toReturn.add(GemColor.GOLD, amount);
-            }
-        }
-
         return toReturn;
     }
 
