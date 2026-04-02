@@ -235,7 +235,7 @@ public class HardAIStrategy implements AIStrategy {
      * the AI already holds heavily.
      */
     private double scoreCard(Card card, Player self, GameState state) {
-        double[] w = getPhaseWeights(self, state);
+        double[] w = getPhaseWeights(self);
         double prestige      = card.getPoints();
         double nobleProgress = calculateNobleProgress(card, self, state.getAvailableNobles());
         double discountUtil  = calculateDiscountUtility(card, state);
@@ -321,25 +321,21 @@ public class HardAIStrategy implements AIStrategy {
     /**
      * Returns [W1, W2, W3] tuned to the current game phase.
      *
-     * Bonus-chase (< 3 bonuses): W=[0, 0, 1] — pure discount utility.
-     * Acquire cheap cards that produce widely-useful permanent discounts.
-     * 
-     * Early (3–5 bonuses): W=[0.1, 0.3, 0.6] — discount + noble progress.
-     * Mid (6–10, nobody near win): W=[0.4, 0.4, 0.2] — balanced.
-     * Late (>10 bonuses or someone ≥ 10 pts): W=[0.7, 0.2, 0.1] — prestige focused.
-     *
+     * Bonus-chase (bonuses < 5):                  W=[0, 0, 1]   — pure discount utility.
+     * Early       (bonuses >= 5, prestige < 5):   W=[0.1, 0.3, 0.6] — discount + noble progress.
+     * Mid         (5 < prestige < 10):             W=[0.4, 0.4, 0.2] — balanced.
+     * Late        (prestige >= 10):                W=[0.7, 0.2, 0.1] — prestige focused.
      */
-    private double[] getPhaseWeights(Player self, GameState state) {
+    private double[] getPhaseWeights(Player self) {
         int totalBonuses = self.calculateBonuses().values().stream()
                 .mapToInt(Integer::intValue).sum();
-        boolean anyNearWin = state.getPlayers().stream()
-                .anyMatch(p -> p.getPoints() >= 10);
+        int prestige = self.getPoints();
 
         if (totalBonuses < 5) {
             return new double[]{0.0, 0.0, 1.0};    // Bonus-chase: pure discount utility
-        } else if (totalBonuses < 7) {
+        } else if (prestige < 5) {
             return new double[]{0.1, 0.3, 0.6};    // Early: discount + noble progress
-        } else if (totalBonuses <= 10 && !anyNearWin) {
+        } else if (prestige < 10) {
             return new double[]{0.4, 0.4, 0.2};    // Mid: balanced
         } else {
             return new double[]{0.7, 0.2, 0.1};    // Late: prestige focused
