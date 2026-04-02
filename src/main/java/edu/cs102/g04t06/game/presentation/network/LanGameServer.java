@@ -4,10 +4,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
@@ -48,6 +53,10 @@ public class LanGameServer implements ThemeStyleSheet {
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println(GREEN + "Hosting LAN game on port " + port + RESET);
+            String hostIpAddress = resolveHostIpv4();
+            if (hostIpAddress != null) {
+                System.out.println(CYAN + "Host IP: " + hostIpAddress + RESET);
+            }
             System.out.println(CYAN + "Waiting for " + (totalPlayers - 1) + " remote player(s)..." + RESET);
             acceptClients(serverSocket);
 
@@ -564,6 +573,35 @@ public class LanGameServer implements ThemeStyleSheet {
             prompt.append(i + 1).append("=").append(nobles.get(i).getName());
         }
         return prompt.toString();
+    }
+
+    private String resolveHostIpv4() {
+        String firstIpv4 = null;
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (!(address instanceof Inet4Address ipv4) || ipv4.isLoopbackAddress()) {
+                        continue;
+                    }
+                    if (firstIpv4 == null) {
+                        firstIpv4 = ipv4.getHostAddress();
+                    }
+                    if (ipv4.isSiteLocalAddress()) {
+                        return ipv4.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ignored) {
+            return null;
+        }
+        return firstIpv4;
     }
 
     private void autoResolveDisconnectedTurn(GameState state, String playerName) {
