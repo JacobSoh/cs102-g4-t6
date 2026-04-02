@@ -550,26 +550,40 @@ public class HardAIStrategy implements AIStrategy {
     /** Wraps a GemCollection in the correct TAKE AIAction type. */
     /**
      * Returns a PURCHASE_CARD action for the first affordable card that would bring
-     * self's prestige to the winning threshold or above, or null if no such card exists.
+     * self's prestige to the winning threshold or above
      * Checks visible cards first, then reserved cards.
      */
     private AIAction findWinningMove(GameState state, Player self) {
         int threshold = state.getWinningThreshold();
         for (Card card : getAllVisibleCards(state)) {
-            if (RULES.canAffordCard(self, card)
-                    && self.getPoints() + card.getPoints() >= threshold) {
+            if (RULES.canAffordCard(self, card) && winsWithCard(card, self, state, threshold)) {
                 return new AIAction(ActionType.PURCHASE_CARD, card, false, null,
                         "AI wins by purchasing " + card.getBonus() + " card (level " + card.getLevel() + ")");
             }
         }
         for (Card card : self.getReservedCards()) {
-            if (RULES.canAffordCard(self, card)
-                    && self.getPoints() + card.getPoints() >= threshold) {
+            if (RULES.canAffordCard(self, card) && winsWithCard(card, self, state, threshold)) {
                 return new AIAction(ActionType.PURCHASE_CARD, card, true, null,
                         "AI wins by purchasing reserved " + card.getBonus() + " card");
             }
         }
         return null;
+    }
+
+    private boolean winsWithCard(Card card, Player self, GameState state, int threshold) {
+        int pointsAfterCard = self.getPoints() + card.getPoints();
+        if (pointsAfterCard >= threshold) return true;
+
+        // Check if buying this card unlocks a noble that completes the win
+        Map<GemColor, Integer> simBonuses = new EnumMap<>(self.calculateBonuses());
+        simBonuses.merge(card.getBonus(), 1, Integer::sum);
+        for (Noble noble : state.getAvailableNobles()) {
+            if (Noble.canBeClaimed(noble, simBonuses)
+                    && pointsAfterCard + noble.getPoints() >= threshold) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private AIAction buildGemAction(GemCollection gems) {
