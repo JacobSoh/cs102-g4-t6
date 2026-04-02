@@ -80,13 +80,25 @@ public class HardAIStrategy implements AIStrategy {
             }
         }
 
-        // 3. Score best gem-take combination
+        // 3. Score best gem-take combination; if no good combo exists, fall back to
+        //    reserving the highest-scored visible card (best value / turns trade-off)
         GemCollection bestGems = findBestGemTake(state, self);
         if (bestGems != null) {
             double gemScore = scoreGemTake(bestGems, state, self);
             if (bestAction == null || gemScore > bestScore) {
-                bestScore = gemScore;
                 bestAction = buildGemAction(bestGems);
+            }
+        } else if (RULES.canReserveCard(self)) {
+            Card bestToReserve = getAllVisibleCards(state).stream()
+                    .max(Comparator.comparingDouble(c -> scoreCard(c, self, state)))
+                    .orElse(null);
+            if (bestToReserve != null) {
+                double score = scoreCard(bestToReserve, self, state);
+                if (bestAction == null || score > bestScore) {
+                    bestAction = new AIAction(ActionType.RESERVE_CARD, bestToReserve, false, null,
+                            "AI reserves best card: " + bestToReserve.getBonus()
+                                    + " (level " + bestToReserve.getLevel() + ")");
+                }
             }
         }
 
@@ -473,7 +485,7 @@ public class HardAIStrategy implements AIStrategy {
         double overflowPenalty = 1.0;
         if (heldAfter > 10) {
             int excess = heldAfter - 10;
-            overflowPenalty = Math.max(0.02, Math.pow(0.5, excess));
+            overflowPenalty = Math.max(0.01, Math.pow(0.2, excess));
         }
 
         return raw * saturation * overflowPenalty;
@@ -503,7 +515,7 @@ public class HardAIStrategy implements AIStrategy {
         int heldAfter = self.getGemCount() + combo.getTotalCount();
         if (heldAfter > 10) {
             int excess = heldAfter - 10;
-            score *= Math.max(0.02, Math.pow(0.5, excess));
+            score *= Math.max(0.01, Math.pow(0.2, excess));
         }
 
         return score;
