@@ -38,6 +38,10 @@ public class HardAIStrategy implements AIStrategy {
      */
     @Override
     public AIAction decideAction(GameState state, Player self) {
+        // 0. Winning move: if any affordable card pushes score to winning threshold, take it immediately
+        AIAction winningMove = findWinningMove(state, self);
+        if (winningMove != null) return winningMove;
+
         double bestScore = Double.NEGATIVE_INFINITY;
         AIAction bestAction = null;
 
@@ -532,6 +536,30 @@ public class HardAIStrategy implements AIStrategy {
 
 
     /** Wraps a GemCollection in the correct TAKE AIAction type. */
+    /**
+     * Returns a PURCHASE_CARD action for the first affordable card that would bring
+     * self's prestige to the winning threshold or above, or null if no such card exists.
+     * Checks visible cards first, then reserved cards.
+     */
+    private AIAction findWinningMove(GameState state, Player self) {
+        int threshold = state.getWinningThreshold();
+        for (Card card : getAllVisibleCards(state)) {
+            if (RULES.canAffordCard(self, card)
+                    && self.getPoints() + card.getPoints() >= threshold) {
+                return new AIAction(ActionType.PURCHASE_CARD, card, false, null,
+                        "AI wins by purchasing " + card.getBonus() + " card (level " + card.getLevel() + ")");
+            }
+        }
+        for (Card card : self.getReservedCards()) {
+            if (RULES.canAffordCard(self, card)
+                    && self.getPoints() + card.getPoints() >= threshold) {
+                return new AIAction(ActionType.PURCHASE_CARD, card, true, null,
+                        "AI wins by purchasing reserved " + card.getBonus() + " card");
+            }
+        }
+        return null;
+    }
+
     private AIAction buildGemAction(GemCollection gems) {
         int nonZero = 0;
         GemColor onlyColor = null;
