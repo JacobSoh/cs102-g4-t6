@@ -1,11 +1,11 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 /**
- * MainMenuUI
+ * Renders the main menu for the console application.
  *
- * Displays the main menu after the load screen.
- * Presents the available start options and returns a MenuChoice so the
- * caller (ConsoleUI / App) can decide what screen to navigate to next.
+ * This screen presents the top-level navigation choices after the splash
+ * screen, allowing the user to start an offline game, host a LAN session, join
+ * a LAN session, or quit the application.
  */
 public class MainMenuUI extends AbstractConsoleUI {
 
@@ -57,6 +57,9 @@ public class MainMenuUI extends AbstractConsoleUI {
         }
     }
 
+    /**
+     * Prints the title art shown above the menu options.
+     */
     private void printTitle() {
         System.out.println();
         for (String line : TITLE_ART) {
@@ -65,6 +68,9 @@ public class MainMenuUI extends AbstractConsoleUI {
         System.out.println();
     }
 
+    /**
+     * Prints the boxed list of available top-level menu options.
+     */
     private void printMenu() {
         String top    = "  ┌" + "─".repeat(BOX_WIDTH) + "┐";
         String div    = "  ├" + "─".repeat(BOX_WIDTH) + "┤";
@@ -87,17 +93,32 @@ public class MainMenuUI extends AbstractConsoleUI {
         System.out.println();
     }
 
+    /**
+     * Prints the version label and the prompt asking the user for a menu choice.
+     */
     private void printFooter() {
         System.out.println(DIM + WHITE + "  " + VERSION + RESET);
         System.out.println();
         System.out.print(WHITE + "  Enter choice and press Enter: " + RESET);
     }
 
+    /**
+     * Shows the validation message for an unsupported menu key.
+     */
     private void printInvalidKey() {
         System.out.println(RED + "  Invalid choice. Enter O, H, J, or Q then press Enter." + RESET);
         sleep(1000);
     }
 
+    /**
+     * Builds a single formatted menu option row.
+     *
+     * @param colour accent color for the hotkey badge
+     * @param key shortcut key displayed to the user
+     * @param label human-readable option label
+     * @param width visible width of the boxed menu row
+     * @return the formatted menu row content
+     */
     private String menuLine(String colour, String key, String label, int width) {
         String bracket = colour + BOLD + "[ " + key + " ]" + RESET;
         String text    = WHITE + "  " + label + RESET;
@@ -107,6 +128,13 @@ public class MainMenuUI extends AbstractConsoleUI {
         return "  " + bracket + text + " ".repeat(padding);
     }
 
+    /**
+     * Centers plain text within a fixed-width menu box row.
+     *
+     * @param text the text to center
+     * @param width the visible width available for the row
+     * @return centered text padded with spaces
+     */
     private String centreInBox(String text, int width) {
         int totalPad = width - text.length();
         int left     = totalPad / 2;
@@ -114,6 +142,11 @@ public class MainMenuUI extends AbstractConsoleUI {
         return " ".repeat(left) + text + " ".repeat(right);
     }
 
+    /**
+     * Reads the next menu input line and returns its first character.
+     *
+     * @return the selected key, or {@code '\0'} when the line is empty
+     */
     private char readChoice() {
         String input = scanner.nextLine().trim();
         if (input.isEmpty()) return '\0';

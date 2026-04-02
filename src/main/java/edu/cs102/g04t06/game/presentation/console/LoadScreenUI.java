@@ -1,11 +1,10 @@
 package edu.cs102.g04t06.game.presentation.console;
 
 /**
- * LoadScreenUI
+ * Renders the splash screen shown when the console application first launches.
  *
- * The splash/intro screen displayed when the game is first launched.
- * Shows the game title in ASCII art, a brief description of Splendor,
- * and waits for the user to press any key before proceeding to the Main Menu.
+ * <p>This screen introduces the game with the title art, a short rules summary,
+ * and a simple prompt that pauses the flow before the main menu is shown.</p>
  */
 public class LoadScreenUI extends AbstractConsoleUI {
 
@@ -25,6 +24,9 @@ public class LoadScreenUI extends AbstractConsoleUI {
         waitForEnter();
     }
 
+    /**
+     * Prints the large ASCII title art for the splash screen.
+     */
     private void printTitle() {
         System.out.println();
         for (String line : TITLE_ART) {
@@ -33,11 +35,17 @@ public class LoadScreenUI extends AbstractConsoleUI {
         System.out.println();
     }
 
+    /**
+     * Prints the horizontal divider separating the title from the description box.
+     */
     private void printDivider() {
         System.out.println(DIM + WHITE + "  " + "─".repeat(BOX_WIDTH) + RESET);
         System.out.println();
     }
 
+    /**
+     * Prints the boxed game introduction and win-condition summary.
+     */
     private void printDescriptionBox() {
         String[] description = {
             "  Welcome to SPLENDOR - a game of gem trading and card development.",
@@ -64,6 +72,9 @@ public class LoadScreenUI extends AbstractConsoleUI {
         System.out.println();
     }
 
+    /**
+     * Prints the version label and the prompt that advances to the main menu.
+     */
     private void printFooter() {
         System.out.println("  " + DIM + WHITE + VERSION + RESET);
         System.out.println();
