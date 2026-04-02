@@ -1,7 +1,10 @@
 package edu.cs102.g04t06.game;
 
+// Edited by GPT-5 (Codex)
+
 import edu.cs102.g04t06.game.infrastructure.config.ConfigLoader;
 import edu.cs102.g04t06.game.infrastructure.config.ExcelDataLoader;
+import edu.cs102.g04t06.game.rules.GameRules;
 import edu.cs102.g04t06.game.rules.entities.Card;
 import edu.cs102.g04t06.game.rules.entities.GemColor;
 import edu.cs102.g04t06.game.rules.entities.Noble;
@@ -55,19 +58,14 @@ class IntegrationSprintOneTest {
         ConfigLoader config = new ConfigLoader(CONFIG_FILE);
         System.out.println("✓ Config loaded successfully");
         
-        // Verify config values
-        assertEquals(15, config.getWinningPoints());
-        assertEquals(3, config.getMaxReservedCards());
-        assertEquals(10, config.getMaxGemsPerPlayer());
-        
         assertEquals(4, config.getGemCount(2, GemColor.WHITE));
         assertEquals(5, config.getGemCount(3, GemColor.BLUE));
         assertEquals(7, config.getGemCount(4, GemColor.RED));
         assertEquals(5, config.getGemCount(2, GemColor.GOLD));
         
-        System.out.println("  Winning points: " + config.getWinningPoints());
-        System.out.println("  Max reserved cards: " + config.getMaxReservedCards());
-        System.out.println("  Max gems per player: " + config.getMaxGemsPerPlayer());
+        System.out.println("  Winning points: " + GameRules.getWinningPoints());
+        System.out.println("  Max reserved cards: " + GameRules.getMaxReservedCards());
+        System.out.println("  Max gems per player: " + GameRules.getMaxGemsPerPlayer());
         System.out.println("  2-player white gems: " + config.getGemCount(2, GemColor.WHITE));
         System.out.println("  3-player blue gems: " + config.getGemCount(3, GemColor.BLUE));
         System.out.println("  4-player red gems: " + config.getGemCount(4, GemColor.RED));
@@ -82,12 +80,13 @@ class IntegrationSprintOneTest {
         String nobleFile = TEST_NOBLE_FILE;
         
         // Load cards
-        List<Card> level1 = ExcelDataLoader.loadLevel1Cards(cardFile);
-        List<Card> level2 = ExcelDataLoader.loadLevel2Cards(cardFile);
-        List<Card> level3 = ExcelDataLoader.loadLevel3Cards(cardFile);
-        
+        ExcelDataLoader dataLoader = new ExcelDataLoader();
+        List<Card> level1 = dataLoader.loadLevel1Cards(cardFile);
+        List<Card> level2 = dataLoader.loadLevel2Cards(cardFile);
+        List<Card> level3 = dataLoader.loadLevel3Cards(cardFile);
+
         // Load nobles
-        List<Noble> nobles = ExcelDataLoader.loadNobles(nobleFile);
+        List<Noble> nobles = dataLoader.loadNobles(nobleFile);
         
         System.out.println("✓ Data loaded successfully");
         

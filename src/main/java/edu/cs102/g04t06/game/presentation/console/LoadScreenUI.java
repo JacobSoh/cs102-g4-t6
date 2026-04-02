@@ -1,26 +1,15 @@
 package edu.cs102.g04t06.game.presentation.console;
 
-import java.util.Scanner;
-
 /**
- * LoadScreenUI
+ * Renders the splash screen shown when the console application first launches.
  *
- * The splash/intro screen displayed when the game is first launched.
- * Shows the game title in ASCII art, a brief description of Splendor,
- * and waits for the user to press any key before proceeding to the Main Menu.
+ * <p>This screen introduces the game with the title art, a short rules summary,
+ * and a simple prompt that pauses the flow before the main menu is shown.</p>
  */
-public class LoadScreenUI implements ThemeStyleSheet {
+public class LoadScreenUI extends AbstractConsoleUI {
 
-    // -------------------------------------------------------------------------
-    // Layout constants
-    // -------------------------------------------------------------------------
-    private static final int    BOX_WIDTH   = 72;   // minimum inner width of the panel
-    private static final String VERSION     = "v1.0.0";
-    private final Scanner scanner = new Scanner(System.in);
-
-    // -------------------------------------------------------------------------
-    // Public entry point
-    // -------------------------------------------------------------------------
+    private static final int    BOX_WIDTH = 72;
+    private static final String VERSION   = "v1.0.0";
 
     /**
      * Displays the load screen and blocks until the user presses any key.
@@ -35,17 +24,9 @@ public class LoadScreenUI implements ThemeStyleSheet {
         waitForEnter();
     }
 
-    // -------------------------------------------------------------------------
-    // Private rendering helpers
-    // -------------------------------------------------------------------------
-
-    /** Clears the terminal using ANSI escape codes. */
-    private void clearScreen() {
-        System.out.print(CLEAR_SCREEN);
-        System.out.flush();
-    }
-
-    /** Prints the ASCII art title in gold/amber. */
+    /**
+     * Prints the large ASCII title art for the splash screen.
+     */
     private void printTitle() {
         System.out.println();
         for (String line : TITLE_ART) {
@@ -54,15 +35,16 @@ public class LoadScreenUI implements ThemeStyleSheet {
         System.out.println();
     }
 
-    /** Prints a thin horizontal divider line. */
+    /**
+     * Prints the horizontal divider separating the title from the description box.
+     */
     private void printDivider() {
         System.out.println(DIM + WHITE + "  " + "─".repeat(BOX_WIDTH) + RESET);
         System.out.println();
     }
 
     /**
-     * Prints a bordered box containing the game description.
-     * Edit the lines inside DESCRIPTION to change the blurb.
+     * Prints the boxed game introduction and win-condition summary.
      */
     private void printDescriptionBox() {
         String[] description = {
@@ -78,10 +60,7 @@ public class LoadScreenUI implements ThemeStyleSheet {
             contentWidth = Math.max(contentWidth, stripAnsi(line).length() + 1);
         }
 
-        // Top border
         System.out.println(WHITE + "  ┌" + "─".repeat(contentWidth) + "┐" + RESET);
-
-        // Description lines
         for (String line : description) {
             int visibleLen = stripAnsi(line).length();
             int padding    = contentWidth - visibleLen - 1;
@@ -89,48 +68,16 @@ public class LoadScreenUI implements ThemeStyleSheet {
             System.out.println(WHITE + "  │ " + RESET + WHITE + line
                     + " ".repeat(padding) + WHITE + "│" + RESET);
         }
-
-        // Bottom border
         System.out.println(WHITE + "  └" + "─".repeat(contentWidth) + "┘" + RESET);
         System.out.println();
     }
 
-    /** Prints the version number and the "press Enter" prompt. */
-    private void printFooter() {
-        String versionStr  = DIM + WHITE + VERSION + RESET;
-        String promptStr   = GREEN + BOLD + "  Press Enter to continue..." + RESET;
-
-        System.out.println("  " + versionStr);
-        System.out.println();
-        System.out.print(promptStr + " ");
-    }
-
-    // -------------------------------------------------------------------------
-    // Input
-    // -------------------------------------------------------------------------
-
-    /** Blocks until the user submits an empty line (Enter only). */
-    private void waitForEnter() {
-        while (true) {
-            String input = scanner.nextLine();
-            if (input.isBlank()) {
-                return;
-            }
-            System.out.println(RED + "  Please press Enter only to continue." + RESET);
-            System.out.print(GREEN + "  > " + RESET);
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Utility
-    // -------------------------------------------------------------------------
-
     /**
-     * Strips ANSI escape sequences from a string so we can measure its
-     * visible length for padding calculations.
+     * Prints the version label and the prompt that advances to the main menu.
      */
-    private String stripAnsi(String s) {
-        return s.replaceAll(ANSI_REGEX, "");
+    private void printFooter() {
+        System.out.println("  " + DIM + WHITE + VERSION + RESET);
+        System.out.println();
+        System.out.print(GREEN + BOLD + "  Press Enter to continue..." + RESET + " ");
     }
-
 }

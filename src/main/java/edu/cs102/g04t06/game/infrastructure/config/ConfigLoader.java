@@ -14,9 +14,6 @@ import edu.cs102.g04t06.game.rules.entities.GemColor;
  *
  * <p>Expected keys include:</p>
  * <ul>
- *   <li>{@code game.winningPoints}</li>
- *   <li>{@code game.maxReservedCards}</li>
- *   <li>{@code game.maxGemsPerPlayer}</li>
  *   <li>{@code game.{N}players.{color}} where {@code N} is 2-4 and color is a
  *       lowercase {@link GemColor} name</li>
  *   <li>{@code data.file.card}</li>
@@ -45,15 +42,6 @@ public class ConfigLoader {
     }
 
     /**
-     * Returns the number of points required to win the game.
-     *
-     * @return the config number of points required to win the game
-     */
-    public int getWinningPoints() {
-        return Integer.parseInt(this.properties.getProperty("game.winningPoints"));
-    }
-
-    /**
      * Returns the number of gems available for a given player count and color.
      *
      * <p>Player counts greater than 4 are clamped to 4.</p>
@@ -67,24 +55,6 @@ public class ConfigLoader {
         Formatter sf = new Formatter(sb);
         sf.format("game.%dplayers.%s", playerCount >= 4 ? 4 : playerCount, color.toString().toLowerCase());
         return Integer.parseInt(this.properties.getProperty(sf.toString()));
-    }
-
-    /**
-     * Returns the maximum number of reserved cards allowed.
-     *
-     * @return maximum number of cards a player may reserve
-     */
-    public int getMaxReservedCards() {
-        return Integer.parseInt(this.properties.getProperty("game.maxReservedCards"));
-    }
-
-    /**
-     * Returns the maximum number of gems a player may hold.
-     *
-     * @return maximum number of gems a player may hold
-     */
-    public int getMaxGemsPerPlayer() {
-        return Integer.parseInt(this.properties.getProperty("game.maxGemsPerPlayer"));
     }
 
     /**

@@ -5,9 +5,9 @@ import java.util.Map; // the specific dictionary we are using
 import java.util.Objects;
 
 /**
- * represents an immutable Noble card 
+ * represents an immutable Noble card
  */
-public class Noble {
+public class Noble implements GameEntity {
 
     private final int points = 3;
     private final Map<GemColor, Integer> requirements; // the variable "requirements" will hold the cost to get the Noble (eg. Key: Red -> Value: 4)
@@ -101,11 +101,20 @@ public class Noble {
                 '}';
         }   
 
-
+    /**
+     * Returns the display name of this noble.
+     *
+     * @return the noble name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the identifier of this noble.
+     *
+     * @return the noble id
+     */
     public int getId() {
         return id;
     }

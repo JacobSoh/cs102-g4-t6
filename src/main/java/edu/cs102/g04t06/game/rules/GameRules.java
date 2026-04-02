@@ -11,14 +11,52 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.Cost;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
-
-
+/**
+ * Validates core Splendor rules such as affordability, gem-taking, and victory checks.
+ */
 public class GameRules{
 
-    //constants 
+    // Universal Splendor rule constants.
+    private static final int WINNING_POINTS = 15;
     private static final int MAX_GEMS_IN_HAND = 10;
     private static final int MAX_RESERVED_CARDS = 3;
     private static final int MIN_GEMS_IN_BANK_FOR_DOUBLE = 4;
+
+    /**
+     * Returns the fixed victory threshold for the game.
+     *
+     * @return points required to trigger the final round
+     */
+    public static int getWinningPoints() {
+        return WINNING_POINTS;
+    }
+
+    /**
+     * Returns the fixed reserved-card limit for the game.
+     *
+     * @return maximum reserved cards allowed per player
+     */
+    public static int getMaxReservedCards() {
+        return MAX_RESERVED_CARDS;
+    }
+
+    /**
+     * Returns the fixed gem-hand limit for the game.
+     *
+     * @return maximum gems allowed in hand
+     */
+    public static int getMaxGemsPerPlayer() {
+        return MAX_GEMS_IN_HAND;
+    }
+
+    /**
+     * Returns the fixed bank threshold required to take two of the same gem color.
+     *
+     * @return minimum gems needed in bank for a double take
+     */
+    public static int getMinGemsInBankForDouble() {
+        return MIN_GEMS_IN_BANK_FOR_DOUBLE;
+    }
 
     /**
      * checks if player fella can afford the card
@@ -29,9 +67,6 @@ public class GameRules{
      * @param card the card to be bought
      * @return true if the player can afford the card
      */
-    //faced issue of gold gems not covering the cost of a card
-    //added logic here but adding in GemCollection.contains may be better
-
     public boolean canAffordCard(Player player, Card card){
         GemCollection actualcost = calculateActualCost(player, card);
         GemCollection playerGems = player.getGems();
@@ -82,13 +117,10 @@ public class GameRules{
             for (Map.Entry<GemColor, Integer> entry : requested.asMap().entrySet()){
                 int count = entry.getValue();
 
-                // Ignore colors the player didn't ask for!
                 if (count == 0) continue; 
 
-                // If they asked for 2 or more of the SAME color, illegal!
                 if (count > 1) return false; 
 
-                // If the bank doesn't have at least 1, illegal!
                 if (bank.getCount(entry.getKey()) < 1) return false; 
             }
             return true;
@@ -130,7 +162,7 @@ public class GameRules{
     public List<Noble> getClaimableNobles(Player player, List<Noble> nobles){
         List<Noble> result = new ArrayList<>();
         for(Noble noble : nobles){
-            if(Noble.canBeClaimed(noble, player.calculateBonuses())){ //dont call static method on instance
+            if(Noble.canBeClaimed(noble, player.calculateBonuses())){
                 result.add(noble);
             }
         }
@@ -178,7 +210,6 @@ public class GameRules{
                     winner = player;
                     unresolvedTie = false;
                 } else if(player.getPoints() == winner.getPoints()){
-                //tie-break : players with fewer cards win
                     if(player.getPurchasedCards().size() < winner.getPurchasedCards().size()){
                         winner = player;
                         unresolvedTie = false;

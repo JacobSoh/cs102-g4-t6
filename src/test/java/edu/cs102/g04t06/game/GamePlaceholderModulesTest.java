@@ -32,10 +32,6 @@ class GamePlaceholderModulesTest {
             "package edu.cs102.g04t06.game.execution;"
         );
         expectedPackages.put(
-            "src/main/java/edu/cs102/g04t06/game/infrastructure/data/ExcelDataLoader.java",
-            "package edu.cs102.g04t06.game.infrastructure.data;"
-        );
-        expectedPackages.put(
             "src/main/java/edu/cs102/g04t06/game/rules/GameState.java",
             "package edu.cs102.g04t06.game.rules;"
         );

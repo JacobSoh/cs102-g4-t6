@@ -4,13 +4,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
 
 import edu.cs102.g04t06.game.execution.GameStateFactory;
-import edu.cs102.g04t06.game.execution.TurnProcessor;
+import edu.cs102.g04t06.game.execution.GameEngine;
 import edu.cs102.g04t06.game.presentation.console.GameBoardUI;
 import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
 import edu.cs102.g04t06.game.rules.GameState;
@@ -22,25 +28,35 @@ public class LanGameServer implements ThemeStyleSheet {
     private final int port;
     private final int totalPlayers;
     private final String hostPlayerName;
+    private final int hostPlayerAge;
     private final GameBoardUI boardUI = new GameBoardUI();
-    private final TurnProcessor turnProcessor = new TurnProcessor();
+    private final GameEngine gameEngine = new GameEngine();
     private final GameStateFactory gameStateFactory = new GameStateFactory();
     private final List<ClientConnection> clients = new ArrayList<>();
     private final List<String> globalLog = new ArrayList<>();
     private String lastActionMessage = "No actions yet";
     private String finalGameMessage = "Match complete.";
     private String hostInlineError = "";
+    private String hostPendingTurnMessage = "";
 
-    public LanGameServer(int port, int totalPlayers, String hostPlayerName) {
+    public LanGameServer(int port, int totalPlayers, String hostPlayerName, int hostPlayerAge) {
         this.port = port;
         this.totalPlayers = totalPlayers;
         this.hostPlayerName = hostPlayerName;
+        this.hostPlayerAge = hostPlayerAge;
         this.boardUI.setPerspectivePlayerName(hostPlayerName);
     }
 
+    /**
+     * Starts the host-side server, accepts clients, and runs the authoritative game loop.
+     */
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println(GREEN + "Hosting LAN game on port " + port + RESET);
+            String hostIpAddress = resolveHostIpv4();
+            if (hostIpAddress != null) {
+                System.out.println(CYAN + "Host IP: " + hostIpAddress + RESET);
+            }
             System.out.println(CYAN + "Waiting for " + (totalPlayers - 1) + " remote player(s)..." + RESET);
             acceptClients(serverSocket);
 
@@ -51,6 +67,11 @@ public class LanGameServer implements ThemeStyleSheet {
             closeClients();
         } catch (IOException e) {
             System.out.println(RED + "Failed to host LAN game: " + e.getMessage() + RESET);
+            System.out.println("Press Enter to return to the main menu...");
+            try {
+                System.in.read();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -70,12 +91,60 @@ public class LanGameServer implements ThemeStyleSheet {
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
         NetworkMessage join = NetworkProtocol.read(reader);
-        if (join == null || join.type != MessageType.JOIN_REQUEST || join.playerName == null || join.playerName.isBlank()) {
+        if (join == null || join.playerName == null || join.playerName.isBlank()) {
             socket.close();
             return null;
         }
 
-        ClientConnection connection = new ClientConnection(socket, reader, writer, join.playerName.trim(), playerIndex);
+        String requestedName = join.playerName.trim();
+        if (join.type == MessageType.CHECK_NAME) {
+            if (isDuplicatePlayerName(requestedName)) {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.ERROR,
+                        "Player name already exists. Choose a different name."));
+            } else {
+                NetworkProtocol.send(writer, NetworkMessage.of(
+                        MessageType.INFO,
+                        "Player name is available."));
+            }
+            writer.flush();
+            try {
+                socket.shutdownOutput();
+            } catch (IOException ignored) {
+                // Some platforms may not support half-close cleanly.
+            }
+            socket.close();
+            return null;
+        }
+
+        if (join.type != MessageType.JOIN_REQUEST || join.playerAge == null) {
+            socket.close();
+            return null;
+        }
+
+        if (isDuplicatePlayerName(requestedName)) {
+            NetworkProtocol.send(writer, NetworkMessage.of(
+                    MessageType.ERROR,
+                    "Player name already exists. Choose a different name."));
+            socket.close();
+            return null;
+        }
+
+        if (join.type != MessageType.JOIN_REQUEST || join.playerAge == null) {
+            socket.close();
+            return null;
+        }
+
+        if (isDuplicatePlayerName(requestedName)) {
+            NetworkProtocol.send(writer, NetworkMessage.of(
+                    MessageType.ERROR,
+                    "Player name already exists. Choose a different name."));
+            socket.close();
+            return null;
+        }
+
+        ClientConnection connection = new ClientConnection(
+                socket, reader, writer, requestedName, join.playerAge, playerIndex);
         NetworkMessage accepted = NetworkMessage.of(MessageType.JOIN_ACCEPTED, "Joined lobby as " + connection.playerName + ".");
         accepted.playerIndex = playerIndex;
         accepted.expectedPlayers = totalPlayers;
@@ -97,15 +166,26 @@ public class LanGameServer implements ThemeStyleSheet {
 
     private void runGameLoop(GameState state) {
         while (!state.isGameOver()) {
-            int currentPlayerIndex = state.getCurrentPlayerIndex();
-            if (currentPlayerIndex == 0) {
+            String currentPlayerName = state.getCurrentPlayer().getName();
+            if (hostPlayerName.equals(currentPlayerName)) {
                 handleHostTurn(state);
             } else {
-                ClientConnection activeClient = clients.get(currentPlayerIndex - 1);
+                ClientConnection activeClient = findClientByName(currentPlayerName);
+                if (activeClient == null) {
+                    state.setGameOver(true);
+                    finalGameMessage = "Game ended: missing client connection for " + currentPlayerName + ".";
+                    appendGlobalLog(finalGameMessage);
+                    break;
+                }
+                if (activeClient.disconnected) {
+                    autoResolveDisconnectedTurn(state, currentPlayerName);
+                    continue;
+                }
                 try {
                     handleRemoteTurn(state, activeClient);
                 } catch (IOException e) {
                     handleDisconnect(state, activeClient, e.getMessage());
+                    autoResolveDisconnectedTurn(state, currentPlayerName);
                 }
             }
         }
@@ -127,25 +207,36 @@ public class LanGameServer implements ThemeStyleSheet {
                     RED + BOLD,
                     getRecentGlobalLog());
             hostInlineError = "";
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return;
+            }
 
-            TurnProcessor.TurnResult result = turnProcessor.processCommand(state, input);
+            GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, input);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
                 continue;
             }
 
             if (result.isAwaitingReturn()) {
+                hostPendingTurnMessage = result.getMessage();
                 if (!handleHostGemReturn(state, result)) {
                     continue;
                 }
+            } else if (result.isAwaitingNobleSelection()) {
+                hostPendingTurnMessage = result.getMessage();
+                if (!handleHostNobleSelection(state, result)) {
+                    continue;
+                }
             } else {
-                broadcastTurnOutcome(state, 0, result.getMessage());
+                hostPendingTurnMessage = "";
+                broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             }
             break;
         }
     }
 
-    private boolean handleHostGemReturn(GameState state, TurnProcessor.TurnResult initialResult) {
+    private boolean handleHostGemReturn(GameState state, GameEngine.TurnResult initialResult) {
         while (true) {
             String statusMessage = hostInlineError;
             if (statusMessage == null || statusMessage.isBlank()) {
@@ -158,12 +249,49 @@ public class LanGameServer implements ThemeStyleSheet {
                     statusColor,
                     getRecentGlobalLog());
             hostInlineError = "";
-            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, input);
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return false;
+            }
+            GameEngine.TurnResult result = gameEngine.processGemReturn(state, input);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
                 continue;
             }
-            broadcastTurnOutcome(state, 0, result.getMessage());
+            if (result.isAwaitingNobleSelection()) {
+                hostPendingTurnMessage = result.getMessage();
+                return handleHostNobleSelection(state, result);
+            }
+            hostPendingTurnMessage = "";
+            broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleHostNobleSelection(GameState state, GameEngine.TurnResult initialResult) {
+        while (true) {
+            String statusMessage = hostInlineError;
+            if (statusMessage == null || statusMessage.isBlank()) {
+                statusMessage = formatNobleSelectionPrompt(initialResult.getClaimableNobles());
+            }
+            String statusColor = (hostInlineError == null || hostInlineError.isBlank()) ? YELLOW : RED + BOLD;
+            String input = boardUI.promptNetworkTurn(
+                    state,
+                    statusMessage,
+                    statusColor,
+                    getRecentGlobalLog());
+            hostInlineError = "";
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return false;
+            }
+            GameEngine.TurnResult result = gameEngine.processNobleSelection(state, input, hostPendingTurnMessage);
+            if (!result.isSuccess()) {
+                hostInlineError = result.getMessage();
+                continue;
+            }
+            hostPendingTurnMessage = "";
+            broadcastTurnOutcome(state, hostPlayerName, result.getMessage());
             return true;
         }
     }
@@ -172,7 +300,7 @@ public class LanGameServer implements ThemeStyleSheet {
         broadcastPassiveState(
                 "Waiting for " + connection.playerName + " to play.",
                 state,
-                connection.playerIndex);
+                connection.playerName);
 
         while (!state.isGameOver()) {
             NetworkMessage request = NetworkMessage.of(MessageType.REQUEST_COMMAND, "Your turn.");
@@ -185,30 +313,38 @@ public class LanGameServer implements ThemeStyleSheet {
             if (reply == null) {
                 throw new IOException(connection.playerName + " disconnected.");
             }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return;
+            }
             if (reply.type != MessageType.MOVE_SUBMIT) {
                 sendError(connection, state, "Expected a move command.");
                 continue;
             }
 
-            TurnProcessor.TurnResult result = turnProcessor.processCommand(state, reply.command);
+            GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, reply.command);
             if (!result.isSuccess()) {
                 sendError(connection, state, result.getMessage());
                 continue;
             }
 
             if (result.isAwaitingReturn()) {
-                if (!handleRemoteGemReturn(state, connection, result)) {
+                if (!handleRemoteGemReturn(state, connection, result, result.getMessage())) {
+                    continue;
+                }
+            } else if (result.isAwaitingNobleSelection()) {
+                if (!handleRemoteNobleSelection(state, connection, result, result.getMessage())) {
                     continue;
                 }
             } else {
-                broadcastTurnOutcome(state, connection.playerIndex, result.getMessage());
+                broadcastTurnOutcome(state, connection.playerName, result.getMessage());
             }
             break;
         }
     }
 
     private boolean handleRemoteGemReturn(GameState state, ClientConnection connection,
-            TurnProcessor.TurnResult initialResult) throws IOException {
+            GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
         while (true) {
             NetworkMessage prompt = NetworkMessage.of(MessageType.REQUEST_RETURN_GEMS, initialResult.getMessage());
             prompt.excessCount = initialResult.getExcessCount();
@@ -219,57 +355,111 @@ public class LanGameServer implements ThemeStyleSheet {
             if (reply == null) {
                 throw new IOException(connection.playerName + " disconnected.");
             }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return false;
+            }
             if (reply.type != MessageType.RETURN_GEMS) {
                 sendError(connection, state, "Expected gem return input.");
                 continue;
             }
 
-            TurnProcessor.TurnResult result = turnProcessor.processReturnGems(state, reply.command);
+            GameEngine.TurnResult result = gameEngine.processGemReturn(state, reply.command);
+            if (!result.isSuccess()) {
+                sendError(connection, state, result.getMessage());
+                continue;
+            }
+            if (result.isAwaitingNobleSelection()) {
+                return handleRemoteNobleSelection(state, connection, result, result.getMessage());
+            }
+            broadcastTurnOutcome(state, connection.playerName, result.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleRemoteNobleSelection(GameState state, ClientConnection connection,
+            GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
+        while (true) {
+            NetworkMessage prompt = NetworkMessage.of(
+                    MessageType.REQUEST_NOBLE_SELECTION,
+                    formatNobleSelectionPrompt(initialResult.getClaimableNobles()));
+            prompt.state = state;
+            prompt.logEntries = getRecentGlobalLog();
+            NetworkProtocol.send(connection.writer, prompt);
+
+            NetworkMessage reply = NetworkProtocol.read(connection.reader);
+            if (reply == null) {
+                throw new IOException(connection.playerName + " disconnected.");
+            }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return false;
+            }
+            if (reply.type != MessageType.NOBLE_SELECTION) {
+                sendError(connection, state, "Expected a noble selection.");
+                continue;
+            }
+
+            GameEngine.TurnResult result = gameEngine.processNobleSelection(state, reply.command, pendingTurnMessage);
             if (!result.isSuccess()) {
                 sendError(connection, state, result.getMessage());
                 continue;
             }
 
-            broadcastTurnOutcome(state, connection.playerIndex, result.getMessage());
+            broadcastTurnOutcome(state, connection.playerName, result.getMessage());
             return true;
         }
     }
 
     private void sendError(ClientConnection connection, GameState state, String message) {
+        if (connection.disconnected) {
+            return;
+        }
         NetworkMessage error = NetworkMessage.of(MessageType.ERROR, message);
         error.state = state;
         NetworkProtocol.send(connection.writer, error);
     }
 
     private void handleDisconnect(GameState state, ClientConnection connection, String reason) {
-        clients.remove(connection);
+        if (connection == null) {
+            String message = hostPlayerName + " disconnected.";
+            if (reason != null && !reason.isBlank()) {
+                message += " " + reason;
+            }
+            finalGameMessage = message;
+            appendGlobalLog(message);
+            state.setGameOver(true);            
+            return;
+        }
+        if (connection.disconnected) {
+            return;
+        }
+        connection.disconnected = true;
         closeClient(connection);
+
+        if (totalPlayers == 2) {
+            String message = connection.playerName + " disconnected. Ending the 2-player game.";
+            if (reason != null && !reason.isBlank()) {
+                message += " " + reason;
+            }
+            finalGameMessage = message;
+            appendGlobalLog(message);
+            state.setGameOver(true);
+            return;
+        }
 
         String message = connection.playerName + " disconnected.";
         if (reason != null && !reason.isBlank()) {
             message += " " + reason;
         }
+        message += " Future turns will auto-pass.";
 
         NetworkMessage disconnected = NetworkMessage.of(MessageType.PLAYER_DISCONNECTED, message);
         disconnected.state = state;
-        disconnected.logMessage = "Player disconnected, ending game.";
+        disconnected.logMessage = message;
         appendGlobalLog(message);
         disconnected.logEntries = getRecentGlobalLog();
         broadcast(disconnected);
-
-        state.setGameOver(true);
-
-        String endMessage = "Game ended: insufficient players after " + connection.playerName + " disconnected.";
-        finalGameMessage = endMessage;
-        appendGlobalLog(endMessage);
-        NetworkMessage gameOver = NetworkMessage.of(MessageType.GAME_OVER, endMessage);
-        gameOver.state = state;
-        gameOver.logEntries = getRecentGlobalLog();
-        broadcast(gameOver);
-
-        boardUI.displayReadOnlyState(state, endMessage, getRecentGlobalLog());
-        System.out.println();
-        System.out.println(RED + endMessage + RESET);
     }
 
     private void broadcastState(MessageType type, String message, GameState state) {
@@ -284,27 +474,29 @@ public class LanGameServer implements ThemeStyleSheet {
         renderHostState(state);
     }
 
-    private void broadcastTurnOutcome(GameState state, int actingPlayerIndex, String actorMessage) {
-        String actorName = state.getPlayers().get(actingPlayerIndex).getName();
+    private void broadcastTurnOutcome(GameState state, String actorName, String actorMessage) {
         String publicMessage = actorName + ": " + actorMessage;
         lastActionMessage = publicMessage;
         appendGlobalLog(publicMessage);
-        int nextPlayerIndex = state.isGameOver() ? -1 : state.getCurrentPlayerIndex();
+        String nextPlayerName = state.isGameOver() ? null : state.getCurrentPlayer().getName();
 
         for (ClientConnection client : clients) {
-            if (client.playerIndex == nextPlayerIndex) {
+            if (client.disconnected) {
+                continue;
+            }
+            if (nextPlayerName != null && client.playerName.equals(nextPlayerName)) {
                 continue;
             }
             NetworkMessage payload = NetworkMessage.of(
                     MessageType.GAME_STATE,
-                    client.playerIndex == actingPlayerIndex ? actorMessage : publicMessage);
+                    client.playerName.equals(actorName) ? actorMessage : publicMessage);
             payload.logMessage = publicMessage;
             payload.logEntries = getRecentGlobalLog();
             payload.state = state;
             NetworkProtocol.send(client.writer, payload);
         }
 
-        if (state.isGameOver() || state.getCurrentPlayerIndex() != 0) {
+        if (state.isGameOver() || !hostPlayerName.equals(state.getCurrentPlayer().getName())) {
             boardUI.displayReadOnlyState(
                     state,
                     state.isGameOver() ? finalGameMessage
@@ -313,9 +505,12 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
-    private void broadcastPassiveState(String message, GameState state, int activePlayerIndex) {
+    private void broadcastPassiveState(String message, GameState state, String activePlayerName) {
         for (ClientConnection client : clients) {
-            if (client.playerIndex == activePlayerIndex) {
+            if (client.disconnected) {
+                continue;
+            }
+            if (client.playerName.equals(activePlayerName)) {
                 continue;
             }
             NetworkMessage payload = NetworkMessage.of(MessageType.GAME_STATE, message);
@@ -330,13 +525,17 @@ public class LanGameServer implements ThemeStyleSheet {
         if (state == null) {
             return;
         }
-        if (!state.isGameOver() && state.getCurrentPlayerIndex() == 0) {
+        if (!state.isGameOver() && hostPlayerName.equals(state.getCurrentPlayer().getName())) {
             return;
         }
         String statusMessage = state.isGameOver()
                 ? finalGameMessage
                 : "Waiting for " + state.getCurrentPlayer().getName() + " to play.";
         boardUI.displayReadOnlyState(state, statusMessage, getRecentGlobalLog());
+    }
+
+    private boolean isDisconnectCommand(String input) {
+        return input != null && input.equalsIgnoreCase("q");
     }
 
     private void appendGlobalLog(String entry) {
@@ -350,26 +549,132 @@ public class LanGameServer implements ThemeStyleSheet {
         if (globalLog.isEmpty()) {
             return List.of();
         }
-        return List.of(globalLog.get(globalLog.size() - 1));
+        int start = Math.max(0, globalLog.size() - 3);
+        return new ArrayList<>(globalLog.subList(start, globalLog.size()));
     }
 
     private void broadcast(NetworkMessage message) {
         for (ClientConnection client : clients) {
+            if (client.disconnected) {
+                continue;
+            }
             NetworkProtocol.send(client.writer, message);
         }
     }
 
+    private String formatNobleSelectionPrompt(List<edu.cs102.g04t06.game.rules.entities.Noble> nobles) {
+        StringBuilder prompt = new StringBuilder("Choose noble");
+        for (int i = 0; i < nobles.size(); i++) {
+            if (i == 0) {
+                prompt.append(": ");
+            } else {
+                prompt.append("  ");
+            }
+            prompt.append(i + 1).append("=").append(nobles.get(i).getName());
+        }
+        return prompt.toString();
+    }
+
+    private String resolveHostIpv4() {
+        String firstIpv4 = null;
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (!(address instanceof Inet4Address ipv4) || ipv4.isLoopbackAddress()) {
+                        continue;
+                    }
+                    if (firstIpv4 == null) {
+                        firstIpv4 = ipv4.getHostAddress();
+                    }
+                    if (ipv4.isSiteLocalAddress()) {
+                        return ipv4.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ignored) {
+            return null;
+        }
+        return firstIpv4;
+    }
+
+    private void autoResolveDisconnectedTurn(GameState state, String playerName) {
+        if (state == null || state.isGameOver() || !playerName.equals(state.getCurrentPlayer().getName())) {
+            return;
+        }
+
+        GameEngine.TurnResult result;
+        if (state.getCurrentPlayer().getGemCount() > 10) {
+            result = gameEngine.processAutomaticReturnGems(state);
+        } else {
+            result = gameEngine.processAutomaticPass(state);
+        }
+
+        if (!result.isSuccess()) {
+            String failureMessage = "Failed to auto-resolve " + playerName + "'s disconnected turn: "
+                    + result.getMessage();
+            finalGameMessage = failureMessage;
+            appendGlobalLog(failureMessage);
+            state.setGameOver(true);
+            NetworkMessage gameOver = NetworkMessage.of(MessageType.GAME_OVER, failureMessage);
+            gameOver.state = state;
+            gameOver.logEntries = getRecentGlobalLog();
+            broadcast(gameOver);
+            boardUI.displayReadOnlyState(state, failureMessage, getRecentGlobalLog());
+            System.out.println();
+            System.out.println(RED + failureMessage + RESET);
+            return;
+        }
+
+        broadcastTurnOutcome(state, playerName, result.getMessage());
+    }
+
     private List<String> buildPlayerNames() {
-        List<String> names = new ArrayList<>();
-        names.add(hostPlayerName);
+        List<PlayerSlot> slots = new ArrayList<>();
+        slots.add(new PlayerSlot(hostPlayerName, hostPlayerAge, 0));
         for (ClientConnection client : clients) {
-            names.add(client.playerName);
+            slots.add(new PlayerSlot(client.playerName, client.playerAge, client.playerIndex));
+        }
+        slots.sort(Comparator
+                .comparingInt(PlayerSlot::age)
+                .thenComparingInt(PlayerSlot::joinOrder));
+
+        List<String> names = new ArrayList<>();
+        for (PlayerSlot slot : slots) {
+            names.add(slot.name());
         }
         return names;
     }
 
     private GameState createInitialGameState(List<String> playerNames) {
         return gameStateFactory.createInitialGameState(totalPlayers, playerNames);
+    }
+
+    private boolean isDuplicatePlayerName(String candidateName) {
+        if (hostPlayerName.equalsIgnoreCase(candidateName)) {
+            return true;
+        }
+        for (ClientConnection client : clients) {
+            if (client.playerName.equalsIgnoreCase(candidateName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ClientConnection findClientByName(String playerName) {
+        for (ClientConnection client : clients) {
+            if (client.playerName.equals(playerName)) {
+                return client;
+            }
+        }
+        return null;
     }
 
     private void closeClients() {
@@ -398,15 +703,21 @@ public class LanGameServer implements ThemeStyleSheet {
         private final BufferedReader reader;
         private final PrintWriter writer;
         private final String playerName;
+        private final int playerAge;
         private final int playerIndex;
+        private boolean disconnected;
 
         private ClientConnection(Socket socket, BufferedReader reader, PrintWriter writer,
-                String playerName, int playerIndex) {
+                String playerName, int playerAge, int playerIndex) {
             this.socket = socket;
             this.reader = reader;
             this.writer = writer;
             this.playerName = playerName;
+            this.playerAge = playerAge;
             this.playerIndex = playerIndex;
+            this.disconnected = false;
         }
     }
+
+    private record PlayerSlot(String name, int age, int joinOrder) {}
 }

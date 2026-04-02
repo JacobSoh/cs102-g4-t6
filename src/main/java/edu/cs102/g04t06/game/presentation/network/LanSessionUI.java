@@ -30,6 +30,7 @@ public class LanSessionUI implements ThemeStyleSheet {
             }
             case REQUEST_COMMAND -> promptCommand(message);
             case REQUEST_RETURN_GEMS -> promptGemReturn(message);
+            case REQUEST_NOBLE_SELECTION -> promptNobleSelection(message);
             default -> null;
         };
     }
@@ -67,6 +68,9 @@ public class LanSessionUI implements ThemeStyleSheet {
         }
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
         NetworkMessage reply = NetworkMessage.of(MessageType.MOVE_SUBMIT, null);
         reply.command = input;
         return reply;
@@ -82,7 +86,27 @@ public class LanSessionUI implements ThemeStyleSheet {
         }
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
         NetworkMessage reply = NetworkMessage.of(MessageType.RETURN_GEMS, null);
+        reply.command = input;
+        return reply;
+    }
+
+    private NetworkMessage promptNobleSelection(NetworkMessage message) {
+        String statusMessage = inlineError;
+        String statusColor = RED + BOLD;
+        if (statusMessage == null || statusMessage.isBlank()) {
+            statusMessage = safeMessage(message);
+            statusColor = YELLOW;
+        }
+        String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
+        inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
+        NetworkMessage reply = NetworkMessage.of(MessageType.NOBLE_SELECTION, null);
         reply.command = input;
         return reply;
     }
@@ -123,5 +147,9 @@ public class LanSessionUI implements ThemeStyleSheet {
             return "Your turn.";
         }
         return "Waiting for " + currentPlayerName + " to play.";
+    }
+
+    private boolean isDisconnectCommand(String input) {
+        return input != null && input.equalsIgnoreCase("q");
     }
 }

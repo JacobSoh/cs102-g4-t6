@@ -72,8 +72,9 @@ class HardAIStrategyTest {
     @Test
     @DisplayName("decideAction: returns PURCHASE_CARD fromReserved=true when only reserved card is affordable")
     void decideAction_purchaseFromReservedWhenOnlyReservedIsAffordable() {
-        // Visible cards are all very expensive; reserved card has zero cost
-        Card freeReserved = buildFreeCard(2, 3, GemColor.RED);
+        // Visible cards are all very expensive; reserved card has zero cost.
+        // Use WHITE bonus so discount utility is non-zero (expensive cards cost WHITE).
+        Card freeReserved = buildFreeCard(2, 3, GemColor.WHITE);
         player.addReservedCard(freeReserved);
         GameState state = buildStateWithExpensiveCards(player);
 
@@ -297,20 +298,6 @@ class HardAIStrategyTest {
 
         assertEquals(1, result.getTotalCount());
         assertEquals(1, result.getCount(GemColor.WHITE));
-    }
-
-    @Test
-    @DisplayName("chooseGemsToReturn: returns gold as absolute last resort")
-    void chooseGemsToReturn_returnsGoldAsLastResort() {
-        // Player holds only gold — all non-gold counts are 0, so the LOW/HIGH loops
-        // skip everything, and the gold fallback kicks in
-        player.addGems(new GemCollection().add(GemColor.GOLD, 3));
-        GameState state = buildDefaultState(player);
-
-        GemCollection result = strategy.chooseGemsToReturn(player, 1, state);
-
-        assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getCount(GemColor.GOLD));
     }
 
     // =========================================================

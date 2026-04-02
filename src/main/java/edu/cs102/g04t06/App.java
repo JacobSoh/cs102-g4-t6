@@ -37,6 +37,11 @@ public class App {
         this.consoleUI.showGame();
     }
 
+    /**
+     * Renders the lobby flow for the selected play mode.
+     *
+     * @param modeOfPlay true for online mode, false for offline mode
+     */
     public void showLobby(boolean modeOfPlay) {
         this.consoleUI.showLobby(modeOfPlay);
     }
