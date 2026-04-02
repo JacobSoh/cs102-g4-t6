@@ -70,6 +70,9 @@ public class LanGameClient {
                 NetworkMessage response = sessionUI.handle(message);
                 if (response != null) {
                     NetworkProtocol.send(writer, response);
+                    if (response.type == MessageType.DISCONNECT_REQUEST) {
+                        return;
+                    }
                 }
                 if (message.type == MessageType.ERROR && !joinedLobby) {
                     return;

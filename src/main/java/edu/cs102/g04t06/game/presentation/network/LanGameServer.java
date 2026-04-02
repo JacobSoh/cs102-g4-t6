@@ -198,6 +198,10 @@ public class LanGameServer implements ThemeStyleSheet {
                     RED + BOLD,
                     getRecentGlobalLog());
             hostInlineError = "";
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return;
+            }
 
             GameEngine.TurnResult result = gameEngine.processPlayerCommand(state, input);
             if (!result.isSuccess()) {
@@ -236,6 +240,10 @@ public class LanGameServer implements ThemeStyleSheet {
                     statusColor,
                     getRecentGlobalLog());
             hostInlineError = "";
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return false;
+            }
             GameEngine.TurnResult result = gameEngine.processGemReturn(state, input);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
@@ -264,6 +272,10 @@ public class LanGameServer implements ThemeStyleSheet {
                     statusColor,
                     getRecentGlobalLog());
             hostInlineError = "";
+            if (isDisconnectCommand(input)) {
+                handleDisconnect(state, null, "Host quit the session.");
+                return false;
+            }
             GameEngine.TurnResult result = gameEngine.processNobleSelection(state, input, hostPendingTurnMessage);
             if (!result.isSuccess()) {
                 hostInlineError = result.getMessage();
@@ -291,6 +303,10 @@ public class LanGameServer implements ThemeStyleSheet {
             NetworkMessage reply = NetworkProtocol.read(connection.reader);
             if (reply == null) {
                 throw new IOException(connection.playerName + " disconnected.");
+            }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return;
             }
             if (reply.type != MessageType.MOVE_SUBMIT) {
                 sendError(connection, state, "Expected a move command.");
@@ -330,6 +346,10 @@ public class LanGameServer implements ThemeStyleSheet {
             if (reply == null) {
                 throw new IOException(connection.playerName + " disconnected.");
             }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return false;
+            }
             if (reply.type != MessageType.RETURN_GEMS) {
                 sendError(connection, state, "Expected gem return input.");
                 continue;
@@ -362,6 +382,10 @@ public class LanGameServer implements ThemeStyleSheet {
             if (reply == null) {
                 throw new IOException(connection.playerName + " disconnected.");
             }
+            if (reply.type == MessageType.DISCONNECT_REQUEST) {
+                handleDisconnect(state, connection, "Player quit the session.");
+                return false;
+            }
             if (reply.type != MessageType.NOBLE_SELECTION) {
                 sendError(connection, state, "Expected a noble selection.");
                 continue;
@@ -388,6 +412,16 @@ public class LanGameServer implements ThemeStyleSheet {
     }
 
     private void handleDisconnect(GameState state, ClientConnection connection, String reason) {
+        if (connection == null) {
+            String message = hostPlayerName + " disconnected.";
+            if (reason != null && !reason.isBlank()) {
+                message += " " + reason;
+            }
+            finalGameMessage = message;
+            appendGlobalLog(message);
+            state.setGameOver(true);            
+            return;
+        }
         if (connection.disconnected) {
             return;
         }
@@ -489,6 +523,10 @@ public class LanGameServer implements ThemeStyleSheet {
                 ? finalGameMessage
                 : "Waiting for " + state.getCurrentPlayer().getName() + " to play.";
         boardUI.displayReadOnlyState(state, statusMessage, getRecentGlobalLog());
+    }
+
+    private boolean isDisconnectCommand(String input) {
+        return input != null && input.equalsIgnoreCase("q");
     }
 
     private void appendGlobalLog(String entry) {

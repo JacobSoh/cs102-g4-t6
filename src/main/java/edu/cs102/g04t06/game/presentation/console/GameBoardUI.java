@@ -344,6 +344,7 @@ public class GameBoardUI extends AbstractConsoleUI {
         line(DIM + WHITE + "Examples:" + RESET);
         line(DIM + WHITE + "  take w r b   |   take w w   |   buy t2 slot1   |   buy reserve 1" + RESET);
         line(DIM + WHITE + "  reserve t1 slot3 (shown)   |   reserve deck t1 (hidden)   |   pass" + RESET);
+        line(DIM + WHITE + "  q exits the current game or LAN session." + RESET);
         blank();
         line(GREEN + BOLD + "Press any key, then Enter, to return to the game board." + RESET);
         boardBottom();
@@ -408,7 +409,7 @@ public class GameBoardUI extends AbstractConsoleUI {
     private void printHeader(GameState state) {
         String left  = GOLD + BOLD + "SPLENDOR" + RESET;
         String mid   = WHITE + "Round " + state.getRoundNumber() + RESET;
-        String right = DIM + WHITE + "[?] Help    [Q] Quit" + RESET;
+        String right = DIM + WHITE + "[?] Help    [Q] Exit" + RESET;
 
         int g1 = (INNER / 2) - vlen(left) - vlen(mid) / 2;
         int g2 = INNER - vlen(left) - vlen(mid) - vlen(right) - g1;

@@ -68,6 +68,9 @@ public class LanSessionUI implements ThemeStyleSheet {
         }
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
         NetworkMessage reply = NetworkMessage.of(MessageType.MOVE_SUBMIT, null);
         reply.command = input;
         return reply;
@@ -83,6 +86,9 @@ public class LanSessionUI implements ThemeStyleSheet {
         }
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
         NetworkMessage reply = NetworkMessage.of(MessageType.RETURN_GEMS, null);
         reply.command = input;
         return reply;
@@ -97,6 +103,9 @@ public class LanSessionUI implements ThemeStyleSheet {
         }
         String input = boardUI.promptNetworkTurn(message.state, statusMessage, statusColor, message.logEntries);
         inlineError = "";
+        if (isDisconnectCommand(input)) {
+            return NetworkMessage.of(MessageType.DISCONNECT_REQUEST, "Client requested disconnect.");
+        }
         NetworkMessage reply = NetworkMessage.of(MessageType.NOBLE_SELECTION, null);
         reply.command = input;
         return reply;
@@ -138,5 +147,9 @@ public class LanSessionUI implements ThemeStyleSheet {
             return "Your turn.";
         }
         return "Waiting for " + currentPlayerName + " to play.";
+    }
+
+    private boolean isDisconnectCommand(String input) {
+        return input != null && input.equalsIgnoreCase("q");
     }
 }

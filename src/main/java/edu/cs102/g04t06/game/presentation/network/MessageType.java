@@ -7,6 +7,7 @@ public enum MessageType {
     CHECK_NAME,
     JOIN_REQUEST,
     JOIN_ACCEPTED,
+    DISCONNECT_REQUEST,
     LOBBY_STATE,
     START_GAME,
     GAME_STATE,

@@ -157,6 +157,8 @@ class GameBoardUITest {
 
         String out = plainOutput();
         assertTrue(out.contains("SPLENDOR HELP"), "Help overlay should render for the local network player");
+        assertTrue(out.contains("q exits the current game or LAN session."),
+                "Help overlay should explain that q exits the current session");
         assertTrue(out.contains("Press any key, then Enter, to return to the game board."),
                 "Help overlay should be dismissible locally before resuming the turn prompt");
     }
@@ -186,6 +188,7 @@ class GameBoardUITest {
 
         assertTrue(out.contains("buy reserve 1"), "Actions guide should show the reserve slot syntax");
         assertTrue(out.contains("reserve deck t1"), "Actions guide should show the hidden deck reserve syntax");
+        assertTrue(out.contains("[?] Help    [Q] Exit"), "Board header should advertise q as exit");
     }
 
     @Test
