@@ -22,10 +22,14 @@ import edu.cs102.g04t06.game.rules.entities.Player;
 import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 
 /**
- * GameBoardUI
+ * Renders and drives the primary in-game Splendor console experience.
  *
- * Renders the full Splendor game board in the console.
- *
+ * This class is responsible for presenting the live game board, collecting
+ * turn input, showing contextual overlays such as help and game over screens,
+ * and coordinating the console-specific parts of turn resolution for local,
+ * AI-assisted, and LAN-based play. Rendering logic stays local to the console
+ * layer, while move validation and state transitions are delegated to
+ * {@link GameEngine}.
  */
 public class GameBoardUI extends AbstractConsoleUI {
     private static final String ACTION_PROMPT = "ACTION > ";
@@ -90,6 +94,10 @@ public class GameBoardUI extends AbstractConsoleUI {
     private final Map<Player, AIPlayer> aiPlayers = new HashMap<>();
     private final Map<String, List<String>> playerActionLog = new LinkedHashMap<>();
 
+    /**
+     * Simple render bundle describing the generated board lines plus the row
+     * positions used later for cursor placement.
+     */
     private static final class MainAreaRender {
         private final List<String> lines;
         private final int actionLineIndex;
@@ -119,10 +127,22 @@ public class GameBoardUI extends AbstractConsoleUI {
         this.gameEngine = new GameEngine();
     }
 
+    /**
+     * Sets the player name whose cards, gems, and affordances should be treated
+     * as the local point of view when rendering the board.
+     *
+     * @param perspectivePlayerName the player name to render as the local user
+     */
     public void setPerspectivePlayerName(String perspectivePlayerName) {
         this.perspectivePlayerName = perspectivePlayerName;
     }
 
+    /**
+     * Registers the AI-controlled players participating in the current match so
+     * their turns can be executed automatically from the board loop.
+     *
+     * @param players AI player wrappers keyed by their backing {@link Player}
+     */
     public void setAIPlayers(List<AIPlayer> players) {
         aiPlayers.clear();
         for (AIPlayer ai : players) {
@@ -207,6 +227,9 @@ public class GameBoardUI extends AbstractConsoleUI {
 
     /**
      * Renders the board in LAN interactive mode and collects a command inside the panel.
+     * Entering {@code ?} opens the help overlay locally for that player and then
+     * returns to the same network prompt without sending the help request over
+     * the network.
      *
      * @param state game state to render
      * @param statusMessage inline status or error message
@@ -712,6 +735,14 @@ public class GameBoardUI extends AbstractConsoleUI {
         sleep(800);
     }
 
+    /**
+     * Prompts the active human player to choose one noble when multiple nobles
+     * become claimable at the end of a turn.
+     *
+     * @param state the game state still awaiting final noble selection
+     * @param actingPlayer the player whose action log should receive the result
+     * @param initialResult the pending turn result containing claimable nobles
+     */
     private void handleNobleSelection(GameState state, String actingPlayer, GameEngine.TurnResult initialResult) {
         String promptMessage = formatNobleSelectionPrompt(initialResult.getClaimableNobles());
         while (true) {
@@ -730,6 +761,12 @@ public class GameBoardUI extends AbstractConsoleUI {
         }
     }
 
+    /**
+     * Formats the inline prompt used to display numbered noble choices.
+     *
+     * @param claimableNobles the nobles currently available to claim
+     * @return a compact numbered selection prompt
+     */
     private String formatNobleSelectionPrompt(List<Noble> claimableNobles) {
         StringBuilder prompt = new StringBuilder("Choose noble");
         for (int i = 0; i < claimableNobles.size(); i++) {
@@ -743,6 +780,13 @@ public class GameBoardUI extends AbstractConsoleUI {
         return prompt.toString();
     }
 
+    /**
+     * Appends a player-facing action message to both the shared action log and
+     * the per-player action history used by the board.
+     *
+     * @param playerName the player who performed the action
+     * @param message the action summary to record
+     */
     private void logPlayerAction(String playerName, String message) {
         actionLog.add(playerName + ": " + message);
         playerActionLog.computeIfAbsent(playerName, k -> new ArrayList<>()).add(message);
@@ -752,6 +796,13 @@ public class GameBoardUI extends AbstractConsoleUI {
     // AI turn handling
     // -------------------------------------------------------------------------
 
+    /**
+     * Executes a single AI-controlled turn through the shared game engine.
+     *
+     * @param state the current game state
+     * @param aiPlayer the AI participant taking the turn
+     * @return the resulting turn outcome
+     */
     private GameEngine.TurnResult executeAITurn(GameState state, AIPlayer aiPlayer) {
         return gameEngine.processAITurn(state, aiPlayer);
     }
@@ -851,7 +902,12 @@ public class GameBoardUI extends AbstractConsoleUI {
         return sb.toString();
     }
 
-    /** Maps uppercase gem stat letter (W/R/U/G/K/*) to ANSI colour. */
+    /**
+     * Maps a shorthand gem code to the ANSI color used for rendering it.
+     *
+     * @param c shorthand gem code such as {@code W}, {@code R}, {@code B}, or {@code *}
+     * @return the ANSI color associated with that gem code
+     */
     private String gemAnsi(char c) {
         return switch (c) {
             case 'W' -> WHITE;
@@ -882,8 +938,11 @@ public class GameBoardUI extends AbstractConsoleUI {
     }
 
     /**
-     * Pads string s (may contain ANSI codes) so its visible width
-     * equals exactly targetWidth. Strips ANSI for width measurement.
+     * Pads a string containing optional ANSI codes to a target visible width.
+     *
+     * @param s text to pad
+     * @param targetWidth desired visible width after padding
+     * @return the padded string
      */
     private String padTo(String s, int targetWidth) {
         int pad = targetWidth - vlen(s);
@@ -893,6 +952,10 @@ public class GameBoardUI extends AbstractConsoleUI {
     /**
      * Joins an array of pre-built tile strings with a gap of gapSize spaces
      * between each tile.
+     *
+     * @param tiles tile rows to join horizontally
+     * @param gapSize number of spaces between adjacent tiles
+     * @return the combined tile row
      */
     private String joinTiles(String[] tiles, int gapSize) {
         StringBuilder sb = new StringBuilder();
@@ -905,7 +968,12 @@ public class GameBoardUI extends AbstractConsoleUI {
         return sb.toString();
     }
 
-    /** Renders 3 reserved card slots: [ ][ ][ ] */
+    /**
+     * Renders the compact three-slot reserved-card indicator.
+     *
+     * @param count the number of occupied reserved slots
+     * @return a three-slot reserved-card display string
+     */
     private String reservedSlots(int count) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 3; i++) {
@@ -916,17 +984,31 @@ public class GameBoardUI extends AbstractConsoleUI {
 
     /**
      * Visible length of s: strips ANSI escape sequences before measuring.
+     *
+     * @param s text whose visible width should be measured
+     * @return visible character length with ANSI sequences ignored
      */
     private int vlen(String s) {
         return s.replaceAll(ANSI_REGEX, "").length();
     }
 
-    /** Returns n spaces. */
+    /**
+     * Returns a string containing {@code n} spaces.
+     *
+     * @param n the number of spaces to generate
+     * @return a space-filled string, or an empty string when {@code n <= 0}
+     */
     private String sp(int n) {
         return n > 0 ? " ".repeat(n) : "";
     }
 
-    /** Returns n repetitions of character c as a String. */
+    /**
+     * Repeats a character a fixed number of times.
+     *
+     * @param c the character to repeat
+     * @param n the number of repetitions
+     * @return the repeated-character string
+     */
     private String rep(char c, int n) {
         StringBuilder sb = new StringBuilder(n);
         for (int i = 0; i < n; i++) {
@@ -939,6 +1021,7 @@ public class GameBoardUI extends AbstractConsoleUI {
      * Builds the left-hand market column of the board as renderable rows.
      *
      * @param state state to render
+     * @param perspectivePlayer player whose affordability and reserved details drive highlights
      * @return prepared render rows plus prompt row metadata
      */
     private MainAreaRender buildMainArea(GameState state, Player perspectivePlayer) {
@@ -979,6 +1062,7 @@ public class GameBoardUI extends AbstractConsoleUI {
      *
      * @param players players to display
      * @param currentPlayer active player for highlighting
+     * @param perspectivePlayer player whose panel should reveal reserved-card costs
      * @return sidebar rows
      */
     private List<String> buildPlayerSidebar(List<Player> players, Player currentPlayer, Player perspectivePlayer) {
@@ -1036,6 +1120,7 @@ public class GameBoardUI extends AbstractConsoleUI {
      * @param lines target row buffer
      * @param player player to render
      * @param isCurrentPlayer whether this player is active
+     * @param isPerspectivePlayer whether this player matches the current local perspective
      */
     private void appendPlayerCard(List<String> lines, Player player, boolean isCurrentPlayer, boolean isPerspectivePlayer) {
         String borderColor = isCurrentPlayer ? GREEN : WHITE;
@@ -1114,6 +1199,7 @@ public class GameBoardUI extends AbstractConsoleUI {
      * Builds one tier section body from visible development cards.
      *
      * @param cards cards to render
+     * @param perspectivePlayer player used to decide affordability highlighting
      * @return render rows for that tier panel
      */
     private List<String> buildTierPanelLines(List<Card> cards, Player perspectivePlayer) {
@@ -1151,15 +1237,20 @@ public class GameBoardUI extends AbstractConsoleUI {
     }
 
     /**
-     * Formats the bank gem counts into one colored row.
+     * Builds the legend explaining the board's gem shorthand labels.
      *
-     * @param bank bank to display
-     * @return formatted bank row
+     * @return a color-legend row for the bank panel
      */
     private String buildGemLegendLine() {
         return DIM + WHITE + "W=White  R=Red  B=Blue  G=Green  D=Black  *=Gold" + RESET;
     }
 
+    /**
+     * Formats the bank gem inventory as a single colorized row.
+     *
+     * @param bank the shared gem bank
+     * @return a formatted bank summary line
+     */
     private String formatBankLine(GemCollection bank) {
         StringBuilder sb = new StringBuilder();
         for (GemColor color : BANK_ORDER) {
@@ -1172,9 +1263,9 @@ public class GameBoardUI extends AbstractConsoleUI {
     }
 
     /**
-     * Formats the recent action log as a single row.
+     * Formats the recent action log for either local play or network read-only mode.
      *
-     * @return formatted log row
+     * @return one or more rendered log rows
      */
     private List<String> formatLogLines() {
         // Network read-only mode: flat list
@@ -1279,6 +1370,14 @@ public class GameBoardUI extends AbstractConsoleUI {
         return sb.toString();
     }
 
+    /**
+     * Formats one or more reserved-card cost lines for the perspective player.
+     *
+     * @param player the player whose reserved cards are being evaluated
+     * @param reservedCards the reserved cards to summarize
+     * @param width available row width inside the sidebar card
+     * @return sidebar rows showing badge and effective cost details
+     */
     private List<String> formatReservedCostLines(Player player, List<Card> reservedCards, int width) {
         if (reservedCards == null || reservedCards.isEmpty()) {
             return List.of(DIM + WHITE + "  none" + RESET);
@@ -1293,6 +1392,12 @@ public class GameBoardUI extends AbstractConsoleUI {
         return lines;
     }
 
+    /**
+     * Formats a reserved-card badge using the card's bonus color and points.
+     *
+     * @param card the reserved card to summarize
+     * @return a compact badge for sidebar display
+     */
     private String formatBonusBadge(Card card) {
         if (card == null) {
             return "?";
@@ -1303,6 +1408,12 @@ public class GameBoardUI extends AbstractConsoleUI {
         return gemAnsi + BOLD + gemLabel + card.getPoints() + RESET;
     }
 
+    /**
+     * Formats a visible market-card badge using the card's bonus color and points.
+     *
+     * @param card the visible card to summarize
+     * @return a compact badge for market display
+     */
     private String formatMarketBonusBadge(Card card) {
         if (card == null) {
             return "?";
@@ -1313,6 +1424,14 @@ public class GameBoardUI extends AbstractConsoleUI {
         return gemAnsi + BOLD + gemLabel + ":" + card.getPoints() + RESET;
     }
 
+    /**
+     * Formats the effective purchase cost for a reserved card from the
+     * perspective of a specific player, including permanent discounts.
+     *
+     * @param player the player attempting to purchase the card
+     * @param card the reserved card whose cost should be shown
+     * @return formatted effective cost text
+     */
     private String formatReservedCost(Player player, Card card) {
         if (card == null || card.getCost() == null) {
             return "-";
@@ -1326,6 +1445,14 @@ public class GameBoardUI extends AbstractConsoleUI {
         return formatColoredCost(actualCost, player);
     }
 
+    /**
+     * Formats a cost map into compact colored gem tokens, bolding tokens the
+     * provided player can currently satisfy with held gems.
+     *
+     * @param cost the cost map to display
+     * @param player optional player context for affordability highlighting
+     * @return formatted colored cost text
+     */
     private String formatColoredCost(Map<GemColor, Integer> cost, Player player) {
         if (cost == null || cost.isEmpty()) {
             return "-";
@@ -1351,6 +1478,13 @@ public class GameBoardUI extends AbstractConsoleUI {
         return sb.length() == 0 ? "-" : sb.toString();
     }
 
+    /**
+     * Resolves which player should be treated as the local viewer for
+     * perspective-based highlights and reserved-card detail rendering.
+     *
+     * @param state the current game state
+     * @return the matching perspective player, or the active player as fallback
+     */
     private Player resolvePerspectivePlayer(GameState state) {
         if (perspectivePlayerName == null || perspectivePlayerName.isBlank()) {
             return state.getCurrentPlayer();
@@ -1364,6 +1498,14 @@ public class GameBoardUI extends AbstractConsoleUI {
         return state.getCurrentPlayer();
     }
 
+    /**
+     * Determines whether a visible market card should be highlighted as
+     * currently affordable for the perspective player.
+     *
+     * @param perspectivePlayer the player whose purchasing power is being shown
+     * @param card the visible card being evaluated
+     * @return true when the card should be highlighted
+     */
     private boolean canHighlightCard(Player perspectivePlayer, Card card) {
         return perspectivePlayer != null && card != null && gameRules.canAffordCard(perspectivePlayer, card);
     }
@@ -1604,6 +1746,10 @@ public class GameBoardUI extends AbstractConsoleUI {
     /**
      * Re-renders the board with a temporary inline status prompt and reads input.
      *
+     * <p>This is used for follow-up turn phases such as gem returns and noble
+     * selection, where the input still belongs inside the board layout but the
+     * prompt text differs from the normal action line.</p>
+     *
      * @param state current game state
      * @param message prompt text to show in the status row
      * @return trimmed user input entered for that prompt
@@ -1623,6 +1769,15 @@ public class GameBoardUI extends AbstractConsoleUI {
     // Game over screen
     // -------------------------------------------------------------------------
 
+    /**
+     * Renders the dedicated end-of-game summary screen for local play.
+     *
+     * <p>The screen computes winners according to the Splendor tie-break rules,
+     * displays the final standings, and waits for the player to acknowledge the
+     * result before returning control to the surrounding console flow.</p>
+     *
+     * @param state completed game state to summarize
+     */
     private void showGameOverScreen(GameState state) {
         clearScreen();
         System.out.print("\u001B[H");
@@ -1779,7 +1934,13 @@ public class GameBoardUI extends AbstractConsoleUI {
         scanner.nextLine();
     }
 
-    /** Comparator for standings: higher points first, then fewer cards first. */
+    /**
+     * Compares two players for final-standings order.
+     *
+     * @param a first player
+     * @param b second player
+     * @return negative when {@code a} should rank ahead of {@code b}
+     */
     private int compareByScore(Player a, Player b) {
         if (b.getPoints() != a.getPoints()) return b.getPoints() - a.getPoints();
         return a.getPurchasedCards().size() - b.getPurchasedCards().size();

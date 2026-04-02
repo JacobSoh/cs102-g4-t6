@@ -9,14 +9,12 @@ import edu.cs102.g04t06.game.presentation.shared.PlayerIdentityPrompts;
 import edu.cs102.g04t06.game.rules.entities.Player;
 
 /**
- * PlayerSetupUI
+ * Collects the configuration needed to start an offline console match.
  *
- * Collects the local offline player configuration before the game starts:
- *   1. The local player's name
- *   2. The local player's birthday
- *   3. Number of opponents (1-3, so total players 2-4)
- *
- * Returns a PlayerSetupResult containing everything the game needs.
+ * <p>This setup flow gathers the local player's identity, determines the total
+ * player count, generates CPU opponents, and records the AI difficulty for each
+ * non-human participant before handing the result back to the main console
+ * controller.</p>
  */
 public class PlayerSetupUI extends AbstractConsoleUI {
 
@@ -101,12 +99,27 @@ public class PlayerSetupUI extends AbstractConsoleUI {
         return result;
     }
 
+    /**
+     * Prompts for the total player count after the local player's identity has
+     * been established.
+     *
+     * @param localName the local player's display name
+     * @return the total number of players for the upcoming match
+     */
     private int promptTotalPlayers(String localName) {
         System.out.println(WHITE + "  You are playing as: " + GOLD + BOLD + localName + RESET);
         System.out.println();
         return identityPrompts.promptTotalPlayers();
     }
 
+    /**
+     * Generates CPU player seeds with nearby ages so turn order remains
+     * age-based without requiring additional prompts.
+     *
+     * @param count number of CPU opponents to create
+     * @param referenceAge the local player's age used as the age baseline
+     * @param playerSeeds target list receiving the generated CPU seeds
+     */
     private void addCpuPlayers(int count, int referenceAge, List<PlayerSeed> playerSeeds) {
         String[] cpuNames = {"CPU-1", "CPU-2", "CPU-3"};
         for (int i = 0; i < count; i++) {
@@ -114,6 +127,12 @@ public class PlayerSetupUI extends AbstractConsoleUI {
         }
     }
 
+    /**
+     * Prompts for the AI difficulty assigned to a generated CPU opponent.
+     *
+     * @param cpuName the CPU player being configured
+     * @return {@code EASY} or {@code HARD}
+     */
     private String promptDifficulty(String cpuName) {
         while (true) {
             System.out.println(WHITE + "  Select difficulty for " + CYAN + cpuName + RESET + ":");
@@ -131,12 +150,24 @@ public class PlayerSetupUI extends AbstractConsoleUI {
         }
     }
 
+    /**
+     * Generates a plausible CPU age near the local player's age to preserve the
+     * age-based turn-order rule without creating extreme values.
+     *
+     * @param referenceAge the age around which the CPU age should be chosen
+     * @return a bounded nearby age in years
+     */
     private int randomNearbyAge(int referenceAge) {
         int minAge = Math.max(1, referenceAge - 5);
         int maxAge = Math.min(120, referenceAge + 5);
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(minAge, maxAge + 1);
     }
 
+    /**
+     * Displays a final setup summary and waits for confirmation before play begins.
+     *
+     * @param result the completed offline setup result
+     */
     private void showSummary(PlayerSetupResult result) {
         clearScreen();
         printHeader("PLAYER SETUP", "Summary — Ready to Play!");
@@ -162,6 +193,12 @@ public class PlayerSetupUI extends AbstractConsoleUI {
         waitForEnter();
     }
 
+    /**
+     * Prints the shared header used by the setup screen and summary screen.
+     *
+     * @param title main heading text
+     * @param subtitle secondary descriptive heading
+     */
     private void printHeader(String title, String subtitle) {
         System.out.println();
         System.out.println(GOLD + BOLD + "  " + title + RESET);
@@ -170,5 +207,13 @@ public class PlayerSetupUI extends AbstractConsoleUI {
         System.out.println();
     }
 
+    /**
+     * Lightweight seed data used during setup before final {@link Player}
+     * instances are created in turn order.
+     *
+     * @param name player display name
+     * @param age player age in years
+     * @param isHuman whether the player is human-controlled
+     */
     private record PlayerSeed(String name, int age, boolean isHuman) {}
 }
