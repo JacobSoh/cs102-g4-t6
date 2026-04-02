@@ -24,16 +24,16 @@ public class EasyAIStrategy implements AIStrategy {
     // hyperparamter tuning 
     // adjust these to change how aggressively the AI weights each factor
 
-    /** Multiplier for raw prestige points when scoring a card. */
+    /** Multiplier for prestige points when scoring a card. */
     private static final double WEIGHT_POINTS        = 5.0; //4.0
 
-    /** Multiplier for how useful a card's bonus color is toward nobles. */
+    /** Multiplier for how useful a card's bonus color for getting nobles. */
     private static final double WEIGHT_NOBLE_SYNERGY  = 1.5; //3.0
 
     /** Multiplier for how useful a card's bonus is toward future purchases. */
     private static final double WEIGHT_ENGINE_VALUE   = 0.5; //1.5
 
-    /** Penalty multiplier per gem of deficit (how far away from buying). */
+    /** Penalty multiplier for each gem of deficit (how far away from buying). */
     private static final double WEIGHT_DEFICIT_PENALTY = 1.5; //1.0
 
     /** Minimum points for a card to be considered worth reserving. */
@@ -46,11 +46,11 @@ public class EasyAIStrategy implements AIStrategy {
     /**
      * Main decision loop
      *
-     *  1. Buy the best affordable card (scored by points + noble synergy
-     *     + engine value, penalised by cost).
+     *  1. Buy the best affordable card 
+     *  (scored by points + noble synergy + engine value, penalised by cost).
      *  2. Reserve a high-value card if:
-     *       the gold token would let us buy it next turn, OR
-     *       it is a high-point card worth locking away.
+     *       the gold token would let us buy it next turn, or
+     *       it is a high-point card worth reserving away from the other player.
      *  3. Take gems that overlap the deficits of our top target cards.
      * 
      * @param state the current gamestate
@@ -60,7 +60,7 @@ public class EasyAIStrategy implements AIStrategy {
     @Override
     public AIAction decideAction(GameState state, Player self) {
 
-        // ── Step 1: purchase ────────────────────────────────────────
+        //step 1: purchase
         Card bestBuy = findBestAffordableCard(state, self);
         if (bestBuy != null) {
             boolean fromReserved = self.getReservedCards().contains(bestBuy);
@@ -70,7 +70,7 @@ public class EasyAIStrategy implements AIStrategy {
                     fromReserved, null, desc);
         }
 
-        // ── Step 2: reserve ─────────────────────────────────────────
+        //step 2: reserve
         if (rules.canReserveCard(self)) {
             Card reserveTarget = findBestReservableCard(state, self);
             if (reserveTarget != null) {
@@ -81,7 +81,7 @@ public class EasyAIStrategy implements AIStrategy {
             }
         }
 
-        // ── Step 3: take gems ───────────────────────────────────────
+        //step 3: take gems
         List<Card> targets = findTopTargetCards(state, self, GEM_TARGET_COUNT);
         return buildGemRequest(self, targets, state.getGemBank());
     }
@@ -110,24 +110,24 @@ public class EasyAIStrategy implements AIStrategy {
      */
     @Override
     public GemCollection chooseGemsToReturn(Player self, int excessCount, GameState state) {
-        // compute combined deficit across top targets, get colors NEED
+        // compute combined deficit across top targets, get colors we need
         List<Card> targets = findTopTargetCards(state, self, GEM_TARGET_COUNT);
         Map<GemColor, Integer> need = combinedDeficit(self, targets);
 
-        // Build a mutable snapshot of the player's gems
+        //build a mutable snapshot of the player's gems
         Map<GemColor, Integer> held = snapshotGems(self);
 
         GemCollection toReturn = new GemCollection();
         int remaining = excessCount;
 
-        // Pass 1: return gems we do NOT need (least-needed first)
+        //pass 1: return gems we dont need
         List<GemColor> unneeded = new ArrayList<>();
         for (GemColor c : held.keySet()) {
             if (c == GemColor.GOLD) continue;
             if (!need.containsKey(c) || need.get(c) <= 0) unneeded.add(c);
         }
 
-        // Sort unneeded by descending count so we shed the biggest pile first
+        //sort unneeded by descending count so we clear the biggest pile first
         unneeded.sort((a, b) -> held.getOrDefault(b, 0) - held.getOrDefault(a, 0));
 
         for (GemColor c : unneeded) {
@@ -139,7 +139,7 @@ public class EasyAIStrategy implements AIStrategy {
             held.put(c, held.getOrDefault(c, 0) - give);
         }
 
-        // Pass 2: if still over, return the most-held color (excluding GOLD)
+        //pass 2: if still over, return the most-held color (excluding GOLD)
         while (remaining > 0) {
             GemColor most = findMostHeldColor(held);
             if (most == null) break;
@@ -252,9 +252,9 @@ public class EasyAIStrategy implements AIStrategy {
 
     /**
      * Improved reserve logic — a card is worth reserving when:
-     *   (a) it has high points AND the gold token would close the gap
-     *       (deficit <= 1 after receiving gold), OR
-     *   (b) it is a high-value card (>= RESERVE_MIN_POINTS) worth locking.
+     *   (a) it has high points and the gold token would close the gap
+     *       (deficit <= 1 after receiving gold), or
+     *   (b) it is a high-value card (>= RESERVE_MIN_POINTS) worth reserving
      *
      * @param state the current gamestate
      * @param self the AI player
@@ -277,11 +277,10 @@ public class EasyAIStrategy implements AIStrategy {
 
                 int deficit = CardEvaluator.totalDeficit(self, card);
 
-                // (a) Gold closes the gap — always worth it
+                //if gold closes the gap always reserve
                 boolean goldCloses = deficit <= 1;
 
-                // (b) High-value lock — only if we have some engine
-                //     and the card is reachable (deficit <= 4)
+                //if we have some bonus and the card is reachable (deficit <= 4)
                 boolean highValue = card.getPoints() >= RESERVE_MIN_POINTS
                         && totalBonuses >= 2
                         && deficit <= 4;
@@ -301,7 +300,7 @@ public class EasyAIStrategy implements AIStrategy {
     }
 
     /**
-     * Returns the top-n target cards (not yet affordable) sorted by
+     * returns the top n target cards (not yet affordable) sorted by
      * composite score. Used to guide gem-taking decisions.
      * 
      * @param state the current gamestate
@@ -312,23 +311,23 @@ public class EasyAIStrategy implements AIStrategy {
     private List<Card> findTopTargetCards(GameState state, Player self, int n) {
         List<Card> candidates = new ArrayList<>();
 
-        // Add all visible market cards
+        //add all visible market cards
         for (int level = 1; level <= 3; level++) {
             for (Card card : state.getMarket().getVisibleCards(level)) {
                 if (card != null) candidates.add(card);
             }
         }
-        // Add reserved cards
+        //add reserved cards
         for (Card card : self.getReservedCards()) {
             if (card != null) candidates.add(card);
         }
 
-        // Sort by score descending
+        //sort by score descending
         candidates.sort((a, b) -> Double.compare(
                 scoreCard(b, state, self),
                 scoreCard(a, state, self)));
 
-        // Return top-n cards of the deck
+        //return top n cards of the deck
         List<Card> top = new ArrayList<>();
         for (int i = 0; i < Math.min(n, candidates.size()); i++) {
             top.add(candidates.get(i));
@@ -343,12 +342,12 @@ public class EasyAIStrategy implements AIStrategy {
      * Builds a gem request considering deficits across multiple target cards.
      * Colors are prioritized by their combined deficit across all targets.
      *
-     * Tries in order:
+     * try these in order:
      *  1. Three different gems from highest combined-deficit colors
      *  2. Two same gems from highest combined-deficit color (bank >= 4)
      *  3. Three different gems from any available bank color
      *  4. Two same gems from any available color
-     *  5. Whatever individual gems remain
+     *  5. Whatever gems remain
      *  6. Empty
      * 
      * @param self the AI player to be evaluated
@@ -357,14 +356,14 @@ public class EasyAIStrategy implements AIStrategy {
      * @return an AIAction to take the gem
      */
     private AIAction buildGemRequest(Player self, List<Card> targets, GemCollection bank) {
-        // Aggregate deficits across all targets
+        //sums deficits across all targets
         Map<GemColor, Integer> combined = combinedDeficit(self, targets);
 
-        // Sort colors by descending combined deficit
+        //sort colors by descending combined deficit
         List<GemColor> prioritized = new ArrayList<>(combined.keySet());
         prioritized.sort((a, b) -> combined.get(b) - combined.get(a));
 
-        // ── Try 1: 3 different gems from deficit colors ─────────────
+        //try 1: 3 different gems from deficit colors
         List<GemColor> pickable = new ArrayList<>();
         for (GemColor color : prioritized) {
             if (bank.getCount(color) >= 1) pickable.add(color);
@@ -379,7 +378,7 @@ public class EasyAIStrategy implements AIStrategy {
             }
         }
 
-        // ── Try 2: 2 same gems from highest deficit (bank >= 4) ─────
+        //try 2: 2 same gems from highest deficit (bank >= 4)
         for (GemColor color : prioritized) {
             if (rules.canTakeTwoSameGems(color, bank)) {
                 GemCollection request = new GemCollection().add(color, 2);
@@ -388,7 +387,7 @@ public class EasyAIStrategy implements AIStrategy {
             }
         }
 
-        // ── Try 3: any 3 different gems from bank ───────────────────
+        //try 3: any 3 different gems from bank
         List<GemColor> available = new ArrayList<>();
         for (GemColor color : GemColor.values()) {
             if (color == GemColor.GOLD) continue;
@@ -404,7 +403,7 @@ public class EasyAIStrategy implements AIStrategy {
             }
         }
 
-        // ── Try 4: any 2 same ───────────────────────────────────────
+        //try 4: any 2 same
         for (GemColor color : GemColor.values()) {
             if (color == GemColor.GOLD) continue;
             if (rules.canTakeTwoSameGems(color, bank)) {
@@ -414,7 +413,7 @@ public class EasyAIStrategy implements AIStrategy {
             }
         }
 
-        // ── Try 5: whatever individual gems remain ──────────────────
+        //try 5: whatever individual gems remain
         GemCollection request = new GemCollection();
         List<GemColor> taken = new ArrayList<>();
         for (GemColor color : GemColor.values()) {
@@ -430,7 +429,7 @@ public class EasyAIStrategy implements AIStrategy {
                     String.format("Take %d gem(s) (last resort): %s", taken.size(), taken));
         }
 
-        // ── Try 6: bank empty ───────────────────────────────────────
+        //try 6: empty bank 
         return new AIAction(ActionType.TAKE_THREE_DIFFERENT, null, false,
                 new GemCollection(), "No gems available");
     }
@@ -439,7 +438,7 @@ public class EasyAIStrategy implements AIStrategy {
     //helpers
 
     /**
-     * Aggregates the gem deficit across multiple target cards.
+     * Sum the gem deficit across multiple target cards.
      * For each non-GOLD color, sums how many more gems the player needs
      * across all targets. This guides gem selection toward colors that
      * help the most cards simultaneously.
@@ -476,7 +475,7 @@ public class EasyAIStrategy implements AIStrategy {
     }
 
 
-    /** Returns the non-GOLD color with the highest count in the map. 
+    /** returns the non-GOLD color with the highest count in the map. 
      * 
      * @param gems a map of current held gems
      * @return the most held color in that map
