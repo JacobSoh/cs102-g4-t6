@@ -73,8 +73,11 @@ public class GemCollection {
      * @return a new map containing the gem counts
      */
     public Map<GemColor, Integer> asMap() {
-        return new EnumMap<>(this.gems);
+        EnumMap<GemColor, Integer> map = new EnumMap<>(GemColor.class);
+        map.putAll(this.gems);
+        return map;
     }
+
 
     /**
      * Adds a specified amount of a gem colour to this collection Returns a new
