@@ -1,7 +1,9 @@
 package edu.cs102.g04t06.game.rules.valueobjects;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 import edu.cs102.g04t06.game.rules.entities.GemColor;
-import java.util.*;
 
 /**
  * Immutable Collection of gems used in Splendor Operations return new
@@ -27,7 +29,9 @@ public class GemCollection {
      * @param gems map of gemColor to Integer counts
      */
     public GemCollection(Map<GemColor, Integer> gems) {
-        this.gems = new EnumMap<>(gems); // defensive copy — prevents external mutation
+        this.gems = new EnumMap<>(GemColor.class);
+        this.gems.putAll(gems);
+        // this.gems = new EnumMap<>(gems); // defensive copy — prevents external mutation
     }
 
     /**

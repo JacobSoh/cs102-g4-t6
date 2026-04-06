@@ -270,7 +270,7 @@ public class HardAIStrategy implements AIStrategy {
             int have      = bonuses.getOrDefault(bonus, 0);
             int remaining = required - have;
             if (remaining > 0) {
-                progress += 1.0 / remaining;
+                progress += 3.0 / remaining;
             }
         }
         return progress;
