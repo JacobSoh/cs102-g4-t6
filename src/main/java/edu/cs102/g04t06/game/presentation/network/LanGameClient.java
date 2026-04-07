@@ -10,25 +10,47 @@ import java.net.Socket;
  * Joiner-side LAN client.
  */
 public class LanGameClient {
+    /**
+     * Outcome of a pre-join validation attempt against a host.
+     */
     public enum JoinValidationStatus {
         OK,
         INVALID_HOST,
         INVALID_NAME
     }
 
+    /**
+     * Structured result returned by join validation.
+     */
     public static final class JoinValidationResult {
         private final JoinValidationStatus status;
         private final String message;
 
+        /**
+         * Creates a validation result.
+         *
+         * @param status the validation outcome
+         * @param message the user-facing explanation, or {@code null} on success
+         */
         public JoinValidationResult(JoinValidationStatus status, String message) {
             this.status = status;
             this.message = message;
         }
 
+        /**
+         * Returns the validation outcome.
+         *
+         * @return the validation status
+         */
         public JoinValidationStatus status() {
             return status;
         }
 
+        /**
+         * Returns the explanatory message for the validation outcome.
+         *
+         * @return the validation message, or {@code null} when validation succeeded
+         */
         public String message() {
             return message;
         }
@@ -40,6 +62,14 @@ public class LanGameClient {
     private final int port;
     private final LanSessionUI sessionUI;
 
+    /**
+     * Creates a LAN client for a remote player.
+     *
+     * @param playerName the joining player's display name
+     * @param playerAge the joining player's age used for turn ordering
+     * @param hostAddress the host IP address or hostname
+     * @param port the host port
+     */
     public LanGameClient(String playerName, int playerAge, String hostAddress, int port) {
         this.playerName = playerName;
         this.playerAge = playerAge;

@@ -22,6 +22,14 @@ public class LanSetupUI implements ThemeStyleSheet {
         public final int port;
         public final int totalPlayers;
 
+        /**
+         * Creates the collected host-side setup values.
+         *
+         * @param hostPlayerName the local host player's name
+         * @param hostPlayerAge the local host player's age
+         * @param port the listening port to bind
+         * @param totalPlayers the total player count for the match
+         */
         public HostSetup(String hostPlayerName, int hostPlayerAge, int port, int totalPlayers) {
             this.hostPlayerName = hostPlayerName;
             this.hostPlayerAge = hostPlayerAge;
@@ -39,6 +47,14 @@ public class LanSetupUI implements ThemeStyleSheet {
         public final String hostAddress;
         public final int port;
 
+        /**
+         * Creates the collected client-side join values.
+         *
+         * @param playerName the joining player's name
+         * @param playerAge the joining player's age
+         * @param hostAddress the host IP address or hostname
+         * @param port the host port
+         */
         public JoinSetup(String playerName, int playerAge, String hostAddress, int port) {
             this.playerName = playerName;
             this.playerAge = playerAge;
@@ -105,11 +121,20 @@ public class LanSetupUI implements ThemeStyleSheet {
         System.out.println(CYAN + message + RESET);
     }
 
+    /**
+     * Clears the console before drawing the setup screen.
+     */
     private void clearScreen() {
         System.out.print(CLEAR_SCREEN);
         System.out.flush();
     }
 
+    /**
+     * Prints the shared setup header for the current mode.
+     *
+     * @param title the main title text
+     * @param subtitle the contextual subtitle text
+     */
     private void printHeader(String title, String subtitle) {
         System.out.println();
         System.out.println(GOLD + BOLD + "  " + title + RESET);
@@ -118,6 +143,12 @@ public class LanSetupUI implements ThemeStyleSheet {
         System.out.println();
     }
 
+    /**
+     * Prompts until a non-blank string is entered.
+     *
+     * @param label the field label to show
+     * @return the trimmed non-blank value
+     */
     private String promptNonBlank(String label) {
         while (true) {
             System.out.print(WHITE + "  " + label + ": " + RESET);
@@ -129,6 +160,14 @@ public class LanSetupUI implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Prompts until a valid integer within the given range is entered.
+     *
+     * @param label the field label to show
+     * @param min the inclusive minimum accepted value
+     * @param max the inclusive maximum accepted value
+     * @return the parsed integer
+     */
     private int promptInt(String label, int min, int max) {
         while (true) {
             System.out.print(WHITE + "  " + label + ": " + RESET);

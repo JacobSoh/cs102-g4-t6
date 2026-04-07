@@ -20,6 +20,7 @@ import edu.cs102.g04t06.game.execution.GameEngine;
 import edu.cs102.g04t06.game.presentation.console.GameBoardUI;
 import edu.cs102.g04t06.game.presentation.console.ThemeStyleSheet;
 import edu.cs102.g04t06.game.rules.GameState;
+import edu.cs102.g04t06.game.rules.entities.Noble;
 
 /**
  * Host-side LAN server that owns the authoritative game state.
@@ -39,6 +40,14 @@ public class LanGameServer implements ThemeStyleSheet {
     private String hostInlineError = "";
     private String hostPendingTurnMessage = "";
 
+    /**
+     * Creates the authoritative LAN host controller.
+     *
+     * @param port the local port to listen on
+     * @param totalPlayers the total number of players expected in the match
+     * @param hostPlayerName the host player's display name
+     * @param hostPlayerAge the host player's age used for turn ordering
+     */
     public LanGameServer(int port, int totalPlayers, String hostPlayerName, int hostPlayerAge) {
         this.port = port;
         this.totalPlayers = totalPlayers;
@@ -75,6 +84,12 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Accepts remote players until the requested lobby size has been reached.
+     *
+     * @param serverSocket the listening server socket
+     * @throws IOException if accepting a client fails
+     */
     private void acceptClients(ServerSocket serverSocket) throws IOException {
         while (clients.size() < totalPlayers - 1) {
             Socket socket = serverSocket.accept();
@@ -87,6 +102,14 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Validates an incoming socket and turns it into a tracked client connection.
+     *
+     * @param socket the newly accepted socket
+     * @param playerIndex the provisional join order for the client
+     * @return the established connection, or {@code null} when the socket was only a probe or was rejected
+     * @throws IOException if the handshake cannot be completed
+     */
     private ClientConnection createConnection(Socket socket, int playerIndex) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
@@ -155,6 +178,9 @@ public class LanGameServer implements ThemeStyleSheet {
         return connection;
     }
 
+    /**
+     * Broadcasts the current lobby occupancy and ordered player names.
+     */
     private void broadcastLobbyState() {
         NetworkMessage lobby = NetworkMessage.of(
                 MessageType.LOBBY_STATE,
@@ -164,6 +190,11 @@ public class LanGameServer implements ThemeStyleSheet {
         broadcast(lobby);
     }
 
+    /**
+     * Runs the authoritative turn loop until the game ends.
+     *
+     * @param state the shared game state owned by the host
+     */
     private void runGameLoop(GameState state) {
         while (!state.isGameOver()) {
             String currentPlayerName = state.getCurrentPlayer().getName();
@@ -199,6 +230,11 @@ public class LanGameServer implements ThemeStyleSheet {
         System.out.println(GOLD + BOLD + finalGameMessage + RESET);
     }
 
+    /**
+     * Processes one complete host-controlled turn, including follow-up prompts.
+     *
+     * @param state the shared game state
+     */
     private void handleHostTurn(GameState state) {
         while (!state.isGameOver()) {
             String input = boardUI.promptNetworkTurn(
@@ -236,6 +272,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Resolves the host's mandatory gem-return flow.
+     *
+     * @param state the shared game state
+     * @param initialResult the turn result that triggered gem return
+     * @return {@code true} when the flow completed successfully
+     */
     private boolean handleHostGemReturn(GameState state, GameEngine.TurnResult initialResult) {
         while (true) {
             String statusMessage = hostInlineError;
@@ -268,6 +311,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Resolves the host's mandatory noble-selection flow.
+     *
+     * @param state the shared game state
+     * @param initialResult the turn result that triggered noble selection
+     * @return {@code true} when the flow completed successfully
+     */
     private boolean handleHostNobleSelection(GameState state, GameEngine.TurnResult initialResult) {
         while (true) {
             String statusMessage = hostInlineError;
@@ -296,6 +346,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Drives a full turn for the currently active remote player.
+     *
+     * @param state the shared game state
+     * @param connection the active remote player connection
+     * @throws IOException if the remote client disconnects mid-turn
+     */
     private void handleRemoteTurn(GameState state, ClientConnection connection) throws IOException {
         broadcastPassiveState(
                 "Waiting for " + connection.playerName + " to play.",
@@ -343,6 +400,16 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Resolves a remote player's mandatory gem-return flow.
+     *
+     * @param state the shared game state
+     * @param connection the active remote player connection
+     * @param initialResult the turn result that triggered gem return
+     * @param pendingTurnMessage the pending public turn summary
+     * @return {@code true} when the flow completed successfully
+     * @throws IOException if the remote client disconnects mid-flow
+     */
     private boolean handleRemoteGemReturn(GameState state, ClientConnection connection,
             GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
         while (true) {
@@ -377,6 +444,16 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Resolves a remote player's mandatory noble-selection flow.
+     *
+     * @param state the shared game state
+     * @param connection the active remote player connection
+     * @param initialResult the turn result that triggered noble selection
+     * @param pendingTurnMessage the pending public turn summary
+     * @return {@code true} when the flow completed successfully
+     * @throws IOException if the remote client disconnects mid-flow
+     */
     private boolean handleRemoteNobleSelection(GameState state, ClientConnection connection,
             GameEngine.TurnResult initialResult, String pendingTurnMessage) throws IOException {
         while (true) {
@@ -411,6 +488,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Sends an error response to a connected client together with the current state snapshot.
+     *
+     * @param connection the client to notify
+     * @param state the latest authoritative game state
+     * @param message the error text to send
+     */
     private void sendError(ClientConnection connection, GameState state, String message) {
         if (connection.disconnected) {
             return;
@@ -420,6 +504,13 @@ public class LanGameServer implements ThemeStyleSheet {
         NetworkProtocol.send(connection.writer, error);
     }
 
+    /**
+     * Marks a participant as disconnected and updates the session outcome accordingly.
+     *
+     * @param state the shared game state
+     * @param connection the disconnected client, or {@code null} when the host quits
+     * @param reason the human-readable disconnect reason
+     */
     private void handleDisconnect(GameState state, ClientConnection connection, String reason) {
         if (connection == null) {
             String message = hostPlayerName + " disconnected.";
@@ -462,6 +553,13 @@ public class LanGameServer implements ThemeStyleSheet {
         broadcast(disconnected);
     }
 
+    /**
+     * Broadcasts a stateful message to all connected clients and refreshes the host view.
+     *
+     * @param type the message type to broadcast
+     * @param message the status text to attach
+     * @param state the current authoritative game state
+     */
     private void broadcastState(MessageType type, String message, GameState state) {
         if (message != null && !message.isBlank()) {
             lastActionMessage = message;
@@ -474,6 +572,13 @@ public class LanGameServer implements ThemeStyleSheet {
         renderHostState(state);
     }
 
+    /**
+     * Broadcasts the outcome of a completed turn to spectators and recently active players.
+     *
+     * @param state the current authoritative game state
+     * @param actorName the player who performed the turn
+     * @param actorMessage the turn result message produced by the engine
+     */
     private void broadcastTurnOutcome(GameState state, String actorName, String actorMessage) {
         String publicMessage = actorName + ": " + actorMessage;
         lastActionMessage = publicMessage;
@@ -505,6 +610,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Broadcasts a passive waiting-state update to all non-active remote clients.
+     *
+     * @param message the waiting message to show
+     * @param state the current authoritative game state
+     * @param activePlayerName the player whose turn is in progress
+     */
     private void broadcastPassiveState(String message, GameState state, String activePlayerName) {
         for (ClientConnection client : clients) {
             if (client.disconnected) {
@@ -521,6 +633,11 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Refreshes the host-side board when the host is not currently entering input.
+     *
+     * @param state the authoritative game state to display
+     */
     private void renderHostState(GameState state) {
         if (state == null) {
             return;
@@ -534,10 +651,21 @@ public class LanGameServer implements ThemeStyleSheet {
         boardUI.displayReadOnlyState(state, statusMessage, getRecentGlobalLog());
     }
 
+    /**
+     * Determines whether the raw input requests leaving the LAN session.
+     *
+     * @param input the raw console input
+     * @return {@code true} when the quit shortcut was entered
+     */
     private boolean isDisconnectCommand(String input) {
         return input != null && input.equalsIgnoreCase("q");
     }
 
+    /**
+     * Appends a non-blank entry to the shared session log.
+     *
+     * @param entry the log entry to record
+     */
     private void appendGlobalLog(String entry) {
         if (entry == null || entry.isBlank()) {
             return;
@@ -545,6 +673,11 @@ public class LanGameServer implements ThemeStyleSheet {
         globalLog.add(entry);
     }
 
+    /**
+     * Returns the most recent shared log entries shown in the LAN UI.
+     *
+     * @return up to the last three log entries
+     */
     private List<String> getRecentGlobalLog() {
         if (globalLog.isEmpty()) {
             return List.of();
@@ -553,6 +686,11 @@ public class LanGameServer implements ThemeStyleSheet {
         return new ArrayList<>(globalLog.subList(start, globalLog.size()));
     }
 
+    /**
+     * Sends the given message to every currently connected client.
+     *
+     * @param message the message to broadcast
+     */
     private void broadcast(NetworkMessage message) {
         for (ClientConnection client : clients) {
             if (client.disconnected) {
@@ -562,7 +700,13 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
-    private String formatNobleSelectionPrompt(List<edu.cs102.g04t06.game.rules.entities.Noble> nobles) {
+    /**
+     * Formats the prompt shown when a player must choose one of several nobles.
+     *
+     * @param nobles the nobles available to claim
+     * @return a numbered prompt string
+     */
+    private String formatNobleSelectionPrompt(List<Noble> nobles) {
         StringBuilder prompt = new StringBuilder("Choose noble");
         for (int i = 0; i < nobles.size(); i++) {
             if (i == 0) {
@@ -575,6 +719,11 @@ public class LanGameServer implements ThemeStyleSheet {
         return prompt.toString();
     }
 
+    /**
+     * Resolves the best IPv4 address to display to remote players.
+     *
+     * @return a site-local IPv4 address when available, otherwise the first non-loopback IPv4, or {@code null}
+     */
     private String resolveHostIpv4() {
         String firstIpv4 = null;
         try {
@@ -604,6 +753,12 @@ public class LanGameServer implements ThemeStyleSheet {
         return firstIpv4;
     }
 
+    /**
+     * Automatically advances a disconnected player's turn when possible.
+     *
+     * @param state the shared game state
+     * @param playerName the disconnected player whose turn is active
+     */
     private void autoResolveDisconnectedTurn(GameState state, String playerName) {
         if (state == null || state.isGameOver() || !playerName.equals(state.getCurrentPlayer().getName())) {
             return;
@@ -635,6 +790,11 @@ public class LanGameServer implements ThemeStyleSheet {
         broadcastTurnOutcome(state, playerName, result.getMessage());
     }
 
+    /**
+     * Builds the player-name order used to initialize the shared game state.
+     *
+     * @return player names ordered by age, then join order
+     */
     private List<String> buildPlayerNames() {
         List<PlayerSlot> slots = new ArrayList<>();
         slots.add(new PlayerSlot(hostPlayerName, hostPlayerAge, 0));
@@ -652,10 +812,22 @@ public class LanGameServer implements ThemeStyleSheet {
         return names;
     }
 
+    /**
+     * Creates the initial authoritative game state for the LAN match.
+     *
+     * @param playerNames the ordered player names participating in the match
+     * @return the initialized game state
+     */
     private GameState createInitialGameState(List<String> playerNames) {
         return gameStateFactory.createInitialGameState(totalPlayers, playerNames);
     }
 
+    /**
+     * Determines whether a proposed player name is already in use in the session.
+     *
+     * @param candidateName the proposed player name
+     * @return {@code true} when the name conflicts with the host or a joined client
+     */
     private boolean isDuplicatePlayerName(String candidateName) {
         if (hostPlayerName.equalsIgnoreCase(candidateName)) {
             return true;
@@ -668,6 +840,12 @@ public class LanGameServer implements ThemeStyleSheet {
         return false;
     }
 
+    /**
+     * Finds the tracked client connection for the given player.
+     *
+     * @param playerName the player name to resolve
+     * @return the matching client connection, or {@code null} when absent
+     */
     private ClientConnection findClientByName(String playerName) {
         for (ClientConnection client : clients) {
             if (client.playerName.equals(playerName)) {
@@ -677,12 +855,20 @@ public class LanGameServer implements ThemeStyleSheet {
         return null;
     }
 
+    /**
+     * Closes every tracked client socket.
+     */
     private void closeClients() {
         for (ClientConnection client : clients) {
             closeClient(client);
         }
     }
 
+    /**
+     * Closes a single client socket, ignoring shutdown errors.
+     *
+     * @param client the client connection to close
+     */
     private void closeClient(ClientConnection client) {
         try {
             client.socket.close();
@@ -690,6 +876,11 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Sleeps the current thread for the requested duration.
+     *
+     * @param ms the number of milliseconds to sleep
+     */
     private void sleep(int ms) {
         try {
             Thread.sleep(ms);
@@ -698,6 +889,9 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Internal record of a remote client's active session resources.
+     */
     private static final class ClientConnection {
         private final Socket socket;
         private final BufferedReader reader;
@@ -707,6 +901,16 @@ public class LanGameServer implements ThemeStyleSheet {
         private final int playerIndex;
         private boolean disconnected;
 
+        /**
+         * Creates a tracked client connection.
+         *
+         * @param socket the connected socket
+         * @param reader the socket reader
+         * @param writer the socket writer
+         * @param playerName the player's display name
+         * @param playerAge the player's age used for turn ordering
+         * @param playerIndex the player's join order among remote clients
+         */
         private ClientConnection(Socket socket, BufferedReader reader, PrintWriter writer,
                 String playerName, int playerAge, int playerIndex) {
             this.socket = socket;
@@ -719,5 +923,12 @@ public class LanGameServer implements ThemeStyleSheet {
         }
     }
 
+    /**
+     * Lightweight sortable view of player identity metadata used during lobby ordering.
+     *
+     * @param name the player's display name
+     * @param age the player's age
+     * @param joinOrder the player's join order for tie-breaking
+     */
     private record PlayerSlot(String name, int age, int joinOrder) {}
 }
