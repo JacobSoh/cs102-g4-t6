@@ -44,6 +44,7 @@ public class Cost {
      * 
      * @return Sum of all gem requirements
      */
+    @Deprecated
     public int getTotalGems() { 
         return required.values().stream()
                 .mapToInt(Integer::intValue)

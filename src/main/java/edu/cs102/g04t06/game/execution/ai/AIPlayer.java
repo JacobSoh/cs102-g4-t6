@@ -72,6 +72,7 @@ public class AIPlayer{
      *
      * @param strategy the new strategy to use
      */
+    @Deprecated
     public void setStrategy(AIStrategy strategy) {
         this.strategy = strategy;
     }

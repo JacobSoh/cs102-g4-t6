@@ -62,6 +62,7 @@ public class GemCollection {
      *
      * @return true if all gem counts are 0
      */
+    @Deprecated
     public boolean isEmpty() {
         return this.getTotalCount() == 0;
     }
@@ -73,8 +74,11 @@ public class GemCollection {
      * @return a new map containing the gem counts
      */
     public Map<GemColor, Integer> asMap() {
-        return new EnumMap<>(this.gems);
+        EnumMap<GemColor, Integer> map = new EnumMap<>(GemColor.class);
+        map.putAll(this.gems);
+        return map;
     }
+
 
     /**
      * Adds a specified amount of a gem colour to this collection Returns a new
@@ -121,6 +125,7 @@ public class GemCollection {
      * @return a new GemCollection with the reduced gems
      * @throws IllegalArgumentException if result is negative
      */
+    @Deprecated
     public GemCollection subtract(GemColor color, int amount) {
         int result = gems.getOrDefault(color, 0) - amount;
         if (result < 0) {

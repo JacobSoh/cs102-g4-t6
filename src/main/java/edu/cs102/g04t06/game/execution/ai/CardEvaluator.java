@@ -112,6 +112,7 @@ public class CardEvaluator{
      * @param bank the current gem bank
      * @return an estimated number of turn 
      */
+    @Deprecated
     public static int estimateTurns(Player player, Card card, GemCollection bank){
         Map<GemColor, Integer> deficit = new EnumMap<>(calculateDeficit(player, card));
 
@@ -180,6 +181,7 @@ public class CardEvaluator{
      * @param nobles list of nobles still available in the game
      * @return total noble-progress score (higher = better)
      */
+    @Deprecated
     public static double nobleProgress(Card card, Player player, List<Noble> nobles){
         GemColor cardBonus = card.getBonus();
 
@@ -206,8 +208,10 @@ public class CardEvaluator{
     /**
      * @param card the card being evaluated
      * @param state the current gamestate to scan visible market
-     * @return discount utility score 
+     * @return discount utility score
+     *  
      */
+    @Deprecated
     public static double discountUtility(Card card, GameState state) {
         GemColor cardBonus = card.getBonus();
         

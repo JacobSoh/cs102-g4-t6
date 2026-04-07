@@ -115,6 +115,7 @@ public class Noble implements GameEntity {
      *
      * @return the noble id
      */
+    @Deprecated
     public int getId() {
         return id;
     }

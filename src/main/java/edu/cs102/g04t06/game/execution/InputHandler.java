@@ -18,7 +18,6 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 public class InputHandler {
 
     public InputHandler() {}
-
     @Deprecated
     public int promptActionChoice(int choice) {
         if (choice < 1 || choice > 4) {

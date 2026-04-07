@@ -50,6 +50,7 @@ public class GameState {
      * @param availableNobles the nobles currently available to be claimed
      * @param winningThreshold ignored compatibility parameter
      */
+    @Deprecated
     public GameState(List<Player> players, CardMarket market, GemCollection gemBank,
             List<Noble> availableNobles, int winningThreshold) {
         this(players, market, gemBank, availableNobles);

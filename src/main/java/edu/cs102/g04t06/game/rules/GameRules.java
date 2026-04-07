@@ -36,6 +36,7 @@ public class GameRules{
      *
      * @return maximum reserved cards allowed per player
      */
+    @Deprecated
     public static int getMaxReservedCards() {
         return MAX_RESERVED_CARDS;
     }
@@ -45,6 +46,7 @@ public class GameRules{
      *
      * @return maximum gems allowed in hand
      */
+    @Deprecated
     public static int getMaxGemsPerPlayer() {
         return MAX_GEMS_IN_HAND;
     }
@@ -54,6 +56,7 @@ public class GameRules{
      *
      * @return minimum gems needed in bank for a double take
      */
+    @Deprecated
     public static int getMinGemsInBankForDouble() {
         return MIN_GEMS_IN_BANK_FOR_DOUBLE;
     }
@@ -147,6 +150,7 @@ public class GameRules{
      * @param player the player to check
      * @return true if players has more than 10 gems
      */
+    @Deprecated
     public boolean mustReturnGems(Player player){
         return player.getGemCount() > MAX_GEMS_IN_HAND;
     }
