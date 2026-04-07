@@ -128,6 +128,7 @@ public class LanGameClient {
      * @param playerName the proposed player name
      * @return null when the name is available, otherwise an error message
      */
+    @Deprecated
     public static String validatePlayerName(String hostAddress, int port, String playerName) {
         JoinValidationResult result = validateJoinRequest(hostAddress, port, playerName);
         return result.status() == JoinValidationStatus.OK ? null : result.message();

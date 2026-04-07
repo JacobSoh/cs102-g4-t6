@@ -117,6 +117,7 @@ public class LanSetupUI implements ThemeStyleSheet {
      *
      * @param message the status message to show
      */
+    @Deprecated
     public void showLobbyStatus(String message) {
         System.out.println(CYAN + message + RESET);
     }
