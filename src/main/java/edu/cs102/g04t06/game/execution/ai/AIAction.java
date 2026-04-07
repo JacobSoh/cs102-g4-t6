@@ -54,6 +54,7 @@ public class AIAction {
     }
 
     /** Returns a human-readable description of this action for the action log. */
+    @Deprecated
     public String getDescription() {
         return description;
     }

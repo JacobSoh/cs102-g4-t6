@@ -62,6 +62,7 @@ public class GemCollection {
      *
      * @return true if all gem counts are 0
      */
+    @Deprecated
     public boolean isEmpty() {
         return this.getTotalCount() == 0;
     }
@@ -124,6 +125,7 @@ public class GemCollection {
      * @return a new GemCollection with the reduced gems
      * @throws IllegalArgumentException if result is negative
      */
+    @Deprecated
     public GemCollection subtract(GemColor color, int amount) {
         int result = gems.getOrDefault(color, 0) - amount;
         if (result < 0) {

@@ -18,7 +18,7 @@ import edu.cs102.g04t06.game.rules.valueobjects.GemCollection;
 public class InputHandler {
 
     public InputHandler() {}
-
+    @Deprecated
     public int promptActionChoice(int choice) {
         if (choice < 1 || choice > 4) {
             throw new IllegalArgumentException(
@@ -82,6 +82,7 @@ public class InputHandler {
         };
     }
 
+    @Deprecated
     public Card promptCardSelection(CardMarket market, int level,
             boolean includeReserved, List<Card> reservedCards, int selection) {
 
@@ -149,6 +150,7 @@ public class InputHandler {
         return claimable.get(selection - 1);
     }
 
+    @Deprecated
     public int promptPlayerCount(int count) {
         if (count < 2 || count > 4) {
             throw new IllegalArgumentException(
@@ -157,6 +159,7 @@ public class InputHandler {
         return count;
     }
 
+    @Deprecated
     public List<String> promptPlayerNames(List<String> names) {
         for (String name : names) {
             if (name == null || name.trim().isEmpty()) {
